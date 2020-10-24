@@ -1,0 +1,2 @@
+D:\CppBaseLib\Network\Socket\Win32\Socket_Win32\Debug\Socket_Win32.exe
+D:\CppBaseLib\Network\Socket\Win32\Socket_Win32\Debug\Socket_Win32.pdb
