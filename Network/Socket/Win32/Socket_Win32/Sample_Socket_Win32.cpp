@@ -77,11 +77,8 @@ int main()
     //{
     //    std::cout << std::string(ser.PopDataFromBuffer());
     //}
-    
-
     UDP_Server_Loop_Param cfg = { true,ser,clientCfg,len };
     
-
     HANDLE 	t = (HANDLE)_beginthreadex(0, 0, UDP_Server_Loop, &cfg, CREATE_SUSPENDED, 0);
     ResumeThread(t);
     DWORD dwExitCode;
@@ -90,6 +87,7 @@ int main()
     {
         throw "";
     }
+
     SocketConfig* temp = &serverCfg;
     int tempSize = sizeof(serverCfg);
     std::cout << "请输入字符串：";
@@ -98,7 +96,7 @@ int main()
         char* input = new char[Max_Suit_Packed_Size];
         scanf("%s", input);
         //std::cout << ":完成,正在发送字符串：" << input << std::endl;
-        int code = client.Send(input, Max_Suit_Packed_Size, temp, tempSize);
+        int code = client.SendTo(input, Max_Suit_Packed_Size, temp, tempSize);
         if (SOCKET_ERROR == code)
         {
             std::cout << "发送消息失败！错误码：" << code;

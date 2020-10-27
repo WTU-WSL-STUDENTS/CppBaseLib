@@ -196,7 +196,7 @@ namespace UDP_Win32
 			int code = UDP_Packet::ReciveFrom(socketHandle, client, size);
 			return code;
 		}
-		virtual int Send(const char* source,int size, SocketConfig* clientOrServerCfg, int cfgSize)
+		virtual int SendTo(const char* source,int size, SocketConfig* clientOrServerCfg, int cfgSize)
 		{
 			UDP_Packet::PushDataToBuffer(source, size);
 			int code = UDP_Packet::SendTo(socketHandle, clientOrServerCfg, cfgSize);
@@ -230,43 +230,8 @@ namespace UDP_Win32
 	class UDP_Client :public I_UDP_Prroto
 	{
 	protected:
-		SOCKET socketHandle;
 		SocketConfig cfg;
 	public:
-		UDP_Client(SocketConfig clientCfg) :I_UDP_Prroto()
-		{
-			int code = socketHandle = Socket_Win32::GetSocketInstance(SocketIpprotoType::UDP);
-			cfg = clientCfg;
-		}
-
+		UDP_Client(SocketConfig clientCfg) :I_UDP_Prroto() {cfg = clientCfg;}
 	};
 }
-
-
-
-
-
-
-
-
-
-
-//class Socket_Win32_Factory
-//{
-//protected:
-//	unsigned short size = 0;
-//	SocketLib_Win32 lib;
-//	std::vector<SOCKET>  sockets = std::vector<SOCKET>(lib.MaxSocketConnectSize());
-//public:
-//	Socket_Win32_Factory(){}
-//	SOCKET GetInstance()
-//	{
-//		SOCKET res = Socket_Win32::GetSocketServerInstance();
-//		sockets.push_back(res);
-//		return res;
-//	}
-//	 
-//	int SetSerivcceConfig(SOCKET s, SocketConfig cfg) { return Socket_Win32::Bind(s, cfg); }
-//};
-//
-
