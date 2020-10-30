@@ -1,0 +1,2 @@
+G:\Project\github\CppBaseLib\Win32\CaptureWindow\Sample\Debug\Sample.exe
+G:\Project\github\CppBaseLib\Win32\CaptureWindow\Sample\Debug\Sample.pdb
