@@ -31,7 +31,7 @@ namespace Socket_Win32_Ult{
 	};
 
 	//Socket传输协议的类型
-	enum class  SocketIpprotoType
+	enum  class  SocketIpprotoType
 	{
 		TCP = IPPROTO_TCP,
 		UDP = IPPROTO_UDP,
@@ -56,8 +56,14 @@ namespace Socket_Win32_Ult{
 	class Socket_Win32
 	{
 	public:
-		static SOCKET GetSocketInstance(SocketIpprotoType IPPROTO_Type = SocketIpprotoType::UDP) { return socket(AF_INET, SOCK_DGRAM, (int)IPPROTO_Type); }
-		static int CloseSocket(SOCKET s) { return closesocket(s); }
+		static SOCKET GetTcpInstance() { return socket(AF_INET, SOCK_STREAM, (int)SocketIpprotoType::TCP); }
+		static SOCKET GetUdpInstance() 
+		{
+			SOCKET res = socket(AF_INET, SOCK_DGRAM, (int)SocketIpprotoType::UDP); 
+			return res;
+		}
+		static int CloseSocket(SOCKET s) { return closesocket(s); }	//AF_INET, SOCK_STREAM, 0
+		//判断SOCKET是否是错误的
 		static bool IsInvalidSocket(SOCKET s) { return s == INVALID_SOCKET; }
 		static int Bind(SOCKET s, SocketConfig cfg) { return bind(s, (SOCKADDR*)&cfg, sizeof(cfg)); }
 	};
@@ -87,12 +93,13 @@ namespace Socket_Win32_Ult{
 
 		//TCP收发数据的接口
 		int Send(SOCKET server) { return send(server, buf, bufLen, Packed_Flag); }
-		int Recive(SOCKET server) { return recv(server, buf, bufLen, Packed_Flag); }
+		int Recive(SOCKET server) { 
+			return recv(server, buf, bufLen, Packed_Flag); }
 
-		//UDP收发数据的接口
+		////UDP收发数据的接口
 
-		int SendTo(SOCKET server, SocketConfig* client, int cfgSize) { return sendto(server, buf, bufLen, Packed_Flag, (sockaddr*)client, cfgSize); }
-		int ReciveFrom(SOCKET server, OUT SocketConfig* client, OUT int* clientDataLen) { return recvfrom(server, buf, bufLen, Packed_Flag, (sockaddr*)client, clientDataLen); }
+		//int SendTo(SOCKET server, SocketConfig* client, int cfgSize) { return sendto(server, buf, bufLen, Packed_Flag, (sockaddr*)client, cfgSize); }
+		//int ReciveFrom(SOCKET msgFrom, OUT SocketConfig* msgToCfg, OUT int* clientDataLen) { return recvfrom(msgFrom, buf, bufLen, Packed_Flag, (sockaddr*)msgToCfg, clientDataLen); }
 	};
 	
 	class I_SocketServer
@@ -106,6 +113,31 @@ namespace Socket_Win32_Ult{
 	public:
 		virtual int ReciveFromServer() = 0;
 		virtual int SendToServer() = 0;
+	};
+
+	class I_Prroto
+	{
+	protected:
+		SocketConfig cfg;
+		unsigned int structSize = 0;
+		SOCKET socketHandle = NULL;
+		I_Prroto() {}
+	public:
+		I_Prroto(SocketConfig cfg, SOCKET socketHandle = NULL)
+		{
+			this->cfg = cfg;
+			structSize = sizeof(cfg);
+			this->socketHandle = socketHandle;
+		}
+		virtual int CloseSocket() { return Socket_Win32::CloseSocket(socketHandle); }
+		virtual SOCKET GetSocketHandle() { return socketHandle; }
+		//virtual SocketConfig GetSocketConfig() { return cfg; }
+		virtual unsigned int ConfigStructSize() { return structSize; }
+		operator SocketConfig()  const     // 隐式转换函数
+		{
+			return cfg;
+		}
+
 	};
 }
 
@@ -124,55 +156,83 @@ namespace TCP_Win32
 	public:
 		TCP_Packet(SocketConfig client);
 	};
-
-	//TCP服务器
-	class TCP_Service :private TCP_Packet, I_SocketServer
+	
+	class I_TCP_Prroto :protected TCP_Packet, public I_Prroto
 	{
 	protected:
-		SOCKET socketHandle;
-		SocketConfig serverCfg;
+		SOCKET  new_sock = NULL;
+		I_TCP_Prroto(SocketConfig client) :TCP_Packet(client){ socketHandle = Socket_Win32::GetTcpInstance(); }
+		virtual ~I_TCP_Prroto() { }
 	public:
-		TCP_Service(SocketConfig server, SocketConfig client):TCP_Packet(client)
+		//收消息的一方需要连接
+		int Connect()
 		{
-			socketHandle = Socket_Win32::GetSocketInstance(SocketIpprotoType::TCP);
-			serverCfg = server;
-			Socket_Win32::Bind(socketHandle, serverCfg);
+			int code = connect(socketHandle, (struct sockaddr*) & client, sizeof(client));
+			if (SOCKET_ERROR == code)
+				throw "与指定客户端建立连接失败，请检查SocketConfig";
+			return code;
+		}
+		//发消息的一方需要监听
+		int CreateListen()
+		{
+			int code = listen(socketHandle, 5);	//最大延迟5
+			if (SOCKET_ERROR == code)
+				throw "监听服务器端口失败，请检查SocketConfig";
+			int dummy;
+			if (new_sock == NULL)
+				new_sock = accept(socketHandle, NULL, &dummy);
+			else
+				throw "未完成的模块";
+			return code;
 		}
 
-		int ReciveFromClient() override
+		int CloseSocket() override { return I_Prroto::CloseSocket() && Socket_Win32::CloseSocket(new_sock); }
+		virtual int Recive()
 		{
-			TCP_Packet::Recive(socketHandle);
-			return 1;
+			int code = TCP_Packet::Recive(socketHandle);
+			return code;
 		}
-		int SendToClient() override
+		virtual int Send(const char* source, int size)
 		{
-			TCP_Packet::SendTo(socketHandle, TCP_Packet::clientPtr, TCP_Packet::clientSize);
-			return 1;
+			PushDataToBuffer(source, size);
+			int code = TCP_Packet::Send(socketHandle);
+			return code;
+		}
+		virtual char* PopDataFromBuffer()
+		{
+			/*	char* res = new char;
+				memcpy(res, buf, bufLen);*/
+			return buf;
+		}
+	};
+	//TCP服务器
+	class TCP_Service : public I_TCP_Prroto
+	{
+	protected:
+		SocketConfig serverCfg;
+	public:
+		TCP_Service(SocketConfig server, SocketConfig client):I_TCP_Prroto(client)
+		{
+			serverCfg = server;
+			int code = Socket_Win32::Bind(socketHandle, serverCfg);
+			if (SOCKET_ERROR == code)
+				throw "初始化服务器失败，请检查SocketConfig";
 		}
 	};
 
 	//TCP客户端
-	class TCP_Client :private TCP_Packet, I_SocketClient
+	class TCP_Client :public I_TCP_Prroto
 	{		
 	protected:
-		SOCKET socketHandle;
 		SocketConfig clientCfg;;
 	public:
-		TCP_Client(SocketConfig client, SocketConfig server) :TCP_Packet(server)
+		TCP_Client(SocketConfig client, SocketConfig server) :I_TCP_Prroto(server)
 		{
-			socketHandle = Socket_Win32::GetSocketInstance(SocketIpprotoType::TCP);
 			clientCfg = client;
+			socketHandle = Socket_Win32::GetTcpInstance();
+			
 		}
-		int ReciveFromServer()override 
-		{
-			TCP_Packet::Recive(socketHandle);
-			return 1;
-		}
-		int SendToServer()override
-		{
-			TCP_Packet::SendTo(socketHandle, TCP_Packet::clientPtr, TCP_Packet::clientSize);
-			return 1;
-		}
+		//在发送消息之前需要初始化
 	};
 }
 
@@ -183,55 +243,68 @@ namespace UDP_Win32
 	//TCP的收发接口没有测试
 	class UDP_Packet :protected SocketPacket {};
 
-	class I_UDP_Prroto:UDP_Packet
+	class I_UDP_Prroto :protected UDP_Packet, public I_Prroto
 	{
 	protected:
-		SOCKET socketHandle;
-		I_UDP_Prroto() { socketHandle = Socket_Win32::GetSocketInstance(SocketIpprotoType::UDP); }
+		I_UDP_Prroto() :UDP_Packet()
+		{
+			socketHandle = Socket_Win32::GetUdpInstance();
+			if (Socket_Win32::IsInvalidSocket(socketHandle)) throw "";
+		}
+		I_UDP_Prroto(SocketConfig socketDef) :I_UDP_Prroto() { cfg = socketDef; structSize = sizeof(cfg); }
 		virtual ~I_UDP_Prroto() { }
 	public:
-		virtual int CloseSocket() { return Socket_Win32::CloseSocket(socketHandle); }
-		virtual int ReciveFrom(SocketConfig* client, int* size)
+		//向指定服务器发送消息(客户端的接口)
+		virtual int SendTo(const char* source,int size, I_Prroto ser)
 		{
-			int code = UDP_Packet::ReciveFrom(socketHandle, client, size);
-			return code;
+			//UDP_Packet::PushDataToBuffer(source, size);
+			return sendto(socketHandle, source, size, Packed_Flag, (sockaddr*)&ser, ser.ConfigStructSize());
 		}
+<<<<<<< Updated upstream
 		virtual int SendTo(const char* source,int size, SocketConfig* clientOrServerCfg, int cfgSize)
+=======
+		virtual int RecvFrom(SocketConfig client, int size)
+>>>>>>> Stashed changes
 		{
-			UDP_Packet::PushDataToBuffer(source, size);
-			int code = UDP_Packet::SendTo(socketHandle, clientOrServerCfg, cfgSize);
-			return code;
+			return recvfrom(socketHandle, buf, bufLen, Packed_Flag, (struct sockaddr*) & client, (int*)size);
 		}
 		virtual char* PopDataFromBuffer()
 		{
-		/*	char* res = new char;
-			memcpy(res, buf, bufLen);*/
+			/*	char* res = new char;
+				memcpy(res, buf, bufLen);*/
 			return buf;
 		}
 	};
 
 	//UDP协议服务器
+	typedef int (*Proc_Fun)(Socket_Win32_Ult::SocketPacket* pack);
+	typedef struct LoopParam { I_Prroto client; Proc_Fun func; }Params;
 	class UDP_Service : public I_UDP_Prroto
 	{
 	protected:
-		SocketConfig cfg;
+		bool isRunning;
 	public:
-		UDP_Service(SocketConfig serverCfg) : I_UDP_Prroto()
+		UDP_Service(SocketConfig serverCfg) : I_UDP_Prroto(serverCfg)
 		{
-			cfg = serverCfg;
+			isRunning = true;
 			int code = Socket_Win32::Bind(socketHandle, cfg);
 			if (SOCKET_ERROR == code)
 				throw "初始化服务器出错,请调用Socket_Win32_Ult::SocketLib_Win32::StartUp();";
 		}
-
+		int LoopProcess();
 	};
 
-	//UDP协议客户端
+	//UDP协议客户端,可以发送数据，接收数据？
 	class UDP_Client :public I_UDP_Prroto
 	{
+<<<<<<< Updated upstream
 	protected:
 		SocketConfig cfg;
 	public:
 		UDP_Client(SocketConfig clientCfg) :I_UDP_Prroto() {cfg = clientCfg;}
+=======
+	public:
+		UDP_Client() :I_UDP_Prroto() {}
+>>>>>>> Stashed changes
 	};
 }
