@@ -1,0 +1,2 @@
+G:\Project\github\CppBaseLib\DirectShow\Sample\Debug\Sample.exe
+G:\Project\github\CppBaseLib\DirectShow\Sample\Debug\Sample.pdb

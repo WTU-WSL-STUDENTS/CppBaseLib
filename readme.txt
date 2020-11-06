@@ -1,4 +1,5 @@
-
+2020-11-6
+正式实现用avicap32.dll获取视频音频（DirectShow）
 2020-11-1
 正在学习QSLite
 
