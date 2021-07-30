@@ -1,9 +1,0 @@
-﻿  Sample_Socket_Win32.cpp
-<<<<<<< Updated upstream
-  Socket_Win32.vcxproj -> G:\Project\github\CppBaseLib\Network\Socket\Win32\Socket_Win32\Debug\Socket_Win32.exe
-=======
-D:\CppBaseLib\Network\Socket\Win32\Socket_Win32\Sample_Socket_Win32.cpp(83,23): warning C4244: “初始化”: 从“DWORD”转换到“WORD”，可能丢失数据
-  Socket_Win32.cpp
-  正在生成代码...
-  Socket_Win32.vcxproj -> D:\CppBaseLib\Network\Socket\Win32\Socket_Win32\Debug\Socket_Win32.exe
->>>>>>> Stashed changes
