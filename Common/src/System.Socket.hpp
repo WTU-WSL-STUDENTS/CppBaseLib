@@ -78,6 +78,10 @@ namespace System
         info.ClientAddr[info.CurrentClientCount].sin_addr.s_addr= 0 == OtherSideIp[0] ? INADDR_BROADCAST : inet_addr(OtherSideIp);
         info.ClientAddr[info.CurrentClientCount].sin_port       = htons(OtherSidePort);
         info.CurrentClientCount++;
+        if(SOCKET_ERROR == bind(info.Socket, (sockaddr *)&info.HostAddr, sizeof(info.HostAddr)))
+        {
+            return false;
+        }
         int optval = 1;
         /* 手动向内核确认是广播*/
         if(SOCKET_ERROR == setsockopt(info.Socket, SOL_SOCKET, SO_BROADCAST, (char *)&optval, sizeof(int)))
@@ -105,7 +109,7 @@ namespace System
 
     class Socket
     {
-        typedef void (*RecvCallback)(const char* buf, int len);
+        typedef void (*RecvCallback)(const char* buf, int len, const char* ip);
         typedef int Send(const char* buf, int len, int clentId);
         typedef int Receive(char* buf, int len, char* (&srcIp));
         protected:
@@ -136,7 +140,7 @@ namespace System
                     len = p->RecvTcp(buf, RECEIVE_BUFFER_SIZE);
                     if(0 < len)
                     {
-                        (*(p->funcRecvCallback))(buf, len);
+                        (*(p->funcRecvCallback))(buf, len, inet_ntoa(p->info.ClientAddr[0].sin_addr));
                     }
                 }
                 return 0;
@@ -152,7 +156,7 @@ namespace System
                     len= p->RecvUdp(buf, RECEIVE_BUFFER_SIZE, ip);
                     if(0 < len)
                     {
-                        (*(p->funcRecvCallback))(buf, len);
+                        (*(p->funcRecvCallback))(buf, len, ip);
                     }
                 }
                 return 0;
