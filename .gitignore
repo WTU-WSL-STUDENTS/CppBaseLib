@@ -1,0 +1,5 @@
+Common/build/*
+!Common/build/lib/*
+!Common/build/bin/*
+Common/resource/unittests/output/*
+.vscode

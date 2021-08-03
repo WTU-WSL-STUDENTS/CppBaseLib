@@ -40,15 +40,16 @@ class Convert
 
         %g自动选择合适的表示法
     */
-    #define RETURN_INT_TO_STRING        char buf[16]; memset(buf, 0, sizeof(buf)); sprintf_s(buf, 16, "%d",   value);return buf;
-    #define RETURN_LONGLONG_TO_STRING   char buf[32]; memset(buf, 0, sizeof(buf)); sprintf_s(buf, 32, "%lld", value);return buf;
-    #define RETURN_ULONGLONG_TO_STRING  char buf[32]; memset(buf, 0, sizeof(buf)); sprintf_s(buf, 32, "%llu", value);return buf;
-    #define RETURN_DOUBLE_TO_STRING     char buf[300]; memset(buf, 0, sizeof(buf)); sprintf_s(buf, 300,"%lf", value);return buf;
+    #define RETURN_INT_TO_STRING        char buf[16];   memset(buf, 0, sizeof(buf)); sprintf_s(buf, 16, "%d",   value); return buf;
+    #define RETURN_LONGLONG_TO_STRING   char buf[32];   memset(buf, 0, sizeof(buf)); sprintf_s(buf, 32, "%lld", value); return buf;
+    #define RETURN_ULONGLONG_TO_STRING  char buf[32];   memset(buf, 0, sizeof(buf)); sprintf_s(buf, 32, "%llu", value); return buf;
+    #define RETURN_DOUBLE_TO_STRING     char buf[300];  memset(buf, 0, sizeof(buf)); sprintf_s(buf, 300,"%lf", value);  return buf;
 
     #define MAX_SPLIT_COUNT 255
 #endif
+public:
 #ifdef C_METHORD
-	bool IsStringAllDecDigit(const char* str)
+	static bool IsStringAllDecDigit(const char* str)
 	{
         do
         {
@@ -57,10 +58,10 @@ class Convert
                 return false;
             }
             str++;
-        } while (0 > *str);
+        } while (0 != *str);
         return true;
 	}
-	bool IsStringAllHexDigit(const char* str)
+	static bool IsStringAllHexDigit(const char* str)
 	{
         do
         {
@@ -69,10 +70,10 @@ class Convert
                 return false;
             }
             str++;
-        } while (0 > *str);
+        } while (0 != *str);
         return true;
 	}
-    bool IsStringAllAlpha(const char* str)
+    static bool IsStringAllAlpha(const char* str)
     {
         do
         {
@@ -81,10 +82,10 @@ class Convert
                 return false;
             }
             str++;
-        } while (0 > *str);
+        } while (0 != *str);
         return true;
     }
-    bool IsStringAllUpperAlpha(const char* str)
+    static bool IsStringAllUpperAlpha(const char* str)
     {
         do
         {
@@ -93,10 +94,10 @@ class Convert
                 return false;
             }
             str++;
-        } while (0 > *str);
+        } while (0 != *str);
         return true;
     }
-    bool IsStringAllLowerAlpha(const char* str)
+    static bool IsStringAllLowerAlpha(const char* str)
     {
         do
         {
@@ -105,10 +106,10 @@ class Convert
                 return false;
             }
             str++;
-        } while (0 > *str);
+        } while (0 != *str);
         return true;
     }
-    bool IsStringAllAlnum(const char* str)
+    static bool IsStringAllAlnum(const char* str)
     {
         do
         {
@@ -117,10 +118,10 @@ class Convert
                 return false;
             }
             str++;
-        } while (0 > *str);
+        } while (0 != *str);
         return true;
     }
-    int Contains(const char* str, char target)
+    static int Contains(const char* str, char target)
     {
         int nRet = 0;
         do
@@ -131,70 +132,70 @@ class Convert
             }
             str++;
             nRet++;
-        } while (0 > *str);
+        } while (0 != *str);
         return -1;
     }
-    char ToChar(const char* str)
+    static char ToChar(const char* str)
     {
         return (char)atoi(str);
     }
-    byte ToByte(const char* str)
+    static byte ToByte(const char* str)
     {
         return (byte)atoi(str);
     }
-    Int16 ToInt16(const char* str)
+    static Int16 ToInt16(const char* str)
     {
         return (short)atoi(str);
     }
-    Int32 ToInt32(const char* str)
+    static Int32 ToInt32(const char* str)
     {
         return (int)atoi(str);
     }
-    Int64 ToInt64(const char* str)
+    static Int64 ToInt64(const char* str)
     {
 		return _atoi64(str);
     }
-    double ToDouble(const char* str)
+    static double ToDouble(const char* str)
     {
         return atof(str);
     }
-    char* ToString(char value)
+    static char* ToString(char value)
     {
         RETURN_INT_TO_STRING
     }
-    char* ToString(byte value)
+    static char* ToString(byte value)
     {
         RETURN_INT_TO_STRING
     }
-    char* ToString(Int16 value)
+    static char* ToString(Int16 value)
     {
         RETURN_INT_TO_STRING
     }
-    char* ToString(UInt16 value)
+    static char* ToString(UInt16 value)
     {
         RETURN_INT_TO_STRING
     }
-    char* ToString(Int32 value)
+    static char* ToString(Int32 value)
     {
         RETURN_INT_TO_STRING
     }
-    char* ToString(UInt32 value)
+    static char* ToString(UInt32 value)
     {
         RETURN_INT_TO_STRING
     }
-    char* ToString(Int64 value)
+    static char* ToString(Int64 value)
     {
         RETURN_LONGLONG_TO_STRING
     }
-    char* ToString(UInt64 value)
+    static char* ToString(UInt64 value)
     {
         RETURN_ULONGLONG_TO_STRING
     }
-    char* ToString(double value)
+    static char* ToString(double value)
     {
         RETURN_DOUBLE_TO_STRING
     }
-    bool ToUpper(char& src)
+    static bool ToUpper(char& src)
     {  
         if (IsLowAlpha(src))
         {
@@ -203,7 +204,7 @@ class Convert
         }
         return false;
     }
-    bool ToLower(char& src)
+    static bool ToLower(char& src)
     {
         if (IsUpperAlpha(src))
         {
@@ -212,214 +213,125 @@ class Convert
         }
         return false;
     }
-	int SplitString(const char* str, char* (&splitedStr)[MAX_SPLIT_COUNT], char sep = ' ')/* "ab c de " -> "ab" "c" "de" */
+	static int SplitString(const char* str, const char* (&splitedStr)[MAX_SPLIT_COUNT]/* str中分割起始地址*/,size_t (&len)[MAX_SPLIT_COUNT], char sep = ' ')/* "ab c de " -> "ab" "c" "de" */
     {
         int    count = 0;
         int    currentStart = 0;
         size_t currentLen = 0;
-        while(0 != *str)
+        for(int i = 0; 0 != str[i]; i++)
         {
-            if(sep == *str)
+            if(sep != str[i])
             {
-                if(currentLen > 0)
-                {
-                    char dest[_MAX_PATH] = {0};
-                    memcpy(dest, (str - currentLen), currentLen);
-                    splitedStr[count] = dest;
-                }
-                else
-                {
-                    splitedStr[count] = "";
-                }
-                currentLen = 0;
-                count++;
-                str++;
-                continue;
+                currentLen++;
             }
-            currentLen++;
-            str++;
+            else
+            {
+                splitedStr[count] = &(str[currentStart]);
+                len[count] = currentLen;
+                count++;
+                currentLen = 0;
+                currentStart = i + 1;
+            }
         }
-        return count;
-    }
-	int SplitString(const char* str, int length, char* (&splitedStr)[MAX_SPLIT_COUNT], char sep = ' ')/* "ab c de " -> "ab" "c" "de" */
-    {
-        int    count = 0;
-        int    currentStart = 0;
-        size_t currentLen = 0;
-        while(0 < length--)
+        if(0 < currentLen)
         {
-            if(sep == *str)
-            {
-                if(currentLen > 0)
-                {
-                    char dest[_MAX_PATH] = {0};
-                    memcpy(dest, (str - currentLen), currentLen);
-                    splitedStr[count] = dest;
-                }
-                else
-                {
-                    splitedStr[count] = "";
-                }
-                currentLen = 0;
-                count++;
-                str++;
-                continue;
-            }
-            currentLen++;
-            str++;
+            splitedStr[count] = &(str[currentStart]);
+            len[count] = currentLen;
+            count++;
         }
         return count;
     }
 #endif
 #if defined CPP_METHORD
-    bool IsStringAllDecDigit(const std::string str)
+    static bool IsStringAllDecDigit(const std::string str)
 	{
-        const char* p = str.c_str();
-        do
-        {
-            if(!IsDecDigit(*p))
-            {
-                return false;
-            }
-            p++;
-        } while (0 > *p);
-        return true;
+        std::string::const_iterator it = std::find_if(str.begin(), str.end(), [](char c) { return !IsDecDigit(c);});
+        return it == str.end();
 	}
-	bool IsStringAllHexDigit(const std::string str)
+	static bool IsStringAllHexDigit(const std::string str)
 	{
-        const char* p = str.c_str();
-        do
-        {
-            if(!IsHexDigit(*p))
-            {
-                return false;
-            }
-            p++;
-        } while (0 > *p);
-        return true;
+        std::string::const_iterator it = std::find_if(str.begin(), str.end(), [](char c) { return !IsHexDigit(c);});
+        return it == str.end();
 	}
-	bool IsStringAllAlpha(const std::string str)
+	static bool IsStringAllAlpha(const std::string str)
 	{
-        const char* p = str.c_str();
-        do
-        {
-            if(!IsAlpha(*p))
-            {
-                return false;
-            }
-            p++;
-        } while (0 > *p);
-        return true;
+        std::string::const_iterator it = std::find_if(str.begin(), str.end(), [](char c) { return !IsAlpha(c);});
+        return it == str.end();
 	}
-	bool IsStringAllUpperAlpha(const std::string str)
+	static bool IsStringAllUpperAlpha(const std::string str)
 	{
-        const char* p = str.c_str();
-        do
-        {
-            if(!IsUpperAlpha(*p))
-            {
-                return false;
-            }
-            p++;
-        } while (0 > *p);
-        return true;
+        std::string::const_iterator it = std::find_if(str.begin(), str.end(), [](char c) { return !IsUpperAlpha(c);});
+        return it == str.end();
 	}
-	bool IsStringAllLowerAlpha(const std::string str)
+	static bool IsStringAllLowerAlpha(const std::string str)
 	{
-        const char* p = str.c_str();
-        do
-        {
-            if(!IsLowAlpha(*p))
-            {
-                return false;
-            }
-            p++;
-        } while (0 > *p);
-        return true;
+        std::string::const_iterator it = std::find_if(str.begin(), str.end(), [](char c) { return !IsLowAlpha(c);});
+        return it == str.end();
 	}
-	bool IsStringAllAlnum(const std::string str)
+	static bool IsStringAllAlnum(const std::string str)
 	{
-        const char* p = str.c_str();
-        do
-        {
-            if(!isalnum(*p))
-            {
-                return false;
-            }
-            p++;
-        } while (0 > *p);
-        return true;
+        std::string::const_iterator it = std::find_if(str.begin(), str.end(), [](char c) { return !isalnum(c);});
+        return it == str.end();
 	}
-    int Contains(const std::string str, char target)
+    static int Contains(const std::string str, char target)
     {
-        const char* p = str.c_str();
-        int nRet = 0;
-        do
-        {
-            if(target == *p)
-            {
-                return nRet;
-            }
-            p++;
-            nRet++;
-        } while (0 > *p);
-        return -1;
+        return 0 < str.find_first_of(target);
     } 
-    char ToChar(const std::string str)
+    static char ToChar(const std::string str)
     {
         return (char)atoi(str.c_str());
     }
-    byte ToByte(const std::string str)
+    static byte ToByte(const std::string str)
     {
         return (byte)atoi(str.c_str());
     }
-    Int16 ToInt16(const std::string str)
+    static Int16 ToInt16(const std::string str)
     {
         return (short)atoi(str.c_str());
     }
-    Int32 ToInt32(const std::string str)
+    static Int32 ToInt32(const std::string str)
     {
         return (int)atoi(str.c_str());
     }
-    Int64 ToInt64(const std::string str)
+    static Int64 ToInt64(const std::string str)
     {
 		return _atoi64(str.c_str());
     }
     #ifndef C_METHORD
-        std::string ToString(char value)
+        static std::string ToString(char value)
         {
             return std::to_string(value);
         }
-        std::string ToString(byte value)
+        static std::string ToString(byte value)
         {
             return std::to_string(value);
         }
-        std::string ToString(Int16 value)
+        static std::string ToString(Int16 value)
         {
             return std::to_string(value);
         }
-        std::string ToString(UInt16 value)
+        static std::string ToString(UInt16 value)
         {
             return std::to_string(value);
         }
-        std::string ToString(Int32 value)
+        static std::string ToString(Int32 value)
         {
             return std::to_string(value);
         }
-        std::string ToString(UInt32 value)
+        static std::string ToString(UInt32 value)
         {
             return std::to_string(value);
         }
-        std::string ToString(Int64 value)
+        static std::string ToString(Int64 value)
         {
             return std::to_string(value);
         }
-        std::string ToString(UInt64 value)
+        static std::string ToString(UInt64 value)
         {
             return std::to_string(value);
         }
     #endif
-	int SplitString(std::string str, std::string (splitedStr)[MAX_SPLIT_COUNT], std::string sep = " ")
+	static int SplitString(std::string str, std::string (&splitedStr)[MAX_SPLIT_COUNT], std::string sep = " ")
     {
         int count = 0;
         std::string strTmp;

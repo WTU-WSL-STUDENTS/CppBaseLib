@@ -1,13 +1,13 @@
 #ifndef COMPLIED_ENTRY_H
 #define COMPLIED_ENTRY_H
 
+#ifndef WIN32
 #define WIN32
+#endif
 
 #define C_METHORD
 #define CPP_METHORD
-
-#include <string>  
-
+  
 #ifdef CPP_METHORD
 #define C_CPP_METHORD
 #endif

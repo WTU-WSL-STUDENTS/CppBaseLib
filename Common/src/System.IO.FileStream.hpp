@@ -1,12 +1,14 @@
 #ifndef FILE_H
 #define FILE_H
 
+
 #include "complied_entry.h"
+#ifdef WIN32
+#define _CRT_SECURE_NO_DEPRECATE
+#endif
+#define MAX_LINE_LENGTH 1024
 #include "System.Convert.hpp"
 #include "System.IO.Stream.hpp"
-#include <io.h>
-#include <fstream>
-#include <iostream>
 #include <stdio.h>
 #include <map>
 #include <vector>
@@ -21,7 +23,7 @@ namespace System
         enum PathType/* 文件类型 */
         {
             IgnoreType = 0,
-            FILE = 0100000,
+            FILE = S_IFREG,
             DIRECOTRY = 0040000
             /*
                 S_IFMT      0170000     文件类型的位mask
@@ -50,12 +52,12 @@ namespace System
             */
         };
 #define DECLARE_STAT_BUF struct _stat buf
-#define EXISTS(filePath, type) 0 == _stat(filePath, &buf) ? (type == buf.st_mode & type ? true : false) : false
+#define EXISTS(filePath, type) ((0 == _stat(filePath, &buf)) &&  (type == (buf.st_mode & type)))
         bool Exists(const char* filePath, PathType type)
         {
-            struct _stat buf;
-            0 == _stat(filePath, &buf) ? (type == buf.st_mode & type ? true : false) : false;
-        }
+            DECLARE_STAT_BUF;
+            return EXISTS(filePath, type);
+        } 
         size_t FileSize(const char* filePath)
         {
             DECLARE_STAT_BUF;
@@ -96,6 +98,7 @@ namespace System
                 {
                     Close();
                 }
+                bool Valid(){return NULL != fileHandle;}
                 size_t Length()
                 {
                     fpos_t pos;
@@ -103,17 +106,18 @@ namespace System
                     {
                         return 0;
                     }
-                    fseek(fileHandle,0,SEEK_SET);
+                    fseek(fileHandle,0,SEEK_END);
                     size_t filesize = ftell(fileHandle);
                     fsetpos(fileHandle, &pos);
                     return filesize;
                 }
+
                 long Seek(long offset, int origin)
                 {
                     return fseek(fileHandle, offset, origin);
                 }
 
-                size_t Read(System::byte* dest, int count)
+                size_t Read(System::byte* dest, size_t count)
                 {
                     return fread(dest, sizeof(System::byte), count, fileHandle);
                 }
@@ -129,11 +133,13 @@ namespace System
                 {
                     return fgetc(fileHandle);
                 }
-                bool ReadLine(const char* str)
+                char* ReadLine()
                 {
-                    return 0 < fscanf(fileHandle, "%[^\n]", str);	
+                    char* buffer = (char*)calloc(MAX_LINE_LENGTH, 1);
+                    fgets(buffer, MAX_LINE_LENGTH,fileHandle);   
+                    return 0 != buffer[0] ? buffer : NULL;
                 }
-                size_t Write(System::byte* src, int count)
+                size_t Write(System::byte* src, size_t count)
                 {
                     return fwrite(src, sizeof(System::byte), count, fileHandle);
                 }
@@ -157,14 +163,9 @@ namespace System
                 {            
                     fflush(fileHandle);
                 }
-                void Close()
-                {
-                    if(NULL != fileHandle)
-                    {       
-                        fclose(fileHandle);
-                        delete fileHandle;
-                        fileHandle = NULL;
-                    }
+                int Close()
+                {  
+                    return NULL != fileHandle ?  fclose(fileHandle) : 0;
                 }
         };
 
@@ -185,19 +186,20 @@ namespace System
                 static void Copy(const char* srcPath, const char* destPath)
                 {
                     FileStream src(srcPath, ReadOnly);
-                    FileStream dest(destPath);
+                    FileStream dest(destPath, ReadWrite);
                     size_t len;
-                    System::byte buff[10240];
-                    while(0 < (len = src.Read(buff, 10240)))
+                    System::byte buff[MAX_LINE_LENGTH];
+                    while(0 < (len = src.Read(buff, MAX_LINE_LENGTH)))
                     {
                         dest.Write(buff, len);
                     }
                     dest.Close();
                     src.Close();
                 }
-                static FileStream& Create(const char* filePath)
+                static FileStream* Create(const char* filePath)
                 {
-                    return FileStream(filePath, FileOperate::Create);
+                    FileStream* fs = new FileStream(filePath, FileOperate::Create);
+                    return fs->Valid() ? fs :NULL;
                 }
                 static bool Delete(const char* filePath){return 0 == remove(filePath);}
                 static bool Exists(const char* filePath){return System::IO::Exists(filePath, PathType::FILE);}
@@ -222,19 +224,27 @@ namespace System
                     dest.Close();
                     return true;
                 }
-                static FileStream& Open(const char* filePath, FileOperate mode)
+                static FileStream* Open(const char* filePath, FileOperate mode = FileOperate::Create)
                 {
-                    return FileStream(filePath, mode);
+                    FileStream* fs = new FileStream(filePath, mode);
+                    if(fs->Valid())
+                    {
+                        fs->Seek(0, SEEK_SET);
+                        return fs;
+                    }
+                    return NULL;
                 }
-                static FileStream& OpenRead(const char* filePath)
+                static FileStream* OpenRead(const char* filePath)
                 {
-                    return FileStream(filePath, ReadOnly);
+                    FileStream* fs = new FileStream(filePath, ReadOnly);
+                    return fs->Valid() ? fs :NULL;
                 }
-                static FileStream& OpenWrite(const char* filePath)
+                static FileStream* OpenWrite(const char* filePath)
                 {
-                    return FileStream(filePath, ReadWrite);
+                    FileStream* fs = new FileStream(filePath, ReadWrite);
+                    return fs->Valid() ? fs :NULL;
                 }
-                static int ReadAllBytes(const char* filePath, byte* (&dest), int &size)/* dest需要手动释放 */
+                static size_t ReadAllBytes(const char* filePath, byte* (&dest), size_t &size)/* dest需要手动释放 */
                 {
                     FileStream src(filePath, ReadOnly);
                     size = src.Length();
@@ -247,14 +257,23 @@ namespace System
                     src.Close();
                     return len;
                 }
-                static void ReadAllLines(const char* filePath, vector<const char*> &lines)
+                static void ReadAllLines(const char* filePath, vector<char*> &lines)
                 {
-                    FileStream fs(filePath, ReadOnly);
-                    const char* str;
-                    while (fs.ReadLine(str))
+                    FileStream fs(filePath, ReadWrite);
+                    if(!fs.Valid())
                     {
-                        lines.push_back(str);
+                        return;
                     }
+                    do
+                    {
+                        char* p = fs.ReadLine();
+                        if(NULL == p)
+                        {
+                            break;
+                        }
+                        lines.push_back(p);
+                    }while(true);
+                    fs.Close();
                 }
                 static void Replace(const char* srcPath, const char* destPath, const char* backupPath = "\0") /* 使用其他文件的内容替换指定文件的内容，这一过程将删除原始文件，并创建被替换文件的备份。 */
                 {
