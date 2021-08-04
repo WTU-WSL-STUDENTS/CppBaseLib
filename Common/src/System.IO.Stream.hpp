@@ -1,15 +1,13 @@
 #ifndef STREAM_H
 #define STREAM_H
 #include <sys/stat.h>
-namespace System
+namespace System::IO
 {
-    namespace IO
-    {
-        class Stream
-        {
-
-        };
-    }
+    class Stream;
 }
+class System::IO::Stream
+{
+
+};
 
 #endif

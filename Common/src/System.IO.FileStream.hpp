@@ -9,6 +9,7 @@
 #define MAX_LINE_LENGTH 1024
 #include "System.Convert.hpp"
 #include "System.IO.Stream.hpp"
+#include <io.h>
 #include <stdio.h>
 #include <map>
 #include <vector>
@@ -174,6 +175,22 @@ namespace System
             private:
                 File(){}
             public:
+                static bool CanExe(const char* filePath)
+                {
+                    return 0 == _access(filePath, 0x01);
+                }
+                static bool CanRead(const char* filePath)
+                {
+                    return 0 == _access(filePath, 0x02);
+                }
+                static bool CanWrite(const char* filePath)
+                {
+                    return 0 == _access(filePath, 0x04);
+                }
+                static bool CanReadWrite(const char* filePath)
+                {
+                    return 0 == _access(filePath, 0x06);
+                }
                 static void AppendAllLines(const char* filePath, char* lines[], int length)
                 {
                     FileStream fs(filePath, Append);

@@ -19,13 +19,13 @@ namespace System
     typedef int Int32;
     typedef unsigned short UInt16;
     typedef unsigned int UInt32;
+    typedef long long Int64;
+    typedef unsigned long long UInt64;
 }
 
 
 #ifdef WIN32
 #define MSVC_32
-typedef long long Int64;
-typedef unsigned long long UInt64;
 #else
 typedef long Int64;
 typedef unsigned long UInt64;

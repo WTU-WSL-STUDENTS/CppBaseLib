@@ -7,7 +7,9 @@
 
 namespace System
 {
-class Convert
+    class Convert;
+}
+class System::Convert
 {
 #if (defined C_METHORD) || (defined CPP_METHORD)
     #define IsDecDigit(ch)      (0 != isdigit(ch))  /* Ê®½øÖÆ */
@@ -357,6 +359,5 @@ public:
     }
 #endif
 };
-}
 
 #endif
