@@ -7,10 +7,10 @@ int main()
     printf("Create Share Memory:%s\n", NULL != mapFile ? "SUCESS":"FAILED");
     MemoryMappedViewAccessor* accessor = mapFile->CreateViewAccessor();
     printf("Create Share Memory Accessor:%s\n", NULL != accessor ? "SUCESS":"FAILED");
-    printf("HeadPtr:%d\n", accessor->GetBuffer());
+    printf("HeadPtr:%p\n", accessor->GetBuffer());
     accessor->Memset(123);
     char* src = (char*)accessor->GetBuffer();
-    for(int i = 0; i < accessor->GetSize(); i++)
+    for(size_t i = 0; i < accessor->GetSize(); i++)
     {
         printf("%3d:%d\n", i, src[i]);
     }

@@ -3,7 +3,7 @@
 
 #include "complied_entry.h"
 #include <stdio.h>
-#ifdef WIN32
+#ifdef _WIN32
 #include <windows.h>
 #else
 #include <sys/time.h>
@@ -12,7 +12,7 @@
 namespace System
 {
     class DateTime;
-    #ifdef WIN32
+    #ifdef _WIN32
     typedef SYSTEMTIME SystemTime;
     #else
     typedef struct _SYSTEMTIME {
@@ -53,7 +53,7 @@ public:
     }
     static bool Now(DateTime& currentTime)/* 返回计算机当前显示的时间 */
     {
-        #ifdef WIN32
+        #ifdef _WIN32
             GetLocalTime(&currentTime.currentTime);
             return true;
         #else     
@@ -82,7 +82,7 @@ public:
     }
     static bool UtcNow(DateTime &currentTime)/* 返回计算机当前显示的时间, 表示为协调通用时间 (UTC) */
     {
-        #ifdef WIN32
+        #ifdef _WIN32
             TIME_ZONE_INFORMATION timeZoneinfo;
 	        GetTimeZoneInformation(&timeZoneinfo);
 	        SystemTime localTime = {0};

@@ -1,8 +1,14 @@
 #ifndef COMPLIED_ENTRY_H
 #define COMPLIED_ENTRY_H
 
-#ifndef WIN32
-#define WIN32
+#if defined __WINDOWS
+    #if defined __MSVC_64
+    #else if defined __MSVC_32
+    #endif 
+#elif defined __LINUX
+    #define LINUX
+#elif defined __FREE_BSD
+    #define FREE_BSD
 #endif
 
 #define C_METHORD
@@ -24,9 +30,7 @@ namespace System
 }
 
 
-#ifdef WIN32
-#define MSVC_32
-#else
+#ifndef _WIN32
 typedef long Int64;
 typedef unsigned long UInt64;
 #endif

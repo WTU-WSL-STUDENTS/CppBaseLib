@@ -8,7 +8,7 @@
 #include <map>
 
 #define RECEIVE_BUFFER_SIZE 1024
-#ifdef WIN32
+#ifdef _WIN32
     #pragma comment(lib,"ws2_32.lib")
     #define _WINSOCK_DEPRECATED_NO_WARNINGS	                    //ºöÂÔinet_addr()º¯Êý´¥·¢µÄ´íÎó
 
@@ -21,7 +21,7 @@ using namespace System::Threading;
 namespace System::Net
 {
     #define TCP_MAX_CLIENT 0xff
-    #ifdef WIN32 
+    #ifdef _WIN32 
     typedef struct tagSocketInfo
     {
         WSADATA WsaData;
@@ -55,7 +55,7 @@ namespace System::Net
         {
             return false;
         }
-        #ifdef WIN32
+        #ifdef _WIN32
         int optVal = 1;
         if (SOCKET_ERROR == setsockopt(info.Socket, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (char *)&optVal, sizeof(int)))
         {
@@ -166,7 +166,7 @@ class System::Net::Socket
     public:
         Socket(SocketConnectProxy proxy, unsigned short SelfPort, char* SelfIp, unsigned short OtherSidePort, char* OtherSideIp)
         {
-            #ifdef WIN32
+            #ifdef _WIN32
             WSAStartup(DEFAULT_WSLIB_VERSION, &info.WsaData);
             #endif
             bool creatSocketSucess = (*createSocketMap[proxy])(info, SelfPort, SelfIp, OtherSidePort, OtherSideIp); 
@@ -197,7 +197,7 @@ class System::Net::Socket
                 info.Socket = INVALID_SOCKET;
             }
                 
-            #ifdef WIN32
+            #ifdef _WIN32
             ret |= WSACleanup();
             #endif
             return 0 == ret;

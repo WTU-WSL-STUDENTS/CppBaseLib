@@ -17,7 +17,7 @@ public:
     Thread* t;
     HowToDisposeLoop()
     {
-        t = new Thread(Loop, this);
+        t = new Thread((THREAD_EVENT)Loop, this);
         printf("Create Thread:%s", t->tInfo.CurrentStatus == Created ? "sucess" : "failed");
         printf("Start():%s\n", t->Start() ? "sucess" : "failed");
         printf("Do Other Things In main(), Do Not Delay By Sleep !\n");
@@ -39,7 +39,7 @@ public:
 };
 int main()
 {
-    Thread t(PrintSomething, "input args from main");
+    Thread t((THREAD_EVENT)PrintSomething, "input args from main");
     printf("Create Thread:%s", t.tInfo.CurrentStatus == Created ? "sucess" : "failed");
     printf("Start():%s\n", t.Start() ? "sucess" : "failed");
     printf("Do Other Things In main(), Do Not Delay By Sleep !\n");

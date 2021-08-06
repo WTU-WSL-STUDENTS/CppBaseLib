@@ -4,7 +4,7 @@
 #include <System.Threading.Thread.hpp>
 using namespace System::Threading;
 
-#ifndef WIN32
+#ifndef _WIN32
 typedef int Millisecond;
 #define SLEEP(dwMilliseconds) usleep(dwMilliseconds)
 #else

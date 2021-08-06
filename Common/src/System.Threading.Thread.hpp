@@ -1,12 +1,14 @@
 #ifndef THREADING_H
 #define THREADING_H
 
-#if (defined __linux) || (defined __APPLE__) || (defined __CYGWIN__)
-#define NOT_WINDOWS_PLANTFORM
-#include <pthread.h>
-#else
+#include <complied_entry.h>
+
+#ifdef _WIN32
 #include <windows.h>
 #include <process.h>
+#else
+#define NOT_WINDOWS_PLANTFORM
+#include <pthread.h>
 #endif
 
 namespace System::Threading /* https://docs.microsoft.com/zh-cn/dotnet/api/system.threading.thread?view=net-5.0 */
@@ -17,7 +19,7 @@ namespace System::Threading /* https://docs.microsoft.com/zh-cn/dotnet/api/syste
         typedef void* THREAD_EVENT_ARGS;
         typedef int ThreadPriorty;
         #define Normal 0
-    #else /* if (defined WIN32)*/
+    #else /* if (defined _WIN32)*/
         typedef void* HANDLE;
         typedef unsigned (__stdcall* THREAD_EVENT)(void*);
         typedef void* THREAD_EVENT_ARGS;
@@ -117,7 +119,7 @@ public:
     ~Thread(){Disopse();}
     static void Sleep(DWORD millscend)
     {
-        #ifdef WIN32
+        #ifdef _WIN32
         ::Sleep(millscend);
         #else
         usleep(millscend * 1000);

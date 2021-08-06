@@ -3,7 +3,7 @@
 
 
 #include "complied_entry.h"
-#ifdef WIN32
+#ifdef _WIN32
 #define _CRT_SECURE_NO_DEPRECATE
 #endif
 #define MAX_LINE_LENGTH 1024
