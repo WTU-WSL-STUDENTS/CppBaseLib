@@ -186,7 +186,7 @@ public:
         unsigned int size;
         return 1 == FtpSize(remotePath, &size, mode, info.ctrlConnBuffer) ? size : 0xffffffff;
     }
-    bool SetCallBack(FtpCallback func, void* args,size_t argsLen, size_t spendedMillSecond)
+    bool SetCallBack(FtpCallback func, void* args,unsigned int argsLen, unsigned int spendedMillSecond)
     {
         FtpCallbackOptions tOpt;
         tOpt.cbFunc = func;
