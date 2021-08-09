@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-08-06 19:31:39
  * @LastEditors: like
- * @LastEditTime: 2021-08-08 22:34:44
+ * @LastEditTime: 2021-08-09 22:27:57
  */
 #ifndef SYSTEM_SOCKET_H
 #define SYSTEM_SOCKET_H
@@ -60,8 +60,8 @@ namespace System::Net
 #pragma region socket basic function
     /**
      * @description:创建Tcp Socket 
-     * @param {socket配置} socket
-     * @return SOCKET是否创建成功
+     * @param {socket配置} SocketInfo
+     * @return {SOCKET是否创建成功}
      * @author: like
      */    
     bool CreateTcpSocket(SocketInfo& socket)
@@ -80,8 +80,8 @@ namespace System::Net
     }
     /**
      * @description:创建Udp Socket 
-     * @param {socket配置} socket
-     * @return SOCKET是否创建成功
+     * @param {socket配置} SocketInfo
+     * @return {SOCKET是否创建成功}
      * @author: like
      */ 
     bool CreateUdpSocket(SocketInfo& socket)
@@ -100,7 +100,7 @@ namespace System::Net
     }
     /**
      * @description:对Tcp/Udp单播/Udp组播，将主机字节顺序转为网络字节顺序
-     * @param {Tcp/Udp单播/Udp组播配置} socket
+     * @param {Tcp/Udp单播/Udp组播配置} SocketInfo
      * @param {输入的的Ip地址主机字节顺序} ServerIp
      * @param {输入的的端口主机字节顺序} ServerPort
      * @author: like
@@ -113,7 +113,7 @@ namespace System::Net
     }
     /**
      * @description:对Udp广播，将主机字节顺序转为网络字节顺序 
-     * @param {Udp广播的配置} socket
+     * @param {Udp广播的配置} SocketInfo
      * @param {Udp广播发送至服务器的端口号} ServerPort
      * @return Porxy是否包含Udp广播
      * @author: like
@@ -132,7 +132,7 @@ namespace System::Net
     }
     /**
      * @description:ServerAddr从网络字节顺序转换为主机字节顺序
-     * @param {socket配置} socket
+     * @param {socket配置} SocketInfo
      * @param {将配置中的Ip地址从网络字节顺序转换为主机字节顺序} addrBuffer
      * @param {将配置的端口从网络字节顺序转换为主机字节顺序} port
      * @author: like
@@ -145,7 +145,7 @@ namespace System::Net
     }
     /**
      * @description:Tcp/Udp服务器设定监听的本机的ip/端口 
-     * @param {Tcp/Udp服务器配置} socket
+     * @param {Tcp/Udp服务器配置} SocketInfo
      * @return {是否绑定成功 (服务器本机端口可以通过设置SendKernelToLockServerPort独占该端口)}
      * @author: like
      */    
@@ -164,23 +164,56 @@ namespace System::Net
         printf("Server Bind Sucess\n");
         return true;
     }
-    
+    /**
+     * @description: 设置服务器独占当前Addr&Port
+     * @param {服务器配置} SocketInfo
+     * @return {设置是否成功}
+     * @author: like
+     */    
     bool SendKernelToLockServerPort(const SocketInfo& socket)
     {      
         if(0 == (Tcp_Server & socket.Proxy))
         {
-            printf("Tcp Lock Port Failed, Format Error\n");
+            printf("Lock Server Addr&Port Failed, Format Error\n");
             return false;
         } 
         int optVal = 1;
         if (SOCKET_ERROR == setsockopt(socket.Socket, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (char *)&optVal, sizeof(int)))
         {
-            printf("Tcp Lock Server Port Failed, Error Code:%d\n", GetLastError());
+            printf("Lock Server Addr&Port Failed, Error Code:%d\n", GetLastError());
             return false;
         }
-        printf("Tcp Lock Server Port Sucess\n");
+        printf("Lock Server Addr&Port Sucess\n");
         return true;
     }
+    /**
+     * @description: 设置服务器共享当前Addr&Port
+     * @param {服务器配置} SocketInfo
+     * @return {设置是否成功}
+     * @author: like
+     */    
+    bool SendKernelToUnlockServerPort(const SocketInfo& socket)
+    {      
+        if(0 == (Tcp_Server & socket.Proxy))
+        {
+            printf("Unlock Server Addr&Port Failed, Format Error\n");
+            return false;
+        } 
+        int optVal = 1;
+        if (SOCKET_ERROR == setsockopt(socket.Socket, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (char *)&optVal, sizeof(int)))
+        {
+            printf("Unlock Server Addr&Port Failed, Error Code:%d\n", GetLastError());
+            return false;
+        }
+        printf("Unlock Server Addr&Port Sucess\n");
+        return true;
+    }
+    /**
+     * @description: 向内核申明当前是广播
+     * @param {服务器配置} SocketInfo
+     * @return {设置是否成功}
+     * @author: like
+     */    
     bool SendKernelToMakesureSocketIsBrodcast(const SocketInfo& socket)
     {
         if(0 == (Udp_Server & socket.Proxy))
@@ -197,6 +230,12 @@ namespace System::Net
         printf("Udp Markesure Brodcast Sucess\n");
         return true;
     }
+    /**
+     * @description: 设置Send数据buffer最大长度
+     * @param {服务器配置} SocketInfo
+     * @return {设置是否成功}
+     * @author: like
+     */  
     bool SendKernelToSetSendBufferLen(const SocketInfo& socket)
     {
         int optval = MAX_SEND_BUFFER_SIZE;
@@ -208,6 +247,12 @@ namespace System::Net
         printf("Set Send Buffer Size Sucess:%d\n", MAX_SEND_BUFFER_SIZE);
         return true;  
     }
+    /**
+     * @description: 设置Recv数据buffer最大长度
+     * @param {服务器配置} SocketInfo
+     * @return {设置是否成功}
+     * @author: like
+     */
     bool SendKernelToSetRecvBufferLen(const SocketInfo& socket)
     {
         int optval = MAX_SEND_BUFFER_SIZE;
@@ -219,6 +264,12 @@ namespace System::Net
         printf("Set Send Buffer Size Sucess:%d\n", MAX_SEND_BUFFER_SIZE);
         return true;  
     }
+    /**
+     * @description: 设置Tcp服务器连接客户端最大数量（TCP_MAX_LISTEN_COUNT）
+     * @param {Tcp服务器配置} SocketInfo
+     * @return {设置是否成功}
+     * @author: like
+     */    
     bool TcpServerListen(const SocketInfo& socket)
     {
         if(0 == (Tcp_Server & socket.Proxy))
@@ -234,6 +285,12 @@ namespace System::Net
         printf("Tcp listen Sucess, Max Listen Count:%d \n", TCP_MAX_LISTEN_COUNT);
         return true;
     }
+    /**
+     * @description: Tcp客户端连接指定服务器
+     * @param {Tcp客户端配置} SocketInfo
+     * @return {设置是否成功}
+     * @author: like
+     */ 
     bool TcpClientConnect(const SocketInfo& socket)
     {
         if(0 == (Tcp_Client & socket.Proxy))
@@ -248,6 +305,13 @@ namespace System::Net
         }
         return true;
     }
+    /**
+     * @description: Tcp服务器等待客户端连接。
+     * @param {Tcp客户端配置} SocketInfo
+     * @param {Tcp客户端配置} SocketInfo
+     * @return {设置是否成功}
+     * @author: like
+     */ 
     bool TcpServerAccecpt(const SocketInfo& socket, SocketInfo& accecptedInfo/* 返回对方的SocketInfo信息*/)
     {
         if(0 == (Tcp_Client & accecptedInfo.Proxy))
@@ -261,7 +325,16 @@ namespace System::Net
             return false;
         }
         return true;
-    }      
+    }     
+    /**
+     * @description: Tcp服务器在指定时间内是否有消息等待接收
+     * @param {Tcp服务器配置} SocketInfo
+     * @param {通信管道ID} Pipline
+     * @param {超时数据结构{秒，毫秒}} timeval
+     * @param {select返回数据} fd_set
+     * @return {设置是否成功}
+     * @author: like
+     */     
     bool TcpAcceptArrive(const SocketInfo& socket, int Pipline, const struct timeval& timeout, struct fd_set& rfds)
     {
         int len;
@@ -282,6 +355,15 @@ namespace System::Net
         }
         return true;
     }
+    /**
+     * @description: Socket客户端/服务器 是否有消息可以接收
+     * @param {客户端/服务器配置} SocketInfo
+     * @param {通信管道ID} Pipline
+     * @param {超时数据结构{秒，毫秒}} timeval
+     * @param {select返回数据} fd_set
+     * @return {设置是否成功}
+     * @author: like
+     */    
     bool SocketPackArrive(const SocketInfo& socket, int Pipline,const struct timeval& timeout, struct fd_set& rfds)
     { 
         int len;
@@ -302,6 +384,14 @@ namespace System::Net
         }
         return true;
     }
+    /**
+     * @description: Tcp连接，向对方发送数据
+     * @param {客户端/服务器配置} SocketInfo
+     * @param {发送缓冲区} buf
+     * @param {缓冲区长度} len
+     * @return {实际发送长度}
+     * @author: like
+     */    
     int SendTcp(const SocketInfo/* SocketClient/SocketServer */& socketSendTo, const char* buf, int len)
     {
         if(INVALID_SOCKET == socketSendTo.Socket){return 0;}
@@ -322,6 +412,14 @@ namespace System::Net
         } while (realSendLen < len);
         return realSendLen;
     }
+    /**
+     * @description: Udp向指定端口&地址发送消息
+     * @param {客户端/服务器配置} SocketInfo
+     * @param {发送缓冲区} buf
+     * @param {缓冲区长度} len
+     * @return {实际发送长度}
+     * @author: like
+     */    
     int SendUdp(const SocketInfo/* SocketServer */& sockeSendToServer, const char* buf, int len)
     {
         if(INVALID_SOCKET == sockeSendToServer.Socket){return 0;}
@@ -341,12 +439,29 @@ namespace System::Net
             realSendLen += ret;
         } while (realSendLen < len);
         return realSendLen;
-    }          
+    }  
+    /**
+     * @description: Tcp连接，接收对方发送的数据
+     * @param {客户端/服务器配置} SocketInfo
+     * @param {接收缓冲区} buf
+     * @param {缓冲区长度} len
+     * @return {实际发送长度}
+     * @author: like
+     */             
     int RecvTcp(const SocketInfo/* SocketClient */& socketRecvFromClient, char (&buf)[MAX_TCP_BUFFER_SIZE], int len)
     {
         if(INVALID_SOCKET == socketRecvFromClient.Socket){return 0;}
         return recv(socketRecvFromClient.Socket, buf, len, 0);
-    }
+    } 
+    /**
+     * @description: Udp等待并接收指定端口消息
+     * @param {接收人配置} SocketInfo
+     * @param {返回发件人信息} SocketInfo
+     * @param {接收缓冲区} buf
+     * @param {缓冲区长度} len
+     * @return {实际发送长度}
+     * @author: like
+     */
     int RecvUdp(const SocketInfo/* SocketServer */& socketRecvedServer, SocketInfo/* SocketClient */& socketSend, char (&buf)[MAX_UDP_BUFFER_SIZE], int len)
     {
         if(INVALID_SOCKET == socketRecvedServer.Socket){return 0;}
@@ -416,7 +531,9 @@ protected:
         struct timeval timeout = {1, 0};
         struct fd_set rfds;
         FD_ZERO(&rfds);
-        if(p->AnsynAccepet && Tcp_Server == (Tcp_Server & p->socket.Proxy))/* 异步TcpAccept */
+        TcpUdpServerBind(p->socket);
+        TcpServerListen(p->socket);
+        if(p->AnsynAccepet)/* 异步TcpAccept */
         {
             Pipline = p->socket.PiplineCount;
             p->socket.PiplineCount++;
@@ -474,6 +591,7 @@ protected:
             {
                 continue;
             }
+            memset(buf, 0, sizeof(buf));
             if(0 < (len = RecvTcp(p->socket.Piplines[Pipline].client, buf, MAX_TCP_BUFFER_SIZE)))
             {
                 if(NULL == p->socket.Piplines[Pipline].funcRecvCallback)
@@ -508,12 +626,14 @@ protected:
         struct timeval timeout = {1, 0};
         struct fd_set rfds;  
         FD_ZERO(&rfds);
+        TcpUdpServerBind(p->socket);
         while(Running == p->socket.Piplines[Pipline].thread->tInfo.CurrentStatus)
         {
             if(!SocketPackArrive(p->socket, Pipline, timeout, rfds))
             {
                 continue;
             }
+            memset(buf, 0, sizeof(buf));
             if(0 < (len = RecvUdp(p->socket, p->socket.Piplines[Pipline].client, buf, MAX_TCP_BUFFER_SIZE)))
             {
                 if(NULL == p->socket.Piplines[Pipline].funcRecvCallback)
@@ -553,8 +673,8 @@ public:
         {
             CreateTcpSocket(socket);
             SetTcpUdpServerAddr(socket, ServerIp, ServerPort);
-            TcpUdpServerBind(socket);
-            TcpServerListen(socket);
+            // TcpUdpServerBind(socket);
+            // TcpServerListen(socket);
         }
         /* Udp */
         if(Udp_Broadcast == (Udp_Broadcast & proxy))/* Udp广播 */
@@ -572,7 +692,7 @@ public:
         {
             CreateUdpSocket(socket);  
             SetTcpUdpServerAddr(socket, ServerIp, ServerPort); 
-            TcpUdpServerBind(socket);
+            // TcpUdpServerBind(socket);
         }
     }
     ~Socket(){Dispose();}
