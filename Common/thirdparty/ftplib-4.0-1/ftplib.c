@@ -16,7 +16,10 @@
 /* http://www.perlfoundation.org/artistic_license_2_0			   */
 /* 									   */
 /***************************************************************************/
-
+#define _CRT_SECURE_NO_WARNINGS
+#define _SCL_SECURE_NO_WARNINGS
+#define  _CRT_SECURE_NO_DEPRECATE
+#define  _AFX_SECURE_NO_WARNINGS
 #if defined(__unix__) || defined(__VMS)
 #include <unistd.h>
 #endif
@@ -245,7 +248,7 @@ static int readline(char *buf,int max,netbuf *ctl)
     	if (ctl->cavail > 0)
     	{
 	    x = (max >= ctl->cavail) ? ctl->cavail : max-1;
-	    end = memccpy(bp,ctl->cget,'\n',x);
+	    end = _memccpy(bp,ctl->cget,'\n',x);
 	    if (end != NULL)
 		x = end - bp;
 	    retval += x;
@@ -447,7 +450,7 @@ GLOBALDEF int FtpConnect(const char *host, netbuf **nControl, int timeout/* = 0 
 
     memset(&sin,0,sizeof(sin));
     sin.sin_family = AF_INET;
-    lhost = strdup(host);
+    lhost = _strdup(host);
     pnum = strchr(lhost,':');
     if (pnum == NULL)
 	pnum = "ftp";
@@ -500,7 +503,7 @@ GLOBALDEF int FtpConnect(const char *host, netbuf **nControl, int timeout/* = 0 
     	if ((phe = gethostbyname(lhost)) == NULL)
     	{
 	    if (ftplib_debug)
-		fprintf(stderr, "gethostbyname: %s\n", WSAGetLastError()/*hstrerror(h_errno)*/);
+		fprintf(stderr, "gethostbyname: %d\n", WSAGetLastError()/*hstrerror(h_errno)*/);
 	    free(lhost);
 	    return 0;
     	}
@@ -1245,7 +1248,7 @@ static int FtpXfer(const char *localfile, const char *path,
 	{
 	    fclose(local);
 	    if ( typ == FTPLIB_FILE_READ )
-		unlink(localfile);
+		_unlink(localfile);
 	}
 	return 0;
     }

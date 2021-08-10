@@ -32,7 +32,8 @@
 #define GLOBALDEF __declspec(dllexport)
 #define GLOBALREF __declspec(dllexport)
 #else
-#define GLOBALREF __declspec(dllimport)
+/* https://docs.microsoft.com/zh-cn/previous-versions/visualstudio/visual-studio-2012/aa3se25k(v=vs.110) */
+#define GLOBALREF /*__declspec(dllimport)*/
 #endif
 #endif
 
@@ -82,7 +83,7 @@ typedef struct FtpCallbackOptions {
     unsigned int idleTime;	/* callback if this many milliseconds have elapsed */
 } FtpCallbackOptions;
 
-GLOBALREF int ftplib_debug;
+// GLOBALREF int ftplib_debug;
 GLOBALREF void FtpInit(void);
 GLOBALREF char *FtpLastResponse(netbuf *nControl);
 GLOBALREF int FtpConnect(const char *host, netbuf **nControl, int timeout);

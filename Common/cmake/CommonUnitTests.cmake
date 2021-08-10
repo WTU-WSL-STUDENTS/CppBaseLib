@@ -9,6 +9,9 @@ add_executable(System.Socket.Udp.Client.Multicast.Test ${UNITS_TEST_PATH}/System
 add_executable(System.Socket.Udp.Client.Broadcast.Test ${UNITS_TEST_PATH}/System.Socket.Udp.Client.Broadcast.Test.cpp ${CommonSrc})
 add_executable(System.Socket.Udp.Server.Test ${UNITS_TEST_PATH}/System.Socket.Udp.Server.Test.cpp ${CommonSrc})
 add_executable(System.Threading.Thread.Test ${UNITS_TEST_PATH}/System.Threading.Thread.Test.cpp ${CommonSrc})
+
 include_directories(${THIRD_PARTY_PATH}/ftplib-4.0-1)
 file(GLOB ftplib_src ${THIRD_PARTY_PATH}/ftplib-4.0-1/*.c)
-add_executable(System.Net.FtpWebRequest.Test ${UNITS_TEST_PATH}/System.Net.FtpWebRequest.Test.cpp  ${ftplib_src})
+add_library(ftplib ${ftplib_src})
+add_executable(System.Net.FtpWebRequest.Test ${UNITS_TEST_PATH}/System.Net.FtpWebRequest.Test.cpp)
+target_link_libraries(System.Net.FtpWebRequest.Test ${Lib_Path}/ftplib)
