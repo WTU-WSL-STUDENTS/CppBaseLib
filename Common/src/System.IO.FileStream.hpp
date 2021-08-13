@@ -100,6 +100,7 @@ namespace System
                     Close();
                 }
                 bool Valid(){return NULL != fileHandle;}
+                std::FILE* GetFileHandle(){return fileHandle;}
                 size_t Length()
                 {
                     fpos_t pos;

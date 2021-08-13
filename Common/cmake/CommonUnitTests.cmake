@@ -1,5 +1,6 @@
 add_executable(System.Convert.Test ${UNITS_TEST_PATH}/System.Convert.Test.cpp ${CommonSrc})
 add_executable(System.IO.FileStream.Test ${UNITS_TEST_PATH}/System.IO.FileStream.Test.cpp ${CommonSrc})
+add_executable(System.IO.Ini.Test ${UNITS_TEST_PATH}/System.IO.Ini.Test.cpp ${CommonSrc})
 add_executable(System.IO.MemoryMappedFiles.Recv.Test ${UNITS_TEST_PATH}/System.IO.MemoryMappedFiles.Recv.Test.cpp ${CommonSrc})
 add_executable(System.IO.MemoryMappedFiles.Send.Test ${UNITS_TEST_PATH}/System.IO.MemoryMappedFiles.Send.Test.cpp ${CommonSrc})
 add_executable(System.Socket.Tcp.Client.Test ${UNITS_TEST_PATH}/System.Socket.Tcp.Client.Test.cpp ${CommonSrc})
@@ -9,6 +10,9 @@ add_executable(System.Socket.Udp.Client.Multicast.Test ${UNITS_TEST_PATH}/System
 add_executable(System.Socket.Udp.Client.Broadcast.Test ${UNITS_TEST_PATH}/System.Socket.Udp.Client.Broadcast.Test.cpp ${CommonSrc})
 add_executable(System.Socket.Udp.Server.Test ${UNITS_TEST_PATH}/System.Socket.Udp.Server.Test.cpp ${CommonSrc})
 add_executable(System.Threading.Thread.Test ${UNITS_TEST_PATH}/System.Threading.Thread.Test.cpp ${CommonSrc})
+
+add_executable(System.LinkList.Test ${UNITS_TEST_PATH}/System.LinkList.Test.cpp ${CommonSrc})
+add_executable(System.List.Test ${UNITS_TEST_PATH}/System.List.Test.cpp ${CommonSrc})
 
 include_directories(${THIRD_PARTY_PATH}/ftplib-4.0-1)
 file(GLOB ftplib_src ${THIRD_PARTY_PATH}/ftplib-4.0-1/*.c)

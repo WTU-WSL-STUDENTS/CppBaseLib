@@ -1,3 +1,11 @@
+/*
+ * @Description: 
+ * @Version: 1.0
+ * @Autor: like
+ * @Date: 2021-07-23 10:21:28
+ * @LastEditors: like
+ * @LastEditTime: 2021-08-11 14:53:03
+ */
 #ifndef COMPLIED_ENTRY_H
 #define COMPLIED_ENTRY_H
 
@@ -33,6 +41,9 @@ namespace System
 #ifndef _WIN32
 typedef long Int64;
 typedef unsigned long UInt64;
+#else
+#define _CRT_SECURE_NO_WARNINGS
+#include <windows.h>
 #endif
 
 #endif

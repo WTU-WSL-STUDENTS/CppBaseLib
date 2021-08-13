@@ -46,7 +46,7 @@ public:
     WORD Milliseconds(){return currentTime.wMilliseconds;};
     virtual char* ToString()/* 通过重载ToString实现不同的打印格式 */
     {
-        char buff[MAX_PATH];
+        char buff[MAX_PATH] = {0};
 	    sprintf(buff, strFormat, currentTime.wYear, currentTime.wMonth, currentTime.wDay
 			, currentTime.wHour, currentTime.wMinute, currentTime.wSecond, currentTime.wMilliseconds);
         return buff;

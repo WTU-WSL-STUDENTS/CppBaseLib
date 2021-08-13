@@ -358,6 +358,28 @@ public:
         return count;
     }
 #endif
+    /**
+     * @description: 字符串从起点（左）到终点（右），连续出现空格的个数
+     * @param {起点} const char*
+     * @param {终点} const char*
+     * @return {右侧空格和Tab的个数}
+     * @author: like
+     */   
+    size_t TrimLeft(const char* begin, const char* end)
+    {
+        return (' ' == *begin || 9/* tab */ == *begin) && begin != end ? 1 + TrimLeft(++begin, end) : 0;
+    }
+    /**
+     * @description: 字符串从起点（右）到终点（左），连续出现空格的个数，右边起始点不要包含'\0'否则返回0
+     * @param {终点} const char*
+     * @param {起点} const char*
+     * @return {右侧空格和Tab的个数}
+     * @author: like
+     */   
+    size_t TrimRight(const char* begin, const char* end /* = begin + strlen(begin) - 1*/)
+    {
+        return (' ' == *end || 9/* tab */ == *end) && begin != end ? 1 + TrimRight(begin, ++end) : 0;
+    }    
 };
 
 #endif
