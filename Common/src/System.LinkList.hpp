@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-08-13 14:07:19
  * @LastEditors: like
- * @LastEditTime: 2021-08-13 17:29:54
+ * @LastEditTime: 2021-08-20 18:10:07
  */
 #ifndef SYSTEM_STACK_HPP
 #define SYSTEM_STACK_HPP
@@ -14,87 +14,83 @@
 namespace System
 {
     template<class T>
-    class LinkListNode
+    struct DoubleLinkNode
     {
-    protected:
-    public:
-        LinkListNode<T>* pre;
-        LinkListNode<T>* next;
-        T val;
-        LinkListNode() : pre(NULL), next(NULL){}
-        LinkListNode(LinkListNode<T>* p, T v, LinkListNode<T>* n) : pre(p), val(v), next(n){}       
-        const LinkListNode<T>* Previous(){return pre;}
-        const LinkListNode<T>* Next(){return next;}
-        T Value    (){return val;}
-        T& RefValue(){return val;}
+        DoubleLinkNode<T>* pre;
+        T*              val;
+        DoubleLinkNode<T>* next;
+        DoubleLinkNode(DoubleLinkNode<T>* p, const T& v,DoubleLinkNode<T>* n) : pre(p), val((T*)malloc(sizeof(T))), next(){memcpy(val, &v, sizeof(T));}
+        ~DoubleLinkNode(){ free(val); val = NULL;}
+        static DoubleLinkNode<T>* FindFromHead(size_t offset, DoubleLinkNode<T>* begin)
+        {
+            return offset > 0 ? FindFromHead(--offset, begin->next) : begin;   
+        }
+        static DoubleLinkNode<T>*  FindFromLast(size_t offset, DoubleLinkNode<T>* last)
+        {
+            return offset > 0 ? FindFromLast(--offset, last->pre) : last;
+        }
     };
-
     template<class T>
     class LinkListEnumrator : public IEnumerator<T>
     {
     protected:
-        LinkListNode<T>* scan0;
-        LinkListNode<T>* current;
+        T** scan0;
         int position;
-        int count;
+        size_t* count;
     public:
-        LinkListEnumrator(LinkListNode<T>* begin, size_t len):scan0(begin), current(begin), position(-1), count(len){}
-        virtual T&  Current()   override {return current->RefValue();}
-        virtual bool MoveNext() override 
+        LinkListEnumrator(DoubleLinkNode<T>* begin, size_t (&size)) : scan0((T**)malloc(sizeof(long) * size)), position(-1), count(&size)
         {
-            if(++position < count)
+            for(size_t i = 0; i < size; i++)
             {
-                current = current->next;
-                return true;  
-            }  
-            return false;
+                *(scan0 + i) = begin->val;
+                begin = begin->next;
+            }
         }
-        virtual void Reset()    override 
-        {
-            position = -1;
-            current  = scan0;
-        }
+        virtual T*  Current()   override {return scan0[position];}
+        virtual bool MoveNext() override {return ++position < (int)(*count);}
+        virtual void Reset()    override {position = -1;}
         virtual void Dispose()  override
         {
-            if(NULL == scan0)
+            while(*count-- > 0)
             {
-                return;
+                if(scan0[*count])
+                {             
+                    free(scan0[*count]);
+                    scan0[*count] = NULL;
+                }
             }
-            LinkListNode<T>* p;
-            do
-            {         
-                p = scan0->next;
-                delete scan0;
-                scan0 = p;
-            } while (count-- > 0);  
+            if(NULL != scan0)
+            {
+                free(scan0);
+                scan0 = NULL;
+            }
         }
     };
     
     template<class T>
-    class LinkList : ICollection<T> , LinkListNode<T>
+    class LinkList : ICollection<T> 
     {
     private:
-        LinkListNode<T>* head;
-        LinkListNode<T>* last;
+        DoubleLinkNode<T>* head;
+        DoubleLinkNode<T>* last;
         size_t  count;
         bool isReadOnly;
-    protected:
-        LinkListNode<T>* FindFromHead(int offset, LinkListNode<T>* begin)
-        {
-            return offset > 0 ? FindFromHead(--offset, begin->next) : begin->next;
-        }
-        LinkListNode<T>* FindFromLast(int offset, LinkListNode<T>* begin)
-        {
-            return offset > 0 ? FindFromLast(--offset, begin->pre) : begin->pre;
-        }
     public:
         LinkList() : head(NULL), last(NULL), count(0), isReadOnly(false){}
-        T& operator[](int index)
-        {
-            return FindFromHead(index, head)->val;
+        ~LinkList()
+        {   
+            DoubleLinkNode<T>* p(NULL);
+            while(count-- > 0)
+            {
+                p = head->next;
+                delete head;
+                head = p;
+            }
         }
-        LinkListNode<T>* First(){return head;}
-        LinkListNode<T>* Last (){return last;}
+        T& operator[](size_t index)
+        {
+            return index < (count >> 1) ? *(DoubleLinkNode<T>::FindFromHead(index, head)->val) : *(DoubleLinkNode<T>::FindFromLast(count - 1 - index, last)->val);
+        }
          /**
          * @description: 获取List对象的Enumrator
          * @param {*}
@@ -127,18 +123,16 @@ namespace System
          */        
         virtual void Add(const T& item) override
         {
-            LinkListNode<T>* node = new LinkListNode<T>(last, item, NULL); 
+            DoubleLinkNode<T>* node = new DoubleLinkNode<T>(last, item, NULL);
             count++;
-            if(1 < count)
+            if(last)
             {
                 last->next = node;
-                last       = node;
+                last       = node;  
+                return; 
             }
-            else
-            {
-                head = node;
-                last = node;
-            }
+            last = node;
+            head = node;
         }
         /**
          * @description: 清楚数据内容，但并不会释放内存 
@@ -147,16 +141,15 @@ namespace System
          * @author: like
          */        
         virtual void Clear() override
-        {        
-            // LinkListNode<T>* p = head;
-            // while(NULL != (head = p))
-            // {
-            //     p = head->next;
-            //     delete head;
-            // }
-            // head  = NULL;
-            // pre   = NULL;
-            // count = 0;
+        {   
+            if(count)
+            {
+                IEnumerator<T>* it = GetEnumerator();
+                it->Dispose();
+                head = NULL;
+                last = NULL;   
+                count = 0;
+            }
         }
         /**
          * @description: 是否存在指定数据.  O(n)
@@ -195,16 +188,46 @@ namespace System
          */        
         virtual bool Remove(const T& item) override
         {
-            LinkListNode<T>* begin = head;
-            while(NULL != begin)
+            DoubleLinkNode<T>* begin = head;
+            if(count == 0)
             {
-                if(item == begin->val)
+                return false;
+            }
+            if(memcmp(head->val, &item, sizeof(T)) && count == 1)
+            {
+                delete head;
+                head = NULL;
+                last = NULL;
+                count = 0;
+                return true;
+            }
+            do
+            {
+                if(memcmp(begin->val, &item, sizeof(T)))
                 {
+                    if(last == begin)
+                    {
+                        last = last->pre;
+                    }
+                    else if(head == begin)
+                    {
+                        head = head->next;
+                    }
+                    if(begin->pre)
+                    {
+                        begin->pre->next = begin->next;
+                    }
+                    if(begin->next)
+                    {
+                        begin->next->pre = begin->pre;
+                    }
+                    delete begin;
+                    begin = NULL;
+                    count--;
                     return true;
                 }
-                begin = begin->next;
-            }    
-            return false;    
+            }while(NULL != (begin = begin->next));
+            return false;  
         }
         
     };

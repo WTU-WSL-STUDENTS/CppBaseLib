@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-08-11 19:54:41
  * @LastEditors: like
- * @LastEditTime: 2021-08-12 16:02:00
+ * @LastEditTime: 2021-08-20 10:42:45
  */
 #ifndef SYSTEM_STACK_HPP
 #define SYSTEM_STACK_HPP
@@ -135,7 +135,7 @@ namespace System
         bool ReplaceAt(TKey key, TVal val, int index)
         {
             INode<TKey, TVal>* res = At(index);
-            if(NULL != res)
+            if(res)
             {
                 res->key = key;
                 res->val = val;
@@ -146,7 +146,7 @@ namespace System
         bool RemoveAt(int index)
         {
             INode<TKey, TVal>* res = At(index);
-            if(NULL != res)
+            if(res)
             {
                 res->next->pre = res->pre;
                 res->pre->next = res->next;

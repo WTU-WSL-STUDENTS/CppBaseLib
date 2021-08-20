@@ -285,7 +285,7 @@ namespace System
                     do
                     {
                         char* p = fs.ReadLine();
-                        if(NULL == p)
+                        if(!p)
                         {
                             break;
                         }

@@ -38,7 +38,7 @@
 //     static JsNode* ConvertFromFileLine(const char* str)
 //     {
 //         const char* split = strchr(str, ':');
-//         if(NULL == split)
+//         if(!split)
 //         {
 //             return NULL;
 //         }

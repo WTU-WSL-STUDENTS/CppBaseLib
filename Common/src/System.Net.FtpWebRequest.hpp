@@ -88,7 +88,7 @@ public:
     ~FtpWebRequest(){Close();}
     bool Connect(int timeout = 30000)
     {
-        if(NULL == info.ip || NULL == info.port)
+        if(!info.ip || NULL == info.port)
         {
             return NULL;
         }
@@ -104,7 +104,7 @@ public:
     }
     void DisConnect()
     {
-        if(NULL == info.ctrlConnBuffer)
+        if(!info.ctrlConnBuffer)
         {
             return;
         }
@@ -113,7 +113,7 @@ public:
     }
     bool Login()
     {
-        if(NULL == info.ctrlConnBuffer)
+        if(!info.ctrlConnBuffer)
         {
             return false;
         }
@@ -121,11 +121,11 @@ public:
     }
     void Close()
     {
-        if(NULL != info.ctrlConnBuffer)
+        if( info.ctrlConnBuffer)
         {
 		    FtpQuit(info.ctrlConnBuffer);
         }
-        if(NULL != info.dataConnBuffer)
+        if( info.dataConnBuffer)
         {
 		    FtpQuit(info.dataConnBuffer);
         }

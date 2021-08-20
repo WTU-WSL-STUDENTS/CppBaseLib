@@ -495,7 +495,7 @@ protected:
     {
         for(int i = TCP_MAX_LISTEN_COUNT - 1; i > -1; i--)
         {
-            if(NULL != socket.Piplines[i].thread)
+            if( socket.Piplines[i].thread)
             {
                 return i;
             }
@@ -594,7 +594,7 @@ protected:
             memset(buf, 0, sizeof(buf));
             if(0 < (len = RecvTcp(p->socket.Piplines[Pipline].client, buf, MAX_TCP_BUFFER_SIZE)))
             {
-                if(NULL == p->socket.Piplines[Pipline].funcRecvCallback)
+                if(!p->socket.Piplines[Pipline].funcRecvCallback)
                 {
                     continue;
                 }
@@ -636,7 +636,7 @@ protected:
             memset(buf, 0, sizeof(buf));
             if(0 < (len = RecvUdp(p->socket, p->socket.Piplines[Pipline].client, buf, MAX_TCP_BUFFER_SIZE)))
             {
-                if(NULL == p->socket.Piplines[Pipline].funcRecvCallback)
+                if(!p->socket.Piplines[Pipline].funcRecvCallback)
                 {
                     continue;
                 }
@@ -713,7 +713,7 @@ public:
                 {
                     i++;
                 }
-                if(NULL == socket.Piplines[i].thread)
+                if(!socket.Piplines[i].thread)
                 {
                     continue;
                 }
@@ -794,7 +794,7 @@ public:
             printf("Start Server Failed, Pipline Is Full\n");
             return -1;
         }
-        if(NULL != socket.Piplines[Pipline].thread)/* Pipline Exists */
+        if( socket.Piplines[Pipline].thread)/* Pipline Exists */
         {
             printf("Start Server Failed, Pipline-%d Already Exists\n", Pipline);
             return false;
@@ -856,7 +856,7 @@ public:
         {
             Pipline = GetCurrentPipline();
         }
-        if(NULL == socket.Piplines[Pipline].thread)/* Pipline Not Exists Or Already Stopped*/
+        if(!socket.Piplines[Pipline].thread)/* Pipline Not Exists Or Already Stopped*/
         {
             printf("Stop Server Failed, Pipline-%d Not Exists\n", Pipline);
             return false;

@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-08-11 08:47:54
  * @LastEditors: like
- * @LastEditTime: 2021-08-11 14:56:27
+ * @LastEditTime: 2021-08-20 10:44:37
  */
 #ifndef SYSTEM_INI_H
 #define SYSTEM_INI_H
@@ -48,7 +48,7 @@ namespace System::IO
     bool ReadIni(const char* iniPath, IniFile& readedIni)
     {
         FileStream* fs = File::OpenRead(iniPath);
-        if(NULL == fs || !fs->Valid())
+        if(!fs || !fs->Valid())
         {
             printf("ReadIni Create Ini FileStream Failed: %s\n", iniPath);
             return false;
@@ -97,7 +97,7 @@ namespace System::IO
     bool WriteIni(const char* iniPath, IniFile readedIni)
     {
         FileStream * fs = new FileStream(iniPath);//File::OpenWrite(iniPath);
-        if(NULL == fs || !fs->Valid())
+        if(!fs || !fs->Valid())
         {
             printf("WriteIni Create Ini FileStream Failed: %s,%d\n", iniPath, GetLastError());
             return false;

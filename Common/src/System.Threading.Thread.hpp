@@ -76,13 +76,13 @@ private:
     {
         Thread* p = (Thread*)args;
         ThreadInfo* tInfo = &p->tInfo;
-        if(NULL !=p->OnStart)
+        if(p->OnStart)
         {
             p->OnStart(p, tInfo->CurrentStatus);
         }
         THREAD_EVENT event   = tInfo->Event;
         unsigned long ret    = (*event)(tInfo->Args);
-        if(NULL !=p->OnFinished)
+        if(p->OnFinished)
         {
             p->OnFinished(p, tInfo->CurrentStatus);
         }
@@ -100,13 +100,13 @@ private:
     {
         Thread* p = (Thread*)args;
         ThreadInfo* tInfo = &p->tInfo;
-        if(NULL !=p->OnStart)
+        if(p->OnStart)
         {
             p->OnStart(p, tInfo->CurrentStatus);
         }
         THREAD_EVENT event = tInfo->Event;
         void* ret = (*event)(tInfo->Args);
-        if(NULL !=p->OnFinished)
+        if(p->OnFinished)
         {
             p->OnFinished(p, tInfo->CurrentStatus);
         }
@@ -142,7 +142,7 @@ public:
             }
         #else
             tInfo.Handle = (HANDLE)_beginthreadex(0, 0, (THREAD_EVENT)ThreadEventContainer, (void*)this, CREATE_SUSPENDED, &tInfo.ThreadId);          
-            if(NULL != tInfo.Handle)
+            if( tInfo.Handle)
             {
                 tInfo.CurrentStatus = Normal == priorty ? Created : TRUE == SetThreadPriority(tInfo.Handle, tInfo.Priorty) ? Created : NotInit;
             }
@@ -301,7 +301,7 @@ public:
     }
     bool Disopse()/* 析构函数中释放线程句柄的方法 */
     {
-        if(NULL != tInfo.Handle)
+        if( tInfo.Handle)
         {
             if(!CloseHandle(tInfo.Handle))
             {
