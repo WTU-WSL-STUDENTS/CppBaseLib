@@ -101,7 +101,7 @@ public:
         {
             return;
         }
-        if(NULL != memoryHandleMap[key].p)
+        if( memoryHandleMap[key].p)
         {
             CloseHandle(memoryHandleMap[key].p);
         }
@@ -133,7 +133,7 @@ public:
 			CloseHandle(handle);
             return NULL;
         }
-        if(NULL == handle)
+        if(!handle)
         {
             return NULL;
         }
@@ -163,7 +163,7 @@ public:
 			CloseHandle(handle);
             return NULL;
         }
-        if(NULL == handle)
+        if(!handle)
         {
             return NULL;
         }
@@ -188,7 +188,7 @@ public:
 			    CloseHandle(handle);
                 handle = OpenFileMappingA(PageAccessMapping[access], false, mapName);  
             }
-            if(NULL == handle)
+            if(!handle)
             {
                 return NULL;
             }
@@ -212,7 +212,7 @@ public:
         else
         {
             HANDLE handle = OpenFileMapping(DesiredAccessMapping[access], false, mapName);  
-            if(NULL == handle)
+            if(!handle)
             {
                 return NULL;
             }
@@ -241,7 +241,7 @@ public:
                 return NULL;
             }
         }  
-        if(NULL == info->p)
+        if(!info->p)
         {
             return NULL;
         }  

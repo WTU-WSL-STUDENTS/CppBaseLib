@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-08-12 16:04:40
  * @LastEditors: like
- * @LastEditTime: 2021-08-13 16:46:48
+ * @LastEditTime: 2021-08-20 18:03:59
  */
 #ifndef SYSTEM_LIST_HPP
 #define SYSTEM_LIST_HPP
@@ -23,7 +23,7 @@ namespace System
     class IEnumerator : public IDisposable
     {
     public:
-        virtual T&  Current()   = 0;
+        virtual T*  Current()   = 0;
         virtual bool MoveNext() = 0;
         virtual void Reset()    = 0;
     };
@@ -66,17 +66,10 @@ namespace System
         int count;
     public:
         ListEnumrator(T* begin, size_t len):scan0(begin), position(-1), count(len){}
-        virtual T&  Current()   override {return *(scan0 + position);}
+        virtual T*  Current()   override {return (scan0 + position);}
         virtual bool MoveNext() override {return ++position < count;}
         virtual void Reset()    override {position = -1;}
-        virtual void Dispose()  override
-        {
-            if(NULL != scan0)
-            {
-                free(scan0);
-                scan0 = NULL;
-            }
-        }
+        virtual void Dispose()  override {}
     };
 
     template<class T>
@@ -95,7 +88,7 @@ namespace System
             IEnumerator<T>* enumerator = enumerable.GetEnumerator();
             if(enumerator->MoveNext())
             {
-                T* src = &enumerator->Current;
+                T* src = enumerator->Current();
                 count = 1;
                 while(enumerator->MoveNext())
                 {
@@ -111,6 +104,10 @@ namespace System
                 capacity = 1024;
                 scan0 = malloc(sizeof(T) * capacity);
             }
+        }
+        ~List()
+        {
+            free(scan0);
         }
         /**
          * @description: 获取List对象的Enumrator
@@ -197,6 +194,13 @@ namespace System
         virtual void CopyTo(T* container, int offset) override
         {
             memcpy(container + offset, scan0, count * sizeof(T));
+        }
+        List<T>* Clone()
+        {
+            List<T>* dest = new List<T>(capacity);
+            dest.count = count;
+            memcpy(dest.scan0, scan0, count * sizeof(T));
+            return 
         }
         /**
          * @description: 从第一个元素开始查找并删除指定元素. O(n^2)
@@ -297,7 +301,7 @@ namespace System
         {
             if(enumrator.MoveNext())
             {       
-                Add(enumrator.Current())
+                Add(*(enumrator.Current()))
                 AddRange(enumrator);
             }
         }

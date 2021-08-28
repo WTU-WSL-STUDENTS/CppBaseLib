@@ -52,7 +52,7 @@ public:
     Timer(Millisecond interval):Interval(interval), AutoReset(0), thread(NULL){}
     bool Start()
     {
-        if(NULL != thread)
+        if( thread)
         {
             return false;
         }
@@ -61,7 +61,7 @@ public:
     }
     bool Stop()
     {
-        if(NULL == thread || !thread->IsRunning())
+        if(!thread || !thread->IsRunning())
         {
             return false;
         }
