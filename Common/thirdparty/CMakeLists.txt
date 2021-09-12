@@ -26,8 +26,8 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     if(CMAKE_CL_64)
         add_definitions(-DMSVC_64) 
-        set(RELEASE_PATH ../build/bin/x64)
-        set(Lib_Path ../build/lib/x64)
+        set(RELEASE_PATH ../Build/bin/x64)
+        set(Lib_Path ../Build/lib/x64)
     else()
         add_definitions(-DMSVC_32)
         set(RELEASE_PATH ../build/bin/x86)
@@ -45,10 +45,14 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG 	${RELEASE_PATH})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE 	${RELEASE_PATH})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG 	${Lib_Path})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RLEASE 	${Lib_Path})
-# 3. 添加文件目录
-include_directories(${INCLUDE_PATH})
-include_directories(${SRC_PATH})
-# 4. 编译单元测试
-include(CommonUnitTests.cmake)
+# 1. 设置编译变量
+set(THIRD_PARTY_PATH ../thirdparty)
+# 2. 设置输出路径
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG 	${RELEASE_PATH})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE 	${RELEASE_PATH})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG 	${Lib_Path})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RLEASE 	${Lib_Path})
+# 3. 编译三方依赖
+include(thirdparty.cmake)
 
 

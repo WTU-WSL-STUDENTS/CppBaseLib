@@ -1,18 +1,18 @@
 #ifndef SYSTEM_DATETIME_HPP
 #define SYSTEM_DATETIME_HPP
 
-#include "complied_entry.h"
-#include <stdio.h>
-#ifdef _WIN32
-#include <windows.h>
-#else
+#include "CompliedEntry.h"
+
+#ifdef __LINUX
 #include <sys/time.h>
+#elif __WINDOWS
+#pragma warning(disable:4996)
 #endif
 
 namespace System
 {
     class DateTime;
-    #ifdef _WIN32
+    #ifdef COMPLIER_MSVC
     typedef SYSTEMTIME SystemTime;
     #else
     typedef struct _SYSTEMTIME {
@@ -53,7 +53,7 @@ public:
     }
     static bool Now(DateTime& currentTime)/* 返回计算机当前显示的时间 */
     {
-        #ifdef _WIN32
+        #ifdef COMPLIER_MSVC
             GetLocalTime(&currentTime.currentTime);
             return true;
         #else     
@@ -82,7 +82,7 @@ public:
     }
     static bool UtcNow(DateTime &currentTime)/* 返回计算机当前显示的时间, 表示为协调通用时间 (UTC) */
     {
-        #ifdef _WIN32
+        #ifdef COMPLIER_MSVC
             TIME_ZONE_INFORMATION timeZoneinfo;
 	        GetTimeZoneInformation(&timeZoneinfo);
 	        SystemTime localTime = {0};
@@ -113,5 +113,7 @@ public:
 
     }
 };
-
+#ifdef __WINDOWS
+#pragma warning(default:4996)
+#endif
 #endif

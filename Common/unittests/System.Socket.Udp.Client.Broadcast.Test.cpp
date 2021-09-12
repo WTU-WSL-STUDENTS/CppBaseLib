@@ -4,9 +4,8 @@
  * @Autor: like
  * @Date: 2021-08-04 19:35:30
  * @LastEditors: like
- * @LastEditTime: 2021-08-09 20:14:48
+ * @LastEditTime: 2021-09-12 16:20:49
  */
-#define _CRT_SECURE_NO_WARNINGS
 #include <System.Net.Socket.hpp>
 
 using namespace System::Net;

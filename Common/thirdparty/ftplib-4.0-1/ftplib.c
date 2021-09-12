@@ -16,7 +16,6 @@
 /* http://www.perlfoundation.org/artistic_license_2_0			   */
 /* 									   */
 /***************************************************************************/
-#define _CRT_SECURE_NO_WARNINGS
 #define _SCL_SECURE_NO_WARNINGS
 #define  _CRT_SECURE_NO_DEPRECATE
 #define  _AFX_SECURE_NO_WARNINGS

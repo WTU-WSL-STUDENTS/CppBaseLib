@@ -2,7 +2,7 @@
 #define SYSTEM_NET_FTP_WEB_REQUEST_HPP
 
 #define _CRT_SECURE_NO_DEPRECATE
-#include <complied_entry.h>
+#include <CompliedEntry.h>
 #include <ftplib.h>
 #include <stdio.h>
 #include <map>

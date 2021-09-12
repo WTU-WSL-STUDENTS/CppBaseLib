@@ -4,13 +4,13 @@
  * @Autor: like
  * @Date: 2021-08-06 19:31:39
  * @LastEditors: like
- * @LastEditTime: 2021-08-09 22:27:57
+ * @LastEditTime: 2021-09-12 16:23:04
  */
 #ifndef SYSTEM_SOCKET_H
 #define SYSTEM_SOCKET_H
-
 #include <WinSock2.h>
 #include <Ws2tcpip.h>
+#include <CompliedEntry.h>
 
 #define MAX_SEND_BUFFER_SIZE 1024 * 2
 #define MAX_TCP_BUFFER_SIZE 1024

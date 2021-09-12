@@ -2,7 +2,7 @@
 #define FILE_H
 
 
-#include "complied_entry.h"
+#include "CompliedEntry.h"
 #ifdef _WIN32
 #define _CRT_SECURE_NO_DEPRECATE
 #endif

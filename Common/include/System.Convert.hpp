@@ -1,9 +1,12 @@
 #ifndef CONVERT_H
 #define CONVERT_H
 
-#include "complied_entry.h"
+#include "CompliedEntry.h"
 #include <ctype.h>
 #include <string>  
+
+#define C_METHORD
+#define CPP_METHORD
 
 namespace System
 {

@@ -1,7 +1,7 @@
 #ifndef THREADING_H
 #define THREADING_H
 
-#include <complied_entry.h>
+#include <CompliedEntry.h>
 #include <stdio.h>
 
 #ifdef _WIN32
@@ -240,7 +240,7 @@ public:
             }
             else
             {
-                printf("WaitForSingleObject Finished Failed, Error Code:%d\n", GetLastError());
+                printf("WaitForSingleObject Finished Timeout\n");
             }
         }
         return false;

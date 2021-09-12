@@ -1,0 +1,6 @@
+include_directories(${THIRD_PARTY_PATH}/tinyxml-2-6-2)
+file(GLOB xmllib_src ${THIRD_PARTY_PATH}/tinyxml-2-6-2/*.cpp)
+add_library(xmllib ${xmllib_src})
+include_directories(${THIRD_PARTY_PATH}/ftplib-4.0-1)
+file(GLOB ftplib_src ${THIRD_PARTY_PATH}/ftplib-4.0-1/*.c)
+add_library(ftplib ${ftplib_src})

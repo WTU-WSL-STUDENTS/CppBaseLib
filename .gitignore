@@ -1,5 +1,28 @@
-Common/build/*
-!Common/build/lib/*
-!Common/build/bin/*
-Common/resource/unittests/output/*
 .vscode
+/*/resource/unittests/output/*
+
+# Math未完成
+Math
+# Hardware在调试
+Hardware
+
+# 忽略cmake生成的文件
+/*/build/*
+*/build/*
+!/*/build/bin
+!/*/build/lib
+
+# 忽略项目生成文件
+/*/build/bin/*
+/*/build/lib/*
+!/*/build/bin/*
+!/*/build/lib/*
+
+# 不忽略编译文件
+/*/build/bin/*/*
+/*/build/lib/*/*
+# !/*/build/bin/*/*.pdb
+!/*/build/bin/*/*.exe
+# !/*/build/lib/*/*.pdb
+!/*/build/lib/*/*.lib
+!/*/build/lib/*/*.dll

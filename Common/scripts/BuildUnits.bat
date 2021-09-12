@@ -1,3 +1,7 @@
+echo off
+@REM 编译三方依赖
+call BuildThirdparty.bat
+@REM 编译单元测试
 copy ..\cmake\CMakeLists.txt ..\build
 copy ..\cmake\CommonUnitTests.cmake ..\build
 @REM 设置指定CMakeLists.txt用vs2019的编译器进行Win32编译

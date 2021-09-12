@@ -1,7 +1,7 @@
 #ifndef SYSTEM_IO_MEMORY_MAPPEDFILES_HPP
 #define SYSTEM_IO_MEMORY_MAPPEDFILES_HPP
 
-#include "complied_entry.h"
+#include "CompliedEntry.h"
 #ifdef _WIN32
 #define _CRT_SECURE_NO_DEPRECATE
 #include <Windows.h>
