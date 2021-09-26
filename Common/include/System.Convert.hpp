@@ -4,6 +4,8 @@
 #include "CompliedEntry.h"
 #include <ctype.h>
 #include <string>  
+#include <typeinfo>
+#include <map>
 
 #define C_METHORD
 #define CPP_METHORD
@@ -50,7 +52,28 @@ class System::Convert
     #define RETURN_ULONGLONG_TO_STRING  char buf[32];   memset(buf, 0, sizeof(buf)); sprintf_s(buf, 32, "%llu", value); return buf;
     #define RETURN_DOUBLE_TO_STRING     char buf[300];  memset(buf, 0, sizeof(buf)); sprintf_s(buf, 300,"%lf", value);  return buf;
 
-    #define MAX_SPLIT_COUNT 255
+    #define MAX_SPLIT_COUNT 255    
+    
+    #define GEN_MAP_SPRINTF_TYPE_PAIR(ParamType, SprintfType) {typeid(ParamType).name(), SprintfType}
+    std::map<const char*, const char*> mapSprintfType = 
+    {
+        GEN_MAP_SPRINTF_TYPE_PAIR(char,             "%d"),
+        GEN_MAP_SPRINTF_TYPE_PAIR(unsigned char,    "%d"),
+        GEN_MAP_SPRINTF_TYPE_PAIR(short,            "%d"),
+        GEN_MAP_SPRINTF_TYPE_PAIR(unsigned short,   "%d"),
+        /* 4×Ö½Ú */
+        GEN_MAP_SPRINTF_TYPE_PAIR(int,              "%d"),
+        GEN_MAP_SPRINTF_TYPE_PAIR(unsigned int,     "%u"),
+        GEN_MAP_SPRINTF_TYPE_PAIR(float,            "%f"),
+        /* 8×Ö½Ú */
+        GEN_MAP_SPRINTF_TYPE_PAIR(double,           "%lf"),
+        /* 4 or 8 or 16 */
+        GEN_MAP_SPRINTF_TYPE_PAIR(long,             "%ld"),
+        GEN_MAP_SPRINTF_TYPE_PAIR(unsigned long,    "%lld"),
+        GEN_MAP_SPRINTF_TYPE_PAIR(long long,        "%lld"),
+        GEN_MAP_SPRINTF_TYPE_PAIR(unsigned long long,"%lld"),
+    };
+
 #endif
 public:
 #ifdef C_METHORD

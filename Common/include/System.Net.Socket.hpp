@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-08-06 19:31:39
  * @LastEditors: like
- * @LastEditTime: 2021-09-12 16:23:04
+ * @LastEditTime: 2021-09-13 07:48:30
  */
 #ifndef SYSTEM_SOCKET_H
 #define SYSTEM_SOCKET_H
@@ -755,7 +755,6 @@ public:
     {
         if(Tcp_Server == (Tcp_Server & socket.Proxy))
         {
-            printf("asd");
             AnsynAccepet = isAnsyn;
         }
     }

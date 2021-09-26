@@ -5,7 +5,8 @@
 Math
 # Hardware在调试
 Hardware
-
+# Ai未完成
+Ai
 # 忽略cmake生成的文件
 /*/build/*
 */build/*
@@ -22,7 +23,7 @@ Hardware
 /*/build/bin/*/*
 /*/build/lib/*/*
 # !/*/build/bin/*/*.pdb
-!/*/build/bin/*/*.exe
+# !/*/build/bin/*/*.exe
 # !/*/build/lib/*/*.pdb
-!/*/build/lib/*/*.lib
-!/*/build/lib/*/*.dll
+# !/*/build/lib/*/*.lib
+# !/*/build/lib/*/*.dll
