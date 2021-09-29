@@ -3,7 +3,10 @@
 
 #define _CRT_SECURE_NO_DEPRECATE
 #include <CompliedEntry.h>
-#include <ftplib.h>
+extern "C"
+{
+    #include <ftplib.h>
+}
 #include <stdio.h>
 #include <map>
 #include <string>

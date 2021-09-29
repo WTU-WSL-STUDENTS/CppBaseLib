@@ -1,3 +1,11 @@
+/*
+ * @Description: 
+ * @Version: 1.0
+ * @Autor: like
+ * @Date: 2021-09-13 07:43:18
+ * @LastEditors: like
+ * @LastEditTime: 2021-09-28 15:47:41
+ */
 #ifndef FILE_H
 #define FILE_H
 
@@ -16,6 +24,8 @@
 using namespace std;
 
 /*https://www.runoob.com/linux/linux-comm-stat.html*/
+
+#define FILE_SCAN_END EOF
 
 namespace System
 {
@@ -71,7 +81,8 @@ namespace System
 
         enum FileOperate/* 文件流操作 */
         {
-            ReadOnly    ,   /* 打开只读文件，该文件必须存在。 */
+            ReadOnly    ,   /* 打开只读文本文件，该文件必须存在。 */
+            ReadBinary  ,   /* 打开只读二进制文本，该文件必须存在。 */
             ReadWrite   ,   /* 打开可读写的文件，该文件必须存在 */
             Create      ,   /* 打开可读写文件，若文件存在则文件长度清为0，即该文件内容会消失。若文件不存在则建立该文件 */
             Append          /* 打开可读写文件，若文件存在则在光标默认移动至末尾，若文件不存在则建立该文件 */
@@ -81,6 +92,7 @@ namespace System
         AccessModeMappingToLetter accessModeMappingToLetter = 
         {
             {ReadOnly,      "r" },
+            {ReadBinary,    "rb"},
             {ReadWrite,     "r+"},
             {Create,        "w+"},
             {Append,        "a+"}
@@ -118,18 +130,32 @@ namespace System
                 {
                     return fseek(fileHandle, offset, origin);
                 }
-
+                template<typename T>
+                int Scan(const char* format, T& val)
+                {
+                    return fscanf(fileHandle, format, val);
+                }
                 size_t Read(System::byte* dest, size_t count)
                 {
                     return fread(dest, sizeof(System::byte), count, fileHandle);
                 }
-                size_t Read(System::byte* dest, int offset, int count)/* 偏移offset个字节，读取count个字节，返回实际读取的长度*/
+                bool Get(System::byte* dest, size_t count)
+                {
+                    return fgets((char*)dest, count, fileHandle);
+                }
+                template<typename T>
+                size_t Read(T* dest, int offset, int count)/* 偏移offset个字节，读取count个字节，返回实际读取的长度*/
                 {
                     if(0 == fseek(fileHandle, offset, 0))
                     {
-                        return fread(dest, sizeof(System::byte), count, fileHandle);
+                        return fread(dest, sizeof(T), count, fileHandle);
                     }
                     return 0;
+                }
+                template<typename T>
+                size_t Read(T* dest,  int count)/* 偏移offset个字节，读取count个字节，返回实际读取的长度*/
+                {
+                    return fread(dest, sizeof(T), count, fileHandle);
                 }
                 int ReadByte()/* EOF -1*/
                 {
@@ -268,12 +294,21 @@ namespace System
                     size = src.Length();
                     if(1 > size)
                     {
-                        return 0;
+                        printf("ReadAllBytes Error Return\n");
+                        return -1;
                     }
-                    dest = (byte*)malloc(size);
-                    size_t len = src.Read(dest, size);
+                    if(NULL == dest)
+                    {
+                        dest = (byte*)malloc(size);
+                        memset(dest, 0, size);
+                    }
+                    size_t readedTotalLen   = 0;
+                    if(!(readedTotalLen = src.Read(dest, size)))
+                    {
+                        return -1;
+                    }
                     src.Close();
-                    return len;
+                    return readedTotalLen;
                 }
                 static void ReadAllLines(const char* filePath, vector<char*> &lines)
                 {

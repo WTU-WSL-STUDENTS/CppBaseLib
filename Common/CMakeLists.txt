@@ -33,17 +33,29 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     endif()
 endif()
 
-# 1. 设置输出路径
 set(RELEASE_PATH    bin/${Path_Suffix})
 set(LIB_Path        lib/${Path_Suffix})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG 	../${RELEASE_PATH})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE 	../${RELEASE_PATH})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG 	../${LIB_Path})
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RLEASE 	../${LIB_Path})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE 	../${LIB_Path})
 
-# 2.0 编译三方依赖
-add_subdirectory(thirdparty)
-# 2.1 编译单元测试
-add_subdirectory(unittests)
+# include_directories(include)
 
+option(ENABLE_GENRATE_PDB "option for genrate pdb file" ON)
+if(ENABLE_GENRATE_PDB)
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi")
+    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /DEBUG /OPT:REF /OPT:ICF")
+    set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /DEBUG /OPT:REF /OPT:ICF")
+endif()
+
+option(BUILD_3RDPART "option for debug" ON)
+if( BUILD_3RDPART )
+    add_subdirectory(thirdparty)
+endif()
+
+option(BUILD_UNITTESTS "option for build unit tests" ON)
+if( BUILD_UNITTESTS )
+    add_subdirectory(unittests)
+endif()
 

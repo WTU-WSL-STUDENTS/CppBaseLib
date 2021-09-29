@@ -1,0 +1,6 @@
+#!/bin/bash
+
+ZBS_PATH=${0%/*/*}
+if [ ! -d $ZBS_PATH ]; then ZBS_PATH=${PWD%/*}; fi
+cd "$ZBS_PATH/ZeroBraneStudio"
+exec bin/lua src/main.lua zbstudio "$@"
