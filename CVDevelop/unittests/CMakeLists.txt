@@ -1,0 +1,6 @@
+include_directories(../include)
+include_directories(../thirdparty/lua-5.4.3/src)
+add_library(lua_test SHARED LuaExport.cpp)
+target_link_libraries(lua_test ../${LIB_Path}/lua54)
+add_executable(calllua_test CallLua.cpp)
+target_link_libraries(calllua_test ../${LIB_Path}/lua54)
