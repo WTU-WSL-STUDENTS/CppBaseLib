@@ -2,6 +2,7 @@
 #define SYSTEM_DATETIME_HPP
 
 #include "CompliedEntry.h"
+#include <stdio.h>
 
 #ifdef __LINUX
 #include <sys/time.h>

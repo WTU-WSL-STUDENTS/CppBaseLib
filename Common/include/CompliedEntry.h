@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-07-23 10:21:28
  * @LastEditors: like
- * @LastEditTime: 2021-09-12 16:32:44
+ * @LastEditTime: 2021-10-03 21:02:49
  */
 #ifndef COMPLIED_ENTRY_H
 #define COMPLIED_ENTRY_H
@@ -52,5 +52,29 @@ namespace System
 #elif defined(COMPLIER_GCC)
 #else/* error */
 #endif
+
+#define ASSERT_ENABLE
+#ifdef ASSERT_ENABLE
+#define VOIDRET_ASSERT(condtion)\
+        do\
+        {\
+        if(!(condtion)){return;}\
+        } while (0)
+#define VALRET_ASSERT(condtion, retVal)\
+        do\
+        {\
+            if(!condtion){return retVal;}\
+        }while(0)
+#define ERROR_ASSERT(condtion, errorIndex)\
+        do\
+        {\
+            if(!condtion){throw errorIndex;}\
+        }while(0)
+
+#else
+#define VOIDRET_ASSERT(condtion)
+#define VALRET_ASSERT(condtion, retVal)
+#endif
+
 
 #endif

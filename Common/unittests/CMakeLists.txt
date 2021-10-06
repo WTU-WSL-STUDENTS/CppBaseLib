@@ -5,6 +5,18 @@ include_directories(../include)
 
 add_executable(System.Convert.Test System.Convert.Test.cpp)
 add_executable(System.Console.Test System.Console.Test.cpp)
+
+include_directories(${THIRD_PARTY_PATH}/sqlite-3-36)
+add_executable(System.Data.Sqlite3.Test System.Data.Sqlite3.Test.cpp)
+target_link_libraries(System.Data.Sqlite3.Test ${Lib_Path}/sqlite3)
+
+include_directories(${THIRD_PARTY_PATH}/glad/include)
+include_directories(${THIRD_PARTY_PATH}/glfw-3.3.4/include)
+include_directories(${THIRD_PARTY_PATH}/glfw-3.3.4/deps/)
+add_executable(System.Form.OpenGL.Test System.Form.OpenGL.Test.cpp)
+target_link_libraries(System.Form.OpenGL.Test ${Lib_Path}/glfw3 ${Lib_Path}/glad)
+
+
 add_executable(System.IO.FileStream.Test System.IO.FileStream.Test.cpp)
 add_executable(System.IO.Ini.Test System.IO.Ini.Test.cpp)
 add_executable(System.IO.MemoryMappedFiles.Recv.Test System.IO.MemoryMappedFiles.Recv.Test.cpp)

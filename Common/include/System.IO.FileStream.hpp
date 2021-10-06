@@ -4,17 +4,24 @@
  * @Autor: like
  * @Date: 2021-09-13 07:43:18
  * @LastEditors: like
- * @LastEditTime: 2021-09-28 15:47:41
+ * @LastEditTime: 2021-10-06 22:33:12
  */
-#ifndef FILE_H
-#define FILE_H
+#ifdef USE_CPP_FILE_API
+#ifndef SYSTEM_IO_FILESTREAM_HPP
+#define SYSTEM_IO_FILESTREAM_HPP
+#endif
+#include <System.IO.FileStreamcpp.hpp>
+#endif
+#ifndef SYSTEM_IO_FILESTREAM_HPP
+#define SYSTEM_IO_FILESTREAM_HPP
 
-
-#include "CompliedEntry.h"
-#ifdef _WIN32
-#define _CRT_SECURE_NO_DEPRECATE
+#if !defined(USE_CPP_FILE_API) && !defined(USE_C_FILE_API)
+#define USE_C_FILE_API
 #endif
 #define MAX_LINE_LENGTH 1024
+
+#define _CRT_SECURE_NO_DEPRECATE
+#include "CompliedEntry.h"
 #include "System.Convert.hpp"
 #include "System.IO.Stream.hpp"
 #include <io.h>
@@ -99,10 +106,9 @@ namespace System
         };
         class FileStream : public Stream /* https://docs.microsoft.com/zh-cn/dotnet/api/system.io.filestream.-ctor?view=net-5.0#System_IO_FileStream__ctor_System_String_System_IO_FileMode_ */
         {
-            private:
+            public:
                 const char* filePath;
                 std::FILE* fileHandle;
-            public:
                 FileStream(const char* strFilePath, FileOperate operate = Create) : filePath(strFilePath)
                 {
                     fileHandle = fopen(strFilePath, accessModeMappingToLetter[operate]);
@@ -115,15 +121,9 @@ namespace System
                 std::FILE* GetFileHandle(){return fileHandle;}
                 size_t Length()
                 {
-                    fpos_t pos;
-                    if(0 != fgetpos(fileHandle, &pos))
-                    {
-                        return 0;
-                    }
-                    fseek(fileHandle,0,SEEK_END);
-                    size_t filesize = ftell(fileHandle);
-                    fsetpos(fileHandle, &pos);
-                    return filesize;
+                    long len = filelength(fileno(fileHandle));
+                    return -1 < len ? len : 0; 
+    
                 }
 
                 long Seek(long offset, int origin)
@@ -178,6 +178,11 @@ namespace System
                         return fwrite(src, sizeof(System::byte), count, fileHandle);
                     }
                     return 0;
+                }
+                template<typename T>
+                size_t Write(T* src, size_t count = 1)
+                {
+                    return fwrite(src, sizeof(T), count, fileHandle);
                 }
                 int WriteByte(System::byte byte)
                 {

@@ -7,7 +7,7 @@ endif()
 if (POLICY CMP0054)
   cmake_policy(SET CMP0054 NEW)
 endif()
-# 0. ‘§∂®“Â
+# 0. √î¬§¬∂¬®√í√•
 set(RELEASE_PATH ../Build/bin)
 set(Lib_Path ../Build/lib)
 if     (CMAKE_SYSTEM_NAME MATCHES "Linux")
@@ -19,7 +19,7 @@ elseif (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
 else ()
     message(STATUS "other platform: ${CMAKE_SYSTEM_NAME}")
 endif (CMAKE_SYSTEM_NAME MATCHES "Linux")
-## ≈–∂œ±‡“Î∆˜
+## √Ö√ê¬∂√è¬±√†√í√´√Ü√∑
 if     ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
