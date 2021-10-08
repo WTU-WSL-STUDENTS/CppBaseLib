@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-10-04 20:53:44
  * @LastEditors: like
- * @LastEditTime: 2021-10-07 13:47:45
+ * @LastEditTime: 2021-10-08 16:45:28
  */
 #ifndef BMP_IMAGE_IO_HPP
 #define BMP_IMAGE_IO_HPP
@@ -279,7 +279,6 @@
 #define IS_BMP(bf) (0x4d42 == bf.bfType)
 bool ReadImage(MatGray* (&img), const char* filepath)
 {
-    printf("123");
     ifstream fs;
     fs.open(filepath, ios::in | ios::binary);
     if(!fs.is_open())
@@ -289,7 +288,6 @@ bool ReadImage(MatGray* (&img), const char* filepath)
         return false;
     }
     BitmapFileHeader bf = {0};
-    printf("123");
 
     fs.read((char*)&bf, sizeof(BitmapFileHeader));
 #ifdef PRINTF_BMP_IMAGE_IO_DEBUG
@@ -329,8 +327,7 @@ bool ReadImage(MatGray* (&img), const char* filepath)
 #ifdef PRINTF_BMP_IMAGE_IO_DEBUG
     int oldLocation = fs.tellg();
     int newLocation = 0;
-    printf("###%d, %D\n", stride, len);
-    for(int i = 0; i < img->h - 1; i++)
+    for(int i = 0; i < img->h; i++)
     {
         fs.read(p, len);
         fs.seekg(fit4bit, ios::cur); 
@@ -339,22 +336,269 @@ bool ReadImage(MatGray* (&img), const char* filepath)
         p += len;
         oldLocation = newLocation;
     }
-    fs.read(p, len);
-    fs.seekg(fit4bit, ios::cur); 
-    newLocation = fs.tellg(); 
-    printf("%d, %d\n", img->h - 1, newLocation - oldLocation);
 #else
-    for(int i = 0; i < img->h - 1; i++)
+    for(int i = 0; i < img->h; i++)
     {
         fs.read(p, len);
         fs.seekg(fit4bit, ios::cur); 
         p += len;
     }
-    fs.read(p, len);
 #endif
     fs.close();
     return true;
 }
+bool WriteImage(const MatGray* img, const char* filepath)
+{
+    if(NULL == img)
+    {
+        return false;
+    }
+    ofstream fs;
+    fs.open(filepath, ios::out | ios::trunc | ios::binary);
+    if(!fs.is_open())
+    {
+        printf("Write Image Failed, Write Image File Failed\n");
+        fs.close();
+        return false;
+    }
+    size_t bisize = 40 + sizeof(RGBAQuad) * (1 << (8 * sizeof(MatKernel8Bit)));
+    int bitcount = 8 * sizeof(MatKernel8Bit);
+    int stride      = ((img->w * bitcount + 31)>>5)<<2;
+    int dataSize    = stride * img->h;
+    int len         = img->w * sizeof(MatKernel8Bit);
+    BitmapFileHeader bf;
+    bf.bfType       = 0x4d42;
+    bf.bfReserved   = 0;
+    bf.bfOffset     = 14 + bisize;
+    bf.bfSize       = bf.bfOffset + dataSize;
+    if(!IS_BMP(bf))
+    {
+        printf("Write Image Failed, File Type Not BM\n");
+        return false;
+    }
+#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
+    printf("bf : %x, %d, %d, %d\n", bf.bfType, bf.bfSize, bf.bfReserved, bf.bfOffset);
+#endif
+    fs.write((char*)&bf, sizeof(BitmapFileHeader));
+    PBitmapInfo pbi = (PBitmapInfo)malloc(bisize);
+    pbi->biSize       = 40;
+    pbi->biWidth      = img->w;
+    pbi->biHeight     = img->h;
+    pbi->biPlanes     = 1;
+    pbi->biBitcount   = bitcount;
+    pbi->biCompression= 0;
+    pbi->biSizeImage  = dataSize;
+    pbi->biXPelsPerMeter  = 0;
+    pbi->biYPelsPerMeter  = 0;
+    pbi->biClrUsed        = 0;
+    pbi->biClrImportant   = 0;
+    SET_PALETTE_255(pbi);
+#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
+    printf("bi : %d, %d, %d, %d, %d\n", pbi->biSize, pbi->biWidth, pbi->biHeight, pbi->biBitcount, pbi->biSizeImage);
+#endif
+    fs.write((char*)pbi, bisize);
+    free(pbi);
+    char* p = (char*)img->p;
+#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
+    int oldLocation = fs.tellp();
+    int newLocation = 0;
+    for(int i = 0; i < img->h - 1; i++)
+    {
+        fs.write(p, stride);
+        newLocation = fs.tellp(); 
+        printf("%d, %d\n", i, newLocation - oldLocation);
+        p += len;
+        oldLocation = newLocation;
+    }
+    fs.write(p, len);
+    int offset = stride - len;
+    if(offset)
+    {
+        char buffer[] = {0, 0, 0, 0};
+        fs.write(buffer, offset);
+    }
+    newLocation = fs.tellp(); 
+    printf("%d, %d\n", img->h - 1, newLocation - oldLocation);
+#else
+    for(int i = 0; i < img->h - 1; i++)
+    {
+        fs.write(p, stride);
+        p += len;
+    }
+    fs.write(p, len);
+    int offset = stride - len;
+    if(offset)
+    {
+        char buffer[] = {0, 0, 0, 0};
+        fs.write(buffer, offset);
+    }
+#endif
+    fs.close();
+    return true;
+}
+
+/* https://docs.microsoft.com/zh-cn/windows/win32/directshow/working-with-16-bit-rgb */
+bool ReadImage(Mat<MatKernel16Bit>* (&img), const char* filepath)
+{
+    ifstream fs;
+    fs.open(filepath, ios::in | ios::binary);
+    if(!fs.is_open())
+    {
+        printf("Read Image Failed, Open Image File Failed\n");
+        fs.close();
+        return false;
+    }
+    BitmapFileHeader bf = {0};
+    fs.read((char*)&bf, sizeof(BitmapFileHeader));
+#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
+    printf("bf : %x, %d, %d, %d\n", bf.bfType, bf.bfSize, bf.bfReserved, bf.bfOffset);
+#endif
+    if(!IS_BMP(bf))
+    {
+        printf("Read Image Failed, File Type Not BM\n");
+        return false;
+    }
+    unsigned long bfsize = bf.bfOffset - sizeof(BitmapFileHeader);
+    PBitmapInfo pbi = (PBitmapInfo)malloc(bfsize);
+    fs.read((char*)pbi, bfsize);
+    size_t paletteCount = pbi->biClrUsed;
+    if(9 > pbi->biBitcount && 0 == pbi->biClrUsed)
+    {
+        paletteCount = 1 << pbi->biBitcount;
+    }  
+#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
+    printf("bi : %d, %d, %d, %d, %d\n", pbi->biSize, pbi->biWidth, pbi->biHeight, pbi->biBitcount, pbi->biSizeImage);
+    for (size_t i = 0; i < paletteCount; i++)
+    {
+        printf("%d,%d,%d,%d\n",pbi->palette[i].R, pbi->palette[i].G, pbi->palette[i].B, pbi->palette[i].A);
+    }
+#endif
+    if((sizeof(MatKernel16Bit) << 3) != pbi->biBitcount)
+    {
+        printf("Mat Kernel Not Match, Correct Bitcount:%d", pbi->biBitcount);
+        return false;
+    }
+    img = new Mat<MatKernel16Bit>(pbi->biWidth, pbi->biHeight);
+    int stride = ((pbi->biWidth * pbi->biBitcount + 31)>>5)<<2;
+    free(pbi);
+    int len = img->w * sizeof(MatKernel16Bit);
+    int fit4bit = stride - len;
+    char* p = (char*)img->p;
+#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
+    int oldLocation = fs.tellg();
+    int newLocation = 0;
+    for(int i = 0; i < img->h; i++)
+    {
+        fs.read(p, len);
+        fs.seekg(fit4bit, ios::cur); 
+        newLocation = fs.tellg(); 
+        printf("%d, %d\n", i, newLocation - oldLocation);
+        p += len;
+        oldLocation = newLocation;
+    }
+#else
+    for(int i = 0; i < img->h; i++)
+    {
+        fs.read(p, len);
+        fs.seekg(fit4bit, ios::cur); 
+        p += len;
+    }
+#endif
+    fs.close();
+    return true;
+}
+bool WriteImage(const Mat<MatKernel16Bit>* img, const char* filepath)
+{
+    if(NULL == img)
+    {
+        return false;
+    }
+    ofstream fs;
+    fs.open(filepath, ios::out | ios::trunc | ios::binary);
+    if(!fs.is_open())
+    {
+        printf("Write Image Failed, Open Image File Failed\n");
+        fs.close();
+        return false;
+    }
+#ifndef ENABLE_
+    size_t bisize = 40;
+#else
+    size_t bisize = 40 + sizeof(RGBAQuad) * 3;
+#endif
+    int bitcount = 8 * sizeof(MatKernel16Bit);
+    int stride      = ((img->w * bitcount + 31)>>5)<<2;
+    int dataSize    = stride * img->h;
+    int len         = img->w * sizeof(MatKernel16Bit);
+    BitmapFileHeader bf;
+    bf.bfType       = 0x4d42;
+    bf.bfReserved   = 0;
+    bf.bfOffset     = 14 + bisize;
+    bf.bfSize       = bf.bfOffset + dataSize;
+    if(!IS_BMP(bf))
+    {
+        printf("Write Image Failed, File Type Not BM\n");
+        return false;
+    }
+#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
+    printf("bf : %x, %d, %d, %d\n", bf.bfType, bf.bfSize, bf.bfReserved, bf.bfOffset);
+#endif
+    fs.write((char*)&bf, sizeof(BitmapFileHeader));
+    BitmapInfo bi;
+    bi.biSize       = 40;
+    bi.biWidth      = img->w;
+    bi.biHeight     = img->h;
+    bi.biPlanes     = 1;
+    bi.biBitcount   = bitcount;
+    bi.biCompression= 0;    /*此处需要修改*/
+    bi.biSizeImage  = dataSize;
+    bi.biXPelsPerMeter  = 0;
+    bi.biYPelsPerMeter  = 0;
+    bi.biClrUsed        = 0;
+    bi.biClrImportant   = 0;
+#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
+    printf("bi : %d, %d, %d, %d, %d\n", bi.biSize, bi.biWidth, bi.biHeight, bi.biBitcount, bi.biSizeImage);
+#endif
+    fs.write((char*)&bi, bi.biSize);
+    char* p = (char*)img->p;
+#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
+    int oldLocation = fs.tellp();
+    int newLocation = 0;
+    for(int i = 0; i < img->h - 1; i++)
+    {
+        fs.write(p, stride);
+        newLocation = fs.tellp(); 
+        printf("%d, %d\n", i, newLocation - oldLocation);
+        p += len;
+        oldLocation = newLocation;
+    }
+    fs.write(p, len);
+    int offset = stride - len;
+    if(offset)
+    {
+        char buffer[] = {0, 0, 0, 0};
+        fs.write(buffer, offset);
+    }
+    newLocation = fs.tellp(); 
+    printf("%d, %d\n", img->h - 1, newLocation - oldLocation);
+#else
+    for(int i = 0; i < img->h - 1; i++)
+    {
+        fs.write(p, stride);
+        p += len;
+    }
+    fs.write(p, len);
+    int offset = stride - len;
+    if(offset)
+    {
+        char buffer[] = {0, 0, 0, 0};
+        fs.write(buffer, offset);
+    }
+#endif
+    fs.close();
+    return true;
+}
+
 bool ReadImage(MatBGR* (&img), const char* filepath)
 {
     ifstream fs;
@@ -404,7 +648,7 @@ bool ReadImage(MatBGR* (&img), const char* filepath)
 #ifdef PRINTF_BMP_IMAGE_IO_DEBUG
     int oldLocation = fs.tellg();
     int newLocation = 0;
-    for(int i = 0; i < img->h - 1; i++)
+    for(int i = 0; i < img->h; i++)
     {
         fs.read(p, len);
         fs.seekg(fit4bit, ios::cur); 
@@ -413,22 +657,104 @@ bool ReadImage(MatBGR* (&img), const char* filepath)
         p += len;
         oldLocation = newLocation;
     }
-    fs.read(p, len);
-    fs.seekg(fit4bit, ios::cur); 
-    newLocation = fs.tellg(); 
-    printf("%d, %d\n", img->h - 1, newLocation - oldLocation);
 #else
-    for(int i = 0; i < img->h - 1; i++)
+    for(int i = 0; i < img->h; i++)
     {
         fs.read(p, len);
         fs.seekg(fit4bit, ios::cur); 
         p += len;
     }
-    fs.read(p, len);
 #endif
     fs.close();
     return true;
 }
+bool WriteImage(const MatBGR* img, const char* filepath)
+{
+    if(NULL == img)
+    {
+        return false;
+    }
+    ofstream fs;
+    fs.open(filepath, ios::out | ios::trunc | ios::binary);
+    if(!fs.is_open())
+    {
+        printf("Write Image Failed, Open Image File Failed\n");
+        fs.close();
+        return false;
+    }
+    int bitcount = 8 * sizeof(MatKernel24Bit);
+    int stride      = ((img->w * bitcount + 31)>>5)<<2;
+    int dataSize    = stride * img->h;
+    int len         = img->w * sizeof(MatKernel24Bit);
+    BitmapFileHeader bf;
+    bf.bfType       = 0x4d42;
+    bf.bfReserved   = 0;
+    bf.bfOffset     = 14 + 40;
+    bf.bfSize       = bf.bfOffset + dataSize;
+    if(!IS_BMP(bf))
+    {
+        printf("Write Image Failed, File Type Not BM\n");
+        return false;
+    }
+#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
+    printf("bf : %x, %d, %d, %d\n", bf.bfType, bf.bfSize, bf.bfReserved, bf.bfOffset);
+#endif
+    fs.write((char*)&bf, sizeof(BitmapFileHeader));
+    BitmapInfo bi;
+    bi.biSize       = 40;
+    bi.biWidth      = img->w;
+    bi.biHeight     = img->h;
+    bi.biPlanes     = 1;
+    bi.biBitcount   = bitcount;
+    bi.biCompression= 0;
+    bi.biSizeImage  = dataSize;
+    bi.biXPelsPerMeter  = 0;
+    bi.biYPelsPerMeter  = 0;
+    bi.biClrUsed        = 0;
+    bi.biClrImportant   = 0;
+#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
+    printf("bi : %d, %d, %d, %d, %d\n", bi.biSize, bi.biWidth, bi.biHeight, bi.biBitcount, bi.biSizeImage);
+#endif
+    fs.write((char*)&bi, bi.biSize);
+    char* p = (char*)img->p;
+#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
+    int oldLocation = fs.tellp();
+    int newLocation = 0;
+    for(int i = 0; i < img->h - 1; i++)
+    {
+        fs.write(p, stride);
+        newLocation = fs.tellp(); 
+        printf("%d, %d\n", i, newLocation - oldLocation);
+        p += len;
+        oldLocation = newLocation;
+    }
+    fs.write(p, len);
+    int offset = stride - len;
+    if(offset)
+    {
+        char buffer[] = {0, 0, 0, 0};
+        fs.write(buffer, offset);
+    }
+    newLocation = fs.tellp(); 
+    printf("%d, %d\n", img->h - 1, newLocation - oldLocation);
+#else
+    for(int i = 0; i < img->h - 1; i++)
+    {
+        fs.write(p, stride);
+        p += len;
+    }
+    fs.write(p, len);
+    int offset = stride - len;
+    if(offset)
+    {
+        char buffer[] = {0, 0, 0, 0};
+        fs.write(buffer, offset);
+    }
+#endif
+    fs.close();
+    return true;
+}
+
 bool ReadImage(MatBGRA* (&img), const char* filepath, ColorBGRA (&palette)[256])
 {
     ifstream fs;
@@ -500,150 +826,5 @@ bool ReadImage(MatBGRA* (&img), const char* filepath, ColorBGRA (&palette)[256])
     fs.close();
     return true;
 }
-
-bool WriteImage(const MatGray* img, const char* filepath)
-{
-    if(NULL == img)
-    {
-        return false;
-    }
-    ofstream fs;
-    fs.open(filepath, ios::out | ios::trunc | ios::binary);
-    if(!fs.is_open())
-    {
-        printf("Write Image Failed, Write Image File Failed\n");
-        fs.close();
-        return false;
-    }
-    size_t bisize = 40 + sizeof(RGBAQuad) * (1 << (8 * sizeof(MatKernel8Bit)));
-    int bitcount = 8 * sizeof(MatKernel8Bit);
-    int stride      = ((img->w * bitcount + 31)>>5)<<2;
-    int dataSize    = stride * img->h;
-    int len         = img->w * sizeof(MatKernel8Bit);
-    BitmapFileHeader bf;
-    bf.bfType       = 0x4d42;
-    bf.bfReserved   = 0;
-    bf.bfOffset     = 14 + bisize;
-    bf.bfSize       = bf.bfOffset + dataSize;
-    if(!IS_BMP(bf))
-    {
-        printf("Write Image Failed, File Type Not BM\n");
-        return false;
-    }
-#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
-    printf("bf : %x, %d, %d, %d\n", bf.bfType, bf.bfSize, bf.bfReserved, bf.bfOffset);
-#endif
-    fs.write((char*)&bf, sizeof(BitmapFileHeader));
-    PBitmapInfo pbi = (PBitmapInfo)malloc(bisize);
-    pbi->biSize       = 40;
-    pbi->biWidth      = img->w;
-    pbi->biHeight     = img->h;
-    pbi->biPlanes     = 1;
-    pbi->biBitcount   = bitcount;
-    pbi->biCompression= 0;
-    pbi->biSizeImage  = dataSize;
-    pbi->biXPelsPerMeter  = 0;
-    pbi->biYPelsPerMeter  = 0;
-    pbi->biClrUsed        = 0;
-    pbi->biClrImportant   = 0;
-    SET_PALETTE_255(pbi);
-#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
-    printf("bi : %d, %d, %d, %d, %d\n", pbi->biSize, pbi->biWidth, pbi->biHeight, pbi->biBitcount, pbi->biSizeImage);
-#endif
-    fs.write((char*)pbi, bisize);
-    free(pbi);
-    char* p = (char*)img->p;
-#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
-    int oldLocation = fs.tellp();
-    int newLocation = 0;
-    for(int i = 0; i < img->h; i++)
-    {
-        fs.write(p, stride);
-        newLocation = fs.tellp(); 
-        printf("%d, %d\n", i, newLocation - oldLocation);
-        p += len;
-        oldLocation = newLocation;
-    }
-#else
-    for(int i = 0; i < img->h; i++)
-    {
-        fs.write(p, stride);
-        p += len;
-    }
-#endif
-    fs.close();
-    return true;
-}
-bool WriteImage(const MatBGR* img, const char* filepath)
-{
-    if(NULL == img)
-    {
-        return false;
-    }
-    ofstream fs;
-    fs.open(filepath, ios::out | ios::trunc | ios::binary);
-    if(!fs.is_open())
-    {
-        printf("Write Image Failed, Open Image File Failed\n");
-        fs.close();
-        return false;
-    }
-    int bitcount = 8 * sizeof(MatKernel24Bit);
-    int stride      = ((img->w * bitcount + 31)>>5)<<2;
-    int dataSize    = stride * img->h;
-    int len         = img->w * sizeof(MatKernel24Bit);
-    BitmapFileHeader bf;
-    bf.bfType       = 0x4d42;
-    bf.bfReserved   = 0;
-    bf.bfOffset     = 14 + 40;
-    bf.bfSize       = bf.bfOffset + dataSize;
-    if(!IS_BMP(bf))
-    {
-        printf("Write Image Failed, File Type Not BM\n");
-        return false;
-    }
-#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
-    printf("bf : %x, %d, %d, %d\n", bf.bfType, bf.bfSize, bf.bfReserved, bf.bfOffset);
-#endif
-    fs.write((char*)&bf, sizeof(BitmapFileHeader));
-    BitmapInfo bi;
-    bi.biSize       = 40;
-    bi.biWidth      = img->w;
-    bi.biHeight     = img->h;
-    bi.biPlanes     = 1;
-    bi.biBitcount   = bitcount;
-    bi.biCompression= 0;
-    bi.biSizeImage  = dataSize;
-    bi.biXPelsPerMeter  = 0;
-    bi.biYPelsPerMeter  = 0;
-    bi.biClrUsed        = 0;
-    bi.biClrImportant   = 0;
-#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
-    printf("bi : %d, %d, %d, %d, %d\n", bi.biSize, bi.biWidth, bi.biHeight, bi.biBitcount, bi.biSizeImage);
-#endif
-    fs.write((char*)&bi, bi.biSize);
-    char* p = (char*)img->p;
-#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
-    int oldLocation = fs.tellp();
-    int newLocation = 0;
-    for(int i = 0; i < img->h; i++)
-    {
-        fs.write(p, stride);
-        newLocation = fs.tellp(); 
-        printf("%d, %d\n", i, newLocation - oldLocation);
-        p += len;
-        oldLocation = newLocation;
-    }
-#else
-    for(int i = 0; i < img->h; i++)
-    {
-        fs.write(p, stride);
-        p += len;
-    }
-#endif
-    fs.close();
-    return true;
-}
-
 
 #endif
