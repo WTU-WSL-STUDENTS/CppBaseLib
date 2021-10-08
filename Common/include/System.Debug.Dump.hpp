@@ -4,14 +4,13 @@
  * @Autor: like
  * @Date: 2021-10-08 15:27:56
  * @LastEditors: like
- * @LastEditTime: 2021-10-08 15:34:32
+ * @LastEditTime: 2021-10-08 20:03:33
  */
 #ifndef SYSTEM_DEBUG_DMP_HPP
 #define SYSTEM_DEBUG_DMP_HPP
 
 #include <CompliedEntry.h>
 #include <DbgHelp.h>
-
 
 //生产DUMP文件
 int GenerateMiniDump(HANDLE hFile, PEXCEPTION_POINTERS pExceptionPointers, PWCHAR pwAppName)
@@ -81,7 +80,7 @@ int GenerateMiniDump(HANDLE hFile, PEXCEPTION_POINTERS pExceptionPointers, PWCHA
 
 	if (hDbgHelp != NULL)
 		FreeLibrary(hDbgHelp);
-
+	MessageBox(NULL, TEXT("System Broken, Generate dump"), TEXT("Error"), MB_OK);
 	return EXCEPTION_EXECUTE_HANDLER;
 }
 

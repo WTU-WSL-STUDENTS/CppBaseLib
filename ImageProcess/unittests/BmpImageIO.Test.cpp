@@ -4,10 +4,10 @@
  * @Autor: like
  * @Date: 2021-10-05 07:19:05
  * @LastEditors: like
- * @LastEditTime: 2021-10-08 17:15:55
+ * @LastEditTime: 2021-10-08 21:52:03
  */
 #define PRINTF_BMP_IMAGE_IO_DEBUG
-#include <System.Debug.Dmp.hpp>
+#include <System.Debug.Dump.hpp>
 #include <cv/BmpImageIO.hpp>
 
 int TryLoopRead255(const char* imageSrcPath)

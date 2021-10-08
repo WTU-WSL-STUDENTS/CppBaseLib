@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-10-04 14:20:56
  * @LastEditors: like
- * @LastEditTime: 2021-10-08 17:07:54
+ * @LastEditTime: 2021-10-08 21:09:53
  */
 #ifndef IMAGE_IO_HPP
 #define IMAGE_IO_HPP
@@ -138,11 +138,13 @@ bool ReadImage(Mat<T>*  img, const char* filepath)
         return false;
     }
     CV_BYTE* srcPtr = (CV_BYTE*)bmpData.Scan0;
-    size_t rowByteCount = img->w * sizeof(T);
-    for(UINT i = 0;i < height;i++)
+    T* p = img->p;
+    size_t len = img->w * sizeof(T);
+    for(UINT i = 0; i < height; i++)
     {
-        memcpy(img->RowAt(i), srcPtr, rowByteCount);
+        memcpy(p, srcPtr, len);
         srcPtr  += bmpData.Stride;
+        p += len;
     }
     bmp->UnlockBits(&bmpData);
     delete bmp;
@@ -158,11 +160,13 @@ bool WriteImage(Mat<T>* img, const char* filepath)
     Gdiplus::BitmapData bmpData;
     bmp->LockBits(&Gdiplus::Rect(0, 0, width, height), Gdiplus::ImageLockModeWrite, bmp->GetPixelFormat(), &bmpData); 
     CV_BYTE* destPtr  = (CV_BYTE*)bmpData.Scan0;
-    size_t rowLength = width * sizeof(T);
+    T* p = img->p;
+    size_t len = img->w * sizeof(T);
     for(int i = 0; i < height; i++)
     {
-        memcpy(destPtr, img->RowAt(i), rowLength);
+        memcpy(destPtr, p, len);
         destPtr  += bmpData.Stride;
+        p += img->w;
     }
     bmp->UnlockBits(&bmpData);
     CLSID pngClsid;
@@ -171,6 +175,7 @@ bool WriteImage(Mat<T>* img, const char* filepath)
     bmp->Save(infilename.c_str(), &pngClsid, NULL); 
     delete bmp;
     bmp = NULL;
+    printf("Gdi+ Write Image To %s\n", filepath);
     return 0 == _access(filepath, 0);  
 }
 
