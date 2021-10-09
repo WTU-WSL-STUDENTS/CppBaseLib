@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-10-04 14:20:56
  * @LastEditors: like
- * @LastEditTime: 2021-10-08 21:09:53
+ * @LastEditTime: 2021-10-09 15:18:48
  */
 #ifndef IMAGE_IO_HPP
 #define IMAGE_IO_HPP
@@ -107,13 +107,18 @@ void DisableGdi()
 std::map<const char*, int> gdiFormatMapping = 
 {
     {typeid(MatKernel8Bit).name()   , PixelFormat8bppIndexed},
+    {
+        typeid(MatKernel16Bit).name(), 
 #if defined(ENABLE_MAT_KERNEL_555)
-    {typeid(MatKernel555).name()    , PixelFormat16bppRGB555},
+        PixelFormat16bppRGB555
 #elif defined(ENABLE_MAT_KERNEL_565)
-    {typeid(MatKernel555).name()    , PixelFormat16bppRGB565},
+        PixelFormat16bppRGB565
 #elif defined(ENABLE_MAT_KERNEL_1555)
-    {typeid(MatKernel555).name()    , PixelFormat16bppRGB1555},
+        PixelFormat16bppRGB1555
+#else
+    Error(Not Defined MatKernel16Bit Type)
 #endif
+    },
     {typeid(MatKernel24Bit).name()  , PixelFormat24bppRGB},
     {typeid(MatKernel32Bit).name()  , PixelFormat32bppARGB}
 };

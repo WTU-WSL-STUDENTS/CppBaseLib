@@ -4,8 +4,11 @@
  * @Autor: like
  * @Date: 2021-10-04 16:09:48
  * @LastEditors: like
- * @LastEditTime: 2021-10-08 21:52:04
+ * @LastEditTime: 2021-10-09 15:26:04
  */
+#define ENABLE_MAT_KERNEL_565
+/* 如果不申明16为位图的模式，默认为555*/
+// #define ENABLE_MAT_KERNEL_555
 #include <System.Debug.Dump.hpp>
 #include <cv/GdiImageIO.hpp>
 #include <stdio.h>
@@ -79,7 +82,7 @@ int GdiReadWrite(const char* srcpath, const char* destpath)
 template<typename T>
 void KernelAdd(T& val, int rowIndex)
 {
-    val = (T)(rowIndex);
+    val = (T)(rowIndex << 10);
 }
 template<>
 void KernelAdd<MatKernel32Bit>(MatKernel32Bit& val, int rowIndex)
@@ -129,7 +132,7 @@ int GdiCreateImage(const char* destpath, const T& initVal)
 }
 int main(int argc, char* argv[])
 {
-    // SetUnhandledExceptionFilter(ExceptionFilter);
+    SetUnhandledExceptionFilter(ExceptionFilter);
     int gdiError;
     if(GdiStatus::Ok != (gdiError = EnableGdi()))
     {
@@ -144,9 +147,9 @@ int main(int argc, char* argv[])
     memcpy(inPath, argv[1], strlen(argv[1]));
     strcat(inPath, "\\300_200_24.bmp");
     // GdiReadWrite(inPath, argv[0]);
-    GdiCreateImage<MatKernel32Bit>(argv[0], MatKernel32Bit{0, 0, 255, 0});
-    GdiCreateImage<MatKernel24Bit>(argv[0], MatKernel24Bit{0, 0, 255});
-    GdiCreateImage<MatKernel16Bit>(argv[0], 0xff0000);
+    // GdiCreateImage<MatKernel32Bit>(argv[0], MatKernel32Bit{0, 0, 255, 0});
+    // GdiCreateImage<MatKernel24Bit>(argv[0], MatKernel24Bit{0, 0, 255});
+    GdiCreateImage<MatKernel16Bit>(argv[0], (MatKernel16Bit)0xff0000);
     DisableGdi();
     return 0;
 }

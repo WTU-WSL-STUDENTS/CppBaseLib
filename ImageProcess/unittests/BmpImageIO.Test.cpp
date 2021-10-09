@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-10-05 07:19:05
  * @LastEditors: like
- * @LastEditTime: 2021-10-08 21:52:03
+ * @LastEditTime: 2021-10-09 09:54:18
  */
 #define PRINTF_BMP_IMAGE_IO_DEBUG
 #include <System.Debug.Dump.hpp>
@@ -115,6 +115,16 @@ int main(int argc, char* argv[])
     char outPath[255] = {0};
 
     // getchar();
+
+    /* TryReadAndWrite.300_256_32 */
+    strcat(outPath, argv[0]);
+    strcat(outPath, "\\BmpImageIO.Test.TryReadAndWrite.300_256_32.bmp");
+    memcpy(inPath, argv[1], strlen(argv[1]));
+    strcat(inPath, "\\300_256_32.bmp");
+    TryReadAndWrite<MatKernel32Bit>(inPath, outPath);
+    memset(inPath, 0, sizeof(inPath));
+    memset(outPath, 0, sizeof(outPath));
+
     /* TryReadAndWrite.3000_2000_24 */
     strcat(outPath, argv[0]);
     strcat(outPath, "\\BmpImageIO.Test.TryReadAndWrite.3000_2000_24.bmp");
@@ -133,28 +143,29 @@ int main(int argc, char* argv[])
     memset(inPath, 0, sizeof(inPath));
     memset(outPath, 0, sizeof(outPath));
     
-    // /* TryReadAndWrite.637_475_16 */
-    // strcat(outPath, argv[0]);
-    // strcat(outPath, "\\BmpImageIO.Test.TryReadAndWrite.637_475_16.bmp");
-    // memcpy(inPath, argv[1], strlen(argv[1]));
-    // strcat(inPath, "\\637_475_16.bmp");
-    // TryReadAndWrite<MatKernel16Bit>(inPath, outPath);
-    // memset(inPath, 0, sizeof(inPath));
-    // memset(outPath, 0, sizeof(outPath));
+    /* TryReadAndWrite.300_256_16 */
+    strcat(outPath, argv[0]);
+    strcat(outPath, "\\BmpImageIO.Test.TryReadAndWrite.300_256_16.bmp");
+    memcpy(inPath, argv[1], strlen(argv[1]));
+    strcat(inPath, "\\300_256_16.bmp");
+    TryReadAndWrite<MatKernel16Bit>(inPath, outPath);
+    memset(inPath, 0, sizeof(inPath));
+    memset(outPath, 0, sizeof(outPath));
 
-    // /* TryReadAndWrite.637_475_8 */
-    // strcat(outPath, argv[0]);
-    // strcat(outPath, "\\BmpImageIO.Test.TryReadAndWrite.637_475_8.bmp");
-    // memcpy(inPath, argv[1], strlen(argv[1]));
-    // strcat(inPath, "\\637_475_8.bmp");
-    // TryReadAndWrite<MatKernel8Bit>(inPath, outPath);
-    // memset(inPath, 0, sizeof(inPath));
-    // memset(outPath, 0, sizeof(outPath));
+    /* TryReadAndWrite.637_475_8 */
+    strcat(outPath, argv[0]);
+    strcat(outPath, "\\BmpImageIO.Test.TryReadAndWrite.637_475_8.bmp");
+    memcpy(inPath, argv[1], strlen(argv[1]));
+    strcat(inPath, "\\637_475_8.bmp");
+    TryReadAndWrite<MatKernel8Bit>(inPath, outPath);
+    memset(inPath, 0, sizeof(inPath));
+    memset(outPath, 0, sizeof(outPath));
     
-    // /* TryWriteTest_4_4_24 */
-    // strcat(outPath, argv[0]);
-    // strcat(outPath, "\\BmpImageIO.Test.TryWriteTest_4_4_24.bmp");
-    // TryWriteTest(outPath);
+    /* TryWriteTest_4_4_24 */
+    strcat(outPath, argv[0]);
+    strcat(outPath, "\\BmpImageIO.Test.TryWriteTest_4_4_24.bmp");
+    TryWriteTest(outPath);
     // getchar();
+    printf("Sucess Exit");
     return 0;
 }

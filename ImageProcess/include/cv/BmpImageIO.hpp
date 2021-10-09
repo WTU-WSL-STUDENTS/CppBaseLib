@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-10-04 20:53:44
  * @LastEditors: like
- * @LastEditTime: 2021-10-08 16:45:28
+ * @LastEditTime: 2021-10-09 14:23:52
  */
 #ifndef BMP_IMAGE_IO_HPP
 #define BMP_IMAGE_IO_HPP
@@ -17,6 +17,11 @@
 #include <fstream> 
 #include <sstream>
 /* https://zhuanlan.zhihu.com/p/111635571 */
+#define SET_PALETTE_16_565(pbi) \
+    pbi->palette[2] = {0,   0xf8,   0, 0}; \
+    pbi->palette[1] = {0xe0,0x07,   0, 0}; \
+    pbi->palette[0] = {0x1f,0,      0, 0}; \
+    pbi->palette[3] = {0,   0,      0, 0}; \
 
 #define SET_PALETTE_255(pbi) \
     pbi->palette[  0] = {  0,   0,   0, 0}; \
@@ -330,7 +335,8 @@ bool ReadImage(MatGray* (&img), const char* filepath)
     for(int i = 0; i < img->h; i++)
     {
         fs.read(p, len);
-        fs.seekg(fit4bit, ios::cur); 
+        if(fit4bit)
+            fs.seekg(fit4bit, ios::cur); 
         newLocation = fs.tellg(); 
         printf("%d, %d\n", i, newLocation - oldLocation);
         p += len;
@@ -340,7 +346,8 @@ bool ReadImage(MatGray* (&img), const char* filepath)
     for(int i = 0; i < img->h; i++)
     {
         fs.read(p, len);
-        fs.seekg(fit4bit, ios::cur); 
+        if(fit4bit)
+            fs.seekg(fit4bit, ios::cur); 
         p += len;
     }
 #endif
@@ -490,7 +497,8 @@ bool ReadImage(Mat<MatKernel16Bit>* (&img), const char* filepath)
     for(int i = 0; i < img->h; i++)
     {
         fs.read(p, len);
-        fs.seekg(fit4bit, ios::cur); 
+        if(fit4bit)
+            fs.seekg(fit4bit, ios::cur); 
         newLocation = fs.tellg(); 
         printf("%d, %d\n", i, newLocation - oldLocation);
         p += len;
@@ -500,7 +508,8 @@ bool ReadImage(Mat<MatKernel16Bit>* (&img), const char* filepath)
     for(int i = 0; i < img->h; i++)
     {
         fs.read(p, len);
-        fs.seekg(fit4bit, ios::cur); 
+        if(fit4bit)
+            fs.seekg(fit4bit, ios::cur); 
         p += len;
     }
 #endif
@@ -521,10 +530,10 @@ bool WriteImage(const Mat<MatKernel16Bit>* img, const char* filepath)
         fs.close();
         return false;
     }
-#ifndef ENABLE_
+#ifndef ENABLE_MAT_KERNEL_565
     size_t bisize = 40;
 #else
-    size_t bisize = 40 + sizeof(RGBAQuad) * 3;
+    size_t bisize = 40 + sizeof(RGBAQuad) * 4;
 #endif
     int bitcount = 8 * sizeof(MatKernel16Bit);
     int stride      = ((img->w * bitcount + 31)>>5)<<2;
@@ -544,22 +553,27 @@ bool WriteImage(const Mat<MatKernel16Bit>* img, const char* filepath)
     printf("bf : %x, %d, %d, %d\n", bf.bfType, bf.bfSize, bf.bfReserved, bf.bfOffset);
 #endif
     fs.write((char*)&bf, sizeof(BitmapFileHeader));
-    BitmapInfo bi;
-    bi.biSize       = 40;
-    bi.biWidth      = img->w;
-    bi.biHeight     = img->h;
-    bi.biPlanes     = 1;
-    bi.biBitcount   = bitcount;
-    bi.biCompression= 0;    /*此处需要修改*/
-    bi.biSizeImage  = dataSize;
-    bi.biXPelsPerMeter  = 0;
-    bi.biYPelsPerMeter  = 0;
-    bi.biClrUsed        = 0;
-    bi.biClrImportant   = 0;
-#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
-    printf("bi : %d, %d, %d, %d, %d\n", bi.biSize, bi.biWidth, bi.biHeight, bi.biBitcount, bi.biSizeImage);
+    PBitmapInfo pbi = (PBitmapInfo)malloc(bisize);
+    pbi->biSize       = 40;
+    pbi->biWidth      = img->w;
+    pbi->biHeight     = img->h;
+    pbi->biPlanes     = 1;
+    pbi->biBitcount   = bitcount;
+#ifndef ENABLE_MAT_KERNEL_565
+    pbi->biCompression= 0;
+#else
+    pbi->biCompression= 3;
 #endif
-    fs.write((char*)&bi, bi.biSize);
+    pbi->biSizeImage  = dataSize;
+    pbi->biXPelsPerMeter  = 0;
+    pbi->biYPelsPerMeter  = 0;
+    pbi->biClrUsed        = 0;
+    pbi->biClrImportant   = 0;
+    SET_PALETTE_255(pbi);
+#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
+    printf("bi : %d, %d, %d, %d, %d\n", pbi->biSize, pbi->biWidth, pbi->biHeight, pbi->biBitcount, pbi->biSizeImage);
+#endif
+    fs.write((char*)pbi, pbi->biSize);
     char* p = (char*)img->p;
 #ifdef PRINTF_BMP_IMAGE_IO_DEBUG
     int oldLocation = fs.tellp();
@@ -651,7 +665,8 @@ bool ReadImage(MatBGR* (&img), const char* filepath)
     for(int i = 0; i < img->h; i++)
     {
         fs.read(p, len);
-        fs.seekg(fit4bit, ios::cur); 
+        if(fit4bit)
+            fs.seekg(fit4bit, ios::cur); 
         newLocation = fs.tellg(); 
         printf("%d, %d\n", i, newLocation - oldLocation);
         p += len;
@@ -661,7 +676,8 @@ bool ReadImage(MatBGR* (&img), const char* filepath)
     for(int i = 0; i < img->h; i++)
     {
         fs.read(p, len);
-        fs.seekg(fit4bit, ios::cur); 
+        if(fit4bit)
+            fs.seekg(fit4bit, ios::cur); 
         p += len;
     }
 #endif
@@ -755,7 +771,7 @@ bool WriteImage(const MatBGR* img, const char* filepath)
     return true;
 }
 
-bool ReadImage(MatBGRA* (&img), const char* filepath, ColorBGRA (&palette)[256])
+bool ReadImage(MatBGRA* (&img), const char* filepath)
 {
     ifstream fs;
     fs.open(filepath, ios::in | ios::binary);
@@ -798,30 +814,116 @@ bool ReadImage(MatBGRA* (&img), const char* filepath, ColorBGRA (&palette)[256])
     img = new MatBGRA(pbi->biWidth, pbi->biHeight);
     int stride = ((pbi->biWidth * pbi->biBitcount + 31)>>5)<<2;
     free(pbi);
-    int len = img->w * sizeof(MatKernel24Bit);
+    int len = img->w * sizeof(MatKernel32Bit);
     int fit4bit = stride - len;
     char* p = (char*)img->p;
 #ifdef PRINTF_BMP_IMAGE_IO_DEBUG
     int oldLocation = fs.tellg();
     int newLocation = 0;
-    for(int i = 0; i < img->h - 1; i++)
+    for(int i = 0; i < img->h; i++)
     {
         fs.read(p, len);
-        fs.seekg(fit4bit, ios::cur); 
+        if(fit4bit)
+            fs.seekg(fit4bit, ios::cur); 
         newLocation = fs.tellg(); 
         printf("%d, %d\n", i, newLocation - oldLocation);
         p += len;
         oldLocation = newLocation;
     }
-    fs.read(p, len);
+#else
+    for(int i = 0; i < img->h; i++)
+    {
+        fs.read(p, len);
+        if(fit4bit)
+            fs.seekg(fit4bit, ios::cur); 
+        p += len;
+    }
+#endif
+    fs.close();
+    return true;
+}
+bool WriteImage(const MatBGRA* img, const char* filepath)
+{
+    if(NULL == img)
+    {
+        return false;
+    }
+    ofstream fs;
+    fs.open(filepath, ios::out | ios::trunc | ios::binary);
+    if(!fs.is_open())
+    {
+        printf("Write Image Failed, Open Image File Failed\n");
+        fs.close();
+        return false;
+    }
+    int bitcount = 8 * sizeof(MatKernel32Bit);
+    int stride      = ((img->w * bitcount + 31)>>5)<<2;
+    int dataSize    = stride * img->h;
+    int len         = img->w * sizeof(MatKernel32Bit);
+    BitmapFileHeader bf;
+    bf.bfType       = 0x4d42;
+    bf.bfReserved   = 0;
+    bf.bfOffset     = 14 + 40;
+    bf.bfSize       = bf.bfOffset + dataSize;
+    if(!IS_BMP(bf))
+    {
+        printf("Write Image Failed, File Type Not BM\n");
+        return false;
+    }
+#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
+    printf("bf : %x, %d, %d, %d\n", bf.bfType, bf.bfSize, bf.bfReserved, bf.bfOffset);
+#endif
+    fs.write((char*)&bf, sizeof(BitmapFileHeader));
+    BitmapInfo bi;
+    bi.biSize       = 40;
+    bi.biWidth      = img->w;
+    bi.biHeight     = img->h;
+    bi.biPlanes     = 1;
+    bi.biBitcount   = bitcount;
+    bi.biCompression= 0;
+    bi.biSizeImage  = dataSize;
+    bi.biXPelsPerMeter  = 0;
+    bi.biYPelsPerMeter  = 0;
+    bi.biClrUsed        = 0;
+    bi.biClrImportant   = 0;
+#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
+    printf("bi : %d, %d, %d, %d, %d\n", bi.biSize, bi.biWidth, bi.biHeight, bi.biBitcount, bi.biSizeImage);
+#endif
+    fs.write((char*)&bi, bi.biSize);
+    char* p = (char*)img->p;
+#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
+    int oldLocation = fs.tellp();
+    int newLocation = 0;
+    for(int i = 0; i < img->h - 1; i++)
+    {
+        fs.write(p, stride);
+        newLocation = fs.tellp(); 
+        printf("%d, %d\n", i, newLocation - oldLocation);
+        p += len;
+        oldLocation = newLocation;
+    }
+    fs.write(p, len);
+    int offset = stride - len;
+    if(offset)
+    {
+        char buffer[] = {0, 0, 0, 0};
+        fs.write(buffer, offset);
+    }
+    newLocation = fs.tellp(); 
+    printf("%d, %d\n", img->h - 1, newLocation - oldLocation);
 #else
     for(int i = 0; i < img->h - 1; i++)
     {
-        fs.read(p, len);
-        fs.seekg(fit4bit, ios::cur); 
+        fs.write(p, stride);
         p += len;
     }
-    fs.read(p, len);
+    fs.write(p, len);
+    int offset = stride - len;
+    if(offset)
+    {
+        char buffer[] = {0, 0, 0, 0};
+        fs.write(buffer, offset);
+    }
 #endif
     fs.close();
     return true;
