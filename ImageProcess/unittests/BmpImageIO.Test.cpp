@@ -4,9 +4,9 @@
  * @Autor: like
  * @Date: 2021-10-05 07:19:05
  * @LastEditors: like
- * @LastEditTime: 2021-10-09 09:54:18
+ * @LastEditTime: 2021-10-12 15:34:48
  */
-#define PRINTF_BMP_IMAGE_IO_DEBUG
+// #define PRINTF_BMP_IMAGE_IO_DEBUG
 #include <System.Debug.Dump.hpp>
 #include <cv/BmpImageIO.hpp>
 
@@ -79,29 +79,29 @@ int TryReadAndWrite(const char* imageSrcPath, const char* imageDestPath)
     {
         printf("Write Image Sucess\n");
     }
-    ifstream fssrc;
-    fssrc.open(imageSrcPath);
-    ifstream fsdest;
-    fsdest.open(imageSrcPath);
-    int src = 0;
-    int dest= 0;
-    for(int i = 0, src = 0, dest = 0;;i++)
-    {
-        src = fssrc.get();
-        dest = fsdest.get();
-        if(src != dest)
-        {
-            printf("Compare Read To Write , Not Same %d, %x, %x\n", i, src, dest);
-            break;
-        }
-        if(EOF == src)
-        {
-            printf("Compare Read To Write Sucess %d\n", i);
-            break;
-        }
-    }
-    fssrc.close();
-    fsdest.close();
+    // ifstream fssrc;
+    // fssrc.open(imageSrcPath);
+    // ifstream fsdest;
+    // fsdest.open(imageSrcPath);
+    // int src = 0;
+    // int dest= 0;
+    // for(int i = 0, src = 0, dest = 0;;i++)
+    // {
+    //     src = fssrc.get();
+    //     dest = fsdest.get();
+    //     if(src != dest)
+    //     {
+    //         printf("Compare Read To Write , Not Same %d, %x, %x\n", i, src, dest);
+    //         break;
+    //     }
+    //     if(EOF == src)
+    //     {
+    //         printf("Compare Read To Write Sucess %d\n", i);
+    //         break;
+    //     }
+    // }
+    // fssrc.close();
+    // fsdest.close();
     
     delete mat;
     mat = NULL;
@@ -125,14 +125,14 @@ int main(int argc, char* argv[])
     memset(inPath, 0, sizeof(inPath));
     memset(outPath, 0, sizeof(outPath));
 
-    /* TryReadAndWrite.3000_2000_24 */
-    strcat(outPath, argv[0]);
-    strcat(outPath, "\\BmpImageIO.Test.TryReadAndWrite.3000_2000_24.bmp");
-    memcpy(inPath, argv[1], strlen(argv[1]));
-    strcat(inPath, "\\3000_2000_24.bmp");
-    TryReadAndWrite<MatKernel24Bit>(inPath, outPath);
-    memset(inPath, 0, sizeof(inPath));
-    memset(outPath, 0, sizeof(outPath));
+    // /* TryReadAndWrite.3000_2000_24 */
+    // strcat(outPath, argv[0]);
+    // strcat(outPath, "\\BmpImageIO.Test.TryReadAndWrite.3000_2000_24.bmp");
+    // memcpy(inPath, argv[1], strlen(argv[1]));
+    // strcat(inPath, "\\3000_2000_24.bmp");
+    // TryReadAndWrite<MatKernel24Bit>(inPath, outPath);
+    // memset(inPath, 0, sizeof(inPath));
+    // memset(outPath, 0, sizeof(outPath));
     
     /* TryReadAndWrite.300_200_24 */
     strcat(outPath, argv[0]);
@@ -152,20 +152,20 @@ int main(int argc, char* argv[])
     memset(inPath, 0, sizeof(inPath));
     memset(outPath, 0, sizeof(outPath));
 
-    /* TryReadAndWrite.637_475_8 */
-    strcat(outPath, argv[0]);
-    strcat(outPath, "\\BmpImageIO.Test.TryReadAndWrite.637_475_8.bmp");
-    memcpy(inPath, argv[1], strlen(argv[1]));
-    strcat(inPath, "\\637_475_8.bmp");
-    TryReadAndWrite<MatKernel8Bit>(inPath, outPath);
-    memset(inPath, 0, sizeof(inPath));
-    memset(outPath, 0, sizeof(outPath));
+    // /* TryReadAndWrite.637_475_8 */
+    // strcat(outPath, argv[0]);
+    // strcat(outPath, "\\BmpImageIO.Test.TryReadAndWrite.637_475_8.bmp");
+    // memcpy(inPath, argv[1], strlen(argv[1]));
+    // strcat(inPath, "\\637_475_8.bmp");
+    // TryReadAndWrite<MatKernel8Bit>(inPath, outPath);
+    // memset(inPath, 0, sizeof(inPath));
+    // memset(outPath, 0, sizeof(outPath));
     
     /* TryWriteTest_4_4_24 */
     strcat(outPath, argv[0]);
     strcat(outPath, "\\BmpImageIO.Test.TryWriteTest_4_4_24.bmp");
     TryWriteTest(outPath);
-    // getchar();
     printf("Sucess Exit");
+    // getchar();
     return 0;
 }

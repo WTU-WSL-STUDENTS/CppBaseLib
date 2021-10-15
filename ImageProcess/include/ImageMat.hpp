@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-10-04 10:21:11
  * @LastEditors: like
- * @LastEditTime: 2021-10-09 15:32:13
+ * @LastEditTime: 2021-10-13 17:09:36
  */
 #ifndef IMAGE_MAT_HPP
 #define IMAGE_MAT_HPP
@@ -36,6 +36,14 @@ typedef struct _ColorBGR
 #pragma pack()
 
 /* 定义图像矩阵核类型 */
+typedef struct _MatKernel1Bit
+{
+    unsigned int d;
+    inline int GetBit(int index/* 0 - 31 */)
+    {
+        return (d & (1 << index)) >> index;
+    }
+}MatKernel1Bit;
 typedef CV_BYTE         MatKernel8Bit;
 typedef unsigned short  MatKernel16Bit;
 typedef MatKernel16Bit  MatKernel555;

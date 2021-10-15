@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-10-04 20:53:44
  * @LastEditors: like
- * @LastEditTime: 2021-10-09 14:23:52
+ * @LastEditTime: 2021-10-12 15:35:50
  */
 #ifndef BMP_IMAGE_IO_HPP
 #define BMP_IMAGE_IO_HPP
@@ -659,28 +659,48 @@ bool ReadImage(MatBGR* (&img), const char* filepath)
     int len = img->w * sizeof(MatKernel24Bit);
     int fit4bit = stride - len;
     char* p = (char*)img->p;
-#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
     int oldLocation = fs.tellg();
     int newLocation = 0;
-    for(int i = 0; i < img->h; i++)
+    if(fit4bit)
     {
-        fs.read(p, len);
-        if(fit4bit)
+#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
+        for(int i = 0; i < img->h; i++)
+        {
+            fs.read(p, len);
             fs.seekg(fit4bit, ios::cur); 
-        newLocation = fs.tellg(); 
-        printf("%d, %d\n", i, newLocation - oldLocation);
-        p += len;
-        oldLocation = newLocation;
-    }
+            newLocation = fs.tellg(); 
+            printf("%d, %d\n", i, newLocation - oldLocation);
+            p += len;
+            oldLocation = newLocation;
+        }
 #else
-    for(int i = 0; i < img->h; i++)
-    {
-        fs.read(p, len);
-        if(fit4bit)
+        for(int i = 0; i < img->h; i++)
+        {
+            fs.read(p, len);
             fs.seekg(fit4bit, ios::cur); 
-        p += len;
-    }
+            p += len;
+        }
 #endif
+    }
+    else
+    {
+#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
+        for(int i = 0; i < img->h; i++)
+        {
+            fs.read(p, len);
+            newLocation = fs.tellg(); 
+            printf("%d, %d\n", i, newLocation - oldLocation);
+            p += len;
+            oldLocation = newLocation;
+        }
+#else
+        for(int i = 0; i < img->h; i++)
+        {
+            fs.read(p, len);
+            p += len;
+        }
+#endif  
+    }
     fs.close();
     return true;
 }
@@ -817,28 +837,50 @@ bool ReadImage(MatBGRA* (&img), const char* filepath)
     int len = img->w * sizeof(MatKernel32Bit);
     int fit4bit = stride - len;
     char* p = (char*)img->p;
+    if(fit4bit)
+    {
 #ifdef PRINTF_BMP_IMAGE_IO_DEBUG
-    int oldLocation = fs.tellg();
-    int newLocation = 0;
-    for(int i = 0; i < img->h; i++)
-    {
-        fs.read(p, len);
-        if(fit4bit)
+        int oldLocation = fs.tellg();
+        int newLocation = 0;
+        for(int i = 0; i < img->h; i++)
+        {
+            fs.read(p, len);
             fs.seekg(fit4bit, ios::cur); 
-        newLocation = fs.tellg(); 
-        printf("%d, %d\n", i, newLocation - oldLocation);
-        p += len;
-        oldLocation = newLocation;
-    }
+            newLocation = fs.tellg(); 
+            printf("%d, %d\n", i, newLocation - oldLocation);
+            p += len;
+            oldLocation = newLocation;
+        }
 #else
-    for(int i = 0; i < img->h; i++)
-    {
-        fs.read(p, len);
-        if(fit4bit)
+        for(int i = 0; i < img->h; i++)
+        {
+            fs.read(p, len);
             fs.seekg(fit4bit, ios::cur); 
-        p += len;
-    }
+            p += len;
+        }
 #endif
+    }
+    else
+    {
+#ifdef PRINTF_BMP_IMAGE_IO_DEBUG
+        int oldLocation = fs.tellg();
+        int newLocation = 0;
+        for(int i = 0; i < img->h; i++)
+        {
+            fs.read(p, len);
+            newLocation = fs.tellg(); 
+            printf("%d, %d\n", i, newLocation - oldLocation);
+            p += len;
+            oldLocation = newLocation;
+        }
+#else
+        for(int i = 0; i < img->h; i++)
+        {
+            fs.read(p, len);
+            p += len;
+        }
+#endif
+    }
     fs.close();
     return true;
 }
