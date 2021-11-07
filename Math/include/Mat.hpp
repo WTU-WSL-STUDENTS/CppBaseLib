@@ -4,31 +4,26 @@
  * @Autor: like
  * @Date: 2021-08-14 21:10:54
  * @LastEditors: like
- * @LastEditTime: 2021-10-06 23:53:33
+ * @LastEditTime: 2021-11-06 07:07:07
  */
 #ifndef MAT_HPP
 #define MAT_HPP
 
 #define _CRT_SECURE_NO_WARNINGS
+#include <CompliedEntry.h>
 #include <stdlib.h>
 #include <string>
 
 using namespace std;
 
 template<typename TKernel>
-/**
- * @description: ??????????????to_string(TKernel), ????????? 
- * @param {??????} t
- * @return {*}
- * @author: like
- */
 inline std::string ToString(const TKernel* t)
 {
     return to_string(*t);
 }
 
 template<typename TKernel>
-class Mat   /* ?????????? */
+class Mat
 {
 public:
     TKernel * p;
@@ -40,7 +35,7 @@ public:
     Mat(const void* source, int width, int height){}
     Mat(int width, int height, const TKernel* array):w(width), h(height), length(width * height)
     {
-        p = (TKernel*)calloc(length, sizeof(TKernel))
+        p = (TKernel*)calloc(length, sizeof(TKernel));
         memcpy(p, array, sizeof(TKernel) * length);
     }
     ~Mat()

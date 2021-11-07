@@ -4,9 +4,9 @@
  * @Autor: like
  * @Date: 2021-10-05 07:19:05
  * @LastEditors: like
- * @LastEditTime: 2021-10-09 09:54:18
+ * @LastEditTime: 2021-10-09 19:08:56
  */
-#define PRINTF_BMP_IMAGE_IO_DEBUG
+// #define PRINTF_BMP_IMAGE_IO_DEBUG
 #include <System.Debug.Dump.hpp>
 #include <cv/BmpImageIO.hpp>
 

@@ -7,3 +7,5 @@ add_executable(GdiImageIO.Test GdiImageIO.Test.cpp)
 target_link_libraries(GdiImageIO.Test gdiplus)
 
 add_executable(BmpImageIO.Test BmpImageIO.Test.cpp)
+
+add_executable(ImageTransformation.Test ImageTransformation.Test.cpp)
