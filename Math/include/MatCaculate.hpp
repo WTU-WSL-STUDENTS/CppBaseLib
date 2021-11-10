@@ -4,13 +4,23 @@
  * @Autor: like
  * @Date: 2021-10-09 19:47:07
  * @LastEditors: like
- * @LastEditTime: 2021-11-08 05:03:50
+ * @LastEditTime: 2021-11-09 06:06:06
  */
 #ifndef MAT_CACULATE_HPP
 #define MAT_CACULATE_HPP
 
 #include <Mat.hpp>
+#define _USE_MATH_DEFINES
 #include <math.h>
+
+inline double DegreeToRadian(double degree)
+{
+    return degree * (M_PI / 180);
+}
+inline double RadianToDegree(double radian)
+{
+    return radian * (180 / M_PI);
+}
 
 template<typename T>
 bool Add(Mat<T>* left, const Mat<T>* right)
@@ -89,7 +99,7 @@ inline Mat<T>* GenMat2dIdentity()
         0, 1, 0,
         0, 0, 1
     };
-    return new Mat<T>(src, 3, 3);
+    return new Mat<T>(3, 3, src);
 }
 /**
  * 平移的变换公式
@@ -110,8 +120,8 @@ template<typename T>
 inline bool Mat2dTranslate(Mat<T>* mat/* 3 x 3 */, T dx, T dy)/* 设置指定x,y偏移量的变换矩阵*/
 {
     VALRET_ASSERT(mat && 3 == mat->h && 3 == mat->w, false);
-    mat->p + 6 = dx;
-    mat->p + 7 = dy;
+    *(mat->p + 6) = dx;
+    *(mat->p + 7) = dy;
     return true;
 }
 /**
@@ -131,8 +141,8 @@ template<typename T>
 inline bool Mat2dScala(Mat<T>* mat/* 3 x 3 */, T sx/* x方向伸缩因子 */, T sy)
 {
     VALRET_ASSERT(mat && 3 == mat->h && 3 == mat->w, false);
-    mat->p = sx;
-    mat->p + 4 = sy;
+    *(mat->p) = sx;
+    *(mat->p + 4) = sy;
     return true;
 }
 /**
@@ -158,13 +168,27 @@ inline bool Mat2dScala(Mat<T>* mat/* 3 x 3 */, T sx/* x方向伸缩因子 */, T sy)
  *              [0      , 0     , 1]
  */
 template<typename T>
-inline bool Mat2dRotate(Mat<T>* mat/* 3 x 3 */, double radians)/* 设置指定x,y偏移量的变换矩阵*/
+inline bool Mat2dRotate(Mat<T>* mat/* 3 x 3 */, double radians)/* 设置指定弧度的旋转*/
 {
     VALRET_ASSERT(mat && 3 == mat->h && 3 == mat->w, false);
-    mat->p     = (T)cos(radians);
-    mat->p + 1 = (T)sin(radians);
-    mat->p + 3 = -1 * (T)sin(radians);
-    mat->p + 4 = (T)cos(radians);
+    T cosVal = (T)cos(radians);
+    T sinVal = (T)sin(radians);
+    *(mat->p)     = cosVal;
+    *(mat->p + 1) = sinVal;
+    *(mat->p + 3) = sinVal * -1;
+    *(mat->p + 4) = cosVal;
+    return true;
+}
+/**
+ * [x, y, 1] * A = [X, Y, 1]
+*/
+template<typename T>
+bool Mat2dMult(const T& x,const T& y, Mat<T>* matTransform/* 3 x 3 */, T& x_out, T& y_out)
+{
+    VALRET_ASSERT(matTransform && 3 == matTransform->h && 3 == matTransform->w, false);
+    T* p = matTransform->p;
+    x_out = *p * x + *(p + 3) * y + *(p + 6);
+    y_out = *(p + 1) * x + *(p + 1 + 3) * y + *(p + 1 + 6);
     return true;
 }
 

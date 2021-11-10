@@ -1,0 +1,5 @@
+include_directories(../include)
+include_directories(../../Common/include)
+add_executable(MatCaculate.Test MatCaculate.Test.cpp)
+add_executable(Mat2dTranspose.Test Mat2dTranspose.Test.cpp)
+add_executable(Mat2dHistogram.Test Mat2dHistogram.Test.cpp)

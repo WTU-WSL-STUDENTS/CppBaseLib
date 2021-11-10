@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-08-14 21:10:54
  * @LastEditors: like
- * @LastEditTime: 2021-11-06 07:07:07
+ * @LastEditTime: 2021-11-09 05:48:10
  */
 #ifndef MAT_HPP
 #define MAT_HPP
@@ -30,14 +30,9 @@ public:
     int w;
     int h;
     size_t length;
-    Mat() : p(NULL){}
+    Mat() : p(NULL), w(0), h(0), length(0){}
     Mat(int width, int height) : w(width), h(height),length(width * height), p((TKernel*)calloc(length, sizeof(TKernel))){}
-    Mat(const void* source, int width, int height){}
-    Mat(int width, int height, const TKernel* array):w(width), h(height), length(width * height)
-    {
-        p = (TKernel*)calloc(length, sizeof(TKernel));
-        memcpy(p, array, sizeof(TKernel) * length);
-    }
+    Mat(int width, int height, const TKernel* source) : Mat(width, height){memcpy(p, source, length * sizeof(TKernel));}
     ~Mat()
     {
         if(p)
