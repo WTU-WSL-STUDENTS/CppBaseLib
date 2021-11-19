@@ -4,13 +4,14 @@
  * @Autor: like
  * @Date: 2021-08-14 21:10:54
  * @LastEditors: like
- * @LastEditTime: 2021-11-09 05:48:10
+ * @LastEditTime: 2021-11-17 10:26:44
  */
 #ifndef MAT_HPP
 #define MAT_HPP
 
 #define _CRT_SECURE_NO_WARNINGS
 #include <CompliedEntry.h>
+#include <assert.h>
 #include <stdlib.h>
 #include <string>
 
@@ -31,8 +32,8 @@ public:
     int h;
     size_t length;
     Mat() : p(NULL), w(0), h(0), length(0){}
-    Mat(int width, int height) : w(width), h(height),length(width * height), p((TKernel*)calloc(length, sizeof(TKernel))){}
-    Mat(int width, int height, const TKernel* source) : Mat(width, height){memcpy(p, source, length * sizeof(TKernel));}
+    Mat(int width, int height) : w(width), h(height),length(width * height), p((TKernel*)calloc(length, sizeof(TKernel))){assert(p);}
+    Mat(int width, int height, const TKernel* source) : Mat(width, height){assert(source); memcpy(p, source, length * sizeof(TKernel));}
     ~Mat()
     {
         if(p)
