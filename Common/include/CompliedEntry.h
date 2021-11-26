@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-07-23 10:21:28
  * @LastEditors: like
- * @LastEditTime: 2021-10-09 15:30:16
+ * @LastEditTime: 2021-11-26 08:21:23
  */
 #ifndef COMPLIED_ENTRY_H
 #define COMPLIED_ENTRY_H
@@ -58,17 +58,17 @@ namespace System
 #define VOIDRET_ASSERT(condtion)\
         do\
         {\
-        if(!(condtion)){return;}\
+            if(!(condtion)){return;}\
         } while (0)
 #define VALRET_ASSERT(condtion, retVal)\
         do\
         {\
-            if(!condtion){return retVal;}\
+            if(!(condtion)){return retVal;}\
         }while(0)
 #define ERROR_ASSERT(condtion, errorIndex)\
         do\
         {\
-            if(!condtion){throw errorIndex;}\
+            if(!(condtion)){throw errorIndex;}\
         }while(0)
 
 #else

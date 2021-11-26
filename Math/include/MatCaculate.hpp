@@ -4,14 +4,12 @@
  * @Autor: like
  * @Date: 2021-10-09 19:47:07
  * @LastEditors: like
- * @LastEditTime: 2021-11-09 06:06:06
+ * @LastEditTime: 2021-11-23 07:05:59
  */
 #ifndef MAT_CACULATE_HPP
 #define MAT_CACULATE_HPP
 
 #include <Mat.hpp>
-#define _USE_MATH_DEFINES
-#include <math.h>
 
 inline double DegreeToRadian(double degree)
 {
