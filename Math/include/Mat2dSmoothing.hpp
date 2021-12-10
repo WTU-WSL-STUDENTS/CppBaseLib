@@ -7,7 +7,7 @@
  * @Autor: like
  * @Date: 2021-11-19 07:00:03
  * @LastEditors: like
- * @LastEditTime: 2021-11-26 16:44:40
+ * @LastEditTime: 2021-12-09 21:17:58
  */
 #ifndef MAT2D_SMOOTHING_HPP
 #define MAT2D_SMOOTHING_HPP
@@ -388,7 +388,7 @@ bool Mat2dMeadianFilter(Mat<unsigned char>* mat, int kernelWidth, int kernelHeig
 #define INIT_LEFT_BEGIN_HISTGRAM(mat, hist, top, left, bottom, right)   \
     do                                                                  \
     {                                                                   \
-        memset(hist, 0, 256);                                           \
+        memset(hist, 0, sizeof(hist));                                  \
         int beginHistogramSpan = top * mat->w + left;                   \
         for(int r = top; r < bottom; r++, beginHistogramSpan += mat->w) \
         {                                               \
@@ -438,7 +438,7 @@ bool Mat2dMeadianFilter(Mat<unsigned char>* mat, int kernelWidth, int kernelHeig
         INIT_LEFT_BEGIN_HISTGRAM(mat, hist, top, 0, bottom, kernelWidth);
         for
         (
-            int tkCol = tkHalfWidth, left = 0, right = kernelWidth; 
+            int tkCol = tkHalfWidth, left = 0, right = kernelWidth - 1; 
             tkCol < mat->w - tkHalfWidth; 
             tkCol++, left++, right++
         )

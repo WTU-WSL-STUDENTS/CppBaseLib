@@ -1,5 +1,6 @@
 include_directories(../include)
 include_directories(../../Common/include)
+add_executable(Mat2dErosionDialation.Test Mat2dErosionDialation.Test.cpp)
 add_executable(Mat2dFFT.Test Mat2dFFT.Test.cpp)
 add_executable(Mat2dHistogram.Test Mat2dHistogram.Test.cpp)
 add_executable(Mat2dMakeBorder.Test Mat2dMakeBorder.Test.cpp)

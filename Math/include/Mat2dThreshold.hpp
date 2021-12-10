@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-11-09 08:22:32
  * @LastEditors: like
- * @LastEditTime: 2021-11-18 06:45:47
+ * @LastEditTime: 2021-12-07 08:01:24
  */
 #ifndef MAT2D_THRESHOLD_HPP
 #define MAT2D_THRESHOLD_HPP
@@ -67,7 +67,7 @@ bool ThresholdLowPass(Mat<unsigned char>* mat, int t)
     {
         if(*p > t)
         {
-            *p = 0;
+            *p = 255;
         }
     }
     return true;
