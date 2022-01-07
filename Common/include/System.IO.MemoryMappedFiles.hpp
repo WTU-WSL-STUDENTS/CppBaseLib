@@ -6,7 +6,7 @@
 #define _CRT_SECURE_NO_DEPRECATE
 #include <Windows.h>
 #endif
-#include <System.IO.FileStream.hpp>
+#include <System.IO.File.hpp>
 #include <map>
 
 /* https://docs.microsoft.com/zh-cn/dotnet/api/system.io.memorymappedfiles?view=net-5.0 */

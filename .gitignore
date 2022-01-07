@@ -1,12 +1,12 @@
 .vscode
 /*/resource/unittests/output/*
 
-# Math未完成
-# Math
-# Hardware在调试
+# Hardware在调试。 ps: 老鼠把 Kinect 线咬断了,硬件调不了 ...
 Hardware
 # Ai未完成
 Ai
+Tools
+# Learn
 # 忽略cmake生成的文件
 /*/build/*
 */build/*
@@ -16,12 +16,12 @@ Ai
 # 忽略项目生成文件
 /*/build/bin/*
 /*/build/lib/*
+/*/build/bin/*/*
+/*/build/lib/*/*
 !/*/build/bin/*
 !/*/build/lib/*
 
 # 不忽略编译文件
-/*/build/bin/*/*
-/*/build/lib/*/*
 # !/*/build/bin/*/*.pdb
 # !/*/build/bin/*/*.exe
 # !/*/build/lib/*/*.pdb

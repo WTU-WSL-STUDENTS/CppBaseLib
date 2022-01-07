@@ -17,6 +17,7 @@ add_executable(System.Form.OpenGL.Test System.Form.OpenGL.Test.cpp)
 target_link_libraries(System.Form.OpenGL.Test ${Lib_Path}/glfw3 ${Lib_Path}/glad)
 
 
+add_executable(System.IO.Directory.Test System.IO.Directory.Test.cpp)
 add_executable(System.IO.FileStream.Test System.IO.FileStream.Test.cpp)
 add_executable(System.IO.Ini.Test System.IO.Ini.Test.cpp)
 add_executable(System.IO.MemoryMappedFiles.Recv.Test System.IO.MemoryMappedFiles.Recv.Test.cpp)

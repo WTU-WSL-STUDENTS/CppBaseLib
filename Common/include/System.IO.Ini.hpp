@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-08-11 08:47:54
  * @LastEditors: like
- * @LastEditTime: 2021-08-20 10:44:37
+ * @LastEditTime: 2022-01-07 21:23:17
  */
 #ifndef SYSTEM_INI_H
 #define SYSTEM_INI_H
@@ -19,7 +19,7 @@
 // #include <errhandlingapi.h>
 // #endif
 
-#include <System.IO.FileStream.hpp>
+#include <System.IO.File.hpp>
 #include <vector>
 
 using namespace std;
