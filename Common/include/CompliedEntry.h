@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-07-23 10:21:28
  * @LastEditors: like
- * @LastEditTime: 2021-11-26 08:21:23
+ * @LastEditTime: 2022-01-19 12:10:05
  */
 #ifndef COMPLIED_ENTRY_H
 #define COMPLIED_ENTRY_H
@@ -28,6 +28,7 @@
 /* 2. 参数定义 */
 namespace System
 {
+    typedef void* Object;
     typedef unsigned char byte;
     typedef short Int16;
     typedef int Int32;

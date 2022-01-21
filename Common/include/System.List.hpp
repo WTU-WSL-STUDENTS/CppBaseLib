@@ -4,21 +4,16 @@
  * @Autor: like
  * @Date: 2021-08-12 16:04:40
  * @LastEditors: like
- * @LastEditTime: 2021-08-20 18:03:59
+ * @LastEditTime: 2022-01-18 09:09:11
  */
 #ifndef SYSTEM_LIST_HPP
 #define SYSTEM_LIST_HPP
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h> 
+#include <System.IDisposable.h>
 namespace System
 {
-    class IDisposable
-    {
-    public:
-        virtual void Dispose() = 0;
-    };
-
     template<class T>
     class IEnumerator : public IDisposable
     {

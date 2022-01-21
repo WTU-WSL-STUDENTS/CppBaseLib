@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-09-13 07:43:18
  * @LastEditors: like
- * @LastEditTime: 2022-01-07 21:21:27
+ * @LastEditTime: 2022-01-18 09:12:47
  */
 #ifdef USE_CPP_FILE_API
 #ifndef SYSTEM_IO_FILESTREAM_HPP
@@ -107,6 +107,14 @@ namespace System
         };
         class FileStream : public Stream /* https://docs.microsoft.com/zh-cn/dotnet/api/system.io.filestream.-ctor?view=net-5.0#System_IO_FileStream__ctor_System_String_System_IO_FileMode_ */
         {
+            protected:
+                virtual void Dispose(bool disposing)
+                {
+                    if(disposing)
+                    {
+                        /* TODO : Dispose*/
+                    }
+                }
             public:
                 const char* filePath;
                 std::FILE* fileHandle;
@@ -126,7 +134,10 @@ namespace System
                     return -1 < len ? len : 0; 
     
                 }
-
+                void Dispose() override
+                {
+                    Dispose(true);
+                }
                 long Seek(long offset, int origin)
                 {
                     return fseek(fileHandle, offset, origin);

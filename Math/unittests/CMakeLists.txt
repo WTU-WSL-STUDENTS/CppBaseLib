@@ -1,7 +1,13 @@
 include_directories(../include)
 include_directories(../../Common/include)
 add_executable(Mat2dErosionDialation.Test Mat2dErosionDialation.Test.cpp)
+# FFTW
+set(FFTW_Path ../thirdparty/fftw-3.3.5)
+set(FFTW_LibName libfftw3-3_32)
+include_directories(${FFTW_Path}/${Path_Suffix})
 add_executable(Mat2dFFT.Test Mat2dFFT.Test.cpp)
+target_link_libraries(Mat2dFFT.Test ../${FFTW_Path}/lib/${FFTW_LibName})
+
 add_executable(Mat2dHistogram.Test Mat2dHistogram.Test.cpp)
 add_executable(Mat2dMakeBorder.Test Mat2dMakeBorder.Test.cpp)
 add_executable(Mat2dScala.Test Mat2dScala.Test.cpp)

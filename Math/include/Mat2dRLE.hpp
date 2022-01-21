@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-11-18 06:45:01
  * @LastEditors: like
- * @LastEditTime: 2021-12-22 14:49:46
+ * @LastEditTime: 2022-01-17 09:55:14
  */
 #ifndef MAT2D_RLE_HPP
 #define MAT2D_RLE_HPP
@@ -114,7 +114,7 @@ System::List<RLES*> BwLabel(Mat<unsigned char>* mat)
     System::IEnumerator<System::List<int>*>* it = tagList->GetEnumerator();
     while(it->MoveNext())
     {
-        (*it->Current())->
+        // (*it->Current())->
     }
     delete tagList;
 }

@@ -191,9 +191,8 @@ public:
      * 
      * @return char* 
      */
-    inline char* ToString()
+    inline char* ToString(char (&buff)[_MAX_PATH])
     {
-        char buff[_MAX_PATH] = {0};
 	    sprintf(buff, TimeFormat[formatType], Year(), Month(), Day(), Hour(), Minute(), Second(), Milliseconds());
         return buff;
     }
@@ -357,7 +356,7 @@ public:
      * 
      * @return DateTime& 
      */
-    inline static DateTime& Now()
+    inline static DateTime Now()
     {
         time_t now;
         time(&now);

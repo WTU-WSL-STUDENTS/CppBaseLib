@@ -29,6 +29,9 @@ add_executable(System.Socket.Udp.Client.Multicast.Test System.Socket.Udp.Client.
 add_executable(System.Socket.Udp.Client.Broadcast.Test System.Socket.Udp.Client.Broadcast.Test.cpp)
 add_executable(System.Socket.Udp.Server.Test System.Socket.Udp.Server.Test.cpp)
 add_executable(System.Threading.Thread.Test System.Threading.Thread.Test.cpp)
+add_executable(System.Threading.ThreadPool.Test System.Threading.ThreadPool.Test.cpp)
+add_executable(System.Threading.Timer.Test System.Threading.Timer.Test.cpp)
+add_executable(System.Threading.WaitHandle.Test System.Threading.WaitHandle.Test.cpp)
 
 add_executable(System.LinkList.Test System.LinkList.Test.cpp)
 add_executable(System.List.Test System.List.Test.cpp)
