@@ -156,7 +156,7 @@ public:
     }
     inline int Month()
     {
-        return t.tm_mon;
+        return t.tm_mon + 1;
     }
     inline System::DayOfWeek DayOfWeek()
     {
@@ -187,14 +187,13 @@ public:
         return milliseconds;
     }
     /**
-     * @brief 通过重载ToString实现不同的打印格式
+     * @brief 通过修改参数 formatType 实现 ToString 不同的打印格式
      * 
      * @return char* 
      */
-    inline char* ToString(char (&buff)[_MAX_PATH])
+    inline void ToString(char* buff)
     {
 	    sprintf(buff, TimeFormat[formatType], Year(), Month(), Day(), Hour(), Minute(), Second(), Milliseconds());
-        return buff;
     }
     /**
      * @brief 时间比较早晚

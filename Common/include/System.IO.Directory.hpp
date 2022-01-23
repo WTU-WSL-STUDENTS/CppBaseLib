@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-01-06 16:29:57
  * @LastEditors: like
- * @LastEditTime: 2022-01-14 16:58:52
+ * @LastEditTime: 2022-01-23 20:50:43
  */
 #ifndef SYSTEM_IO_DIRECTORY_HPP
 #define SYSTEM_IO_DIRECTORY_HPP
@@ -35,6 +35,14 @@ namespace System::IO
         /* 在搜索操作中包括当前目录和所有它的子目录 */
         AllDirectories      
     };
+    inline static bool GetFullPath(const char* relativePath, char (&absolutePath)[_MAX_PATH])
+    {
+#if defined(__linux) || defined(__APPLE__) || defined(__CYGWIN__)
+        return realpath(relativePath, absolutePath);
+#else
+        return _fullpath(absolutePath, relativePath, _MAX_PATH);
+#endif
+    }
     /**
      * @brief 判断指定路径是否为目录
      * 
@@ -140,8 +148,7 @@ namespace System::IO
      * @brief 按照搜索条件, 将搜索结果按照 func 组包后将结果存入容器中
      * 
      */
-    template<typename T>
-    bool Search_With(const char* path, const char* searchPattern, List<T>& results, 
+    bool Search_With(const char* path, const char* searchPattern, List<std::string>& results, 
 #if defined(__linux) || defined(__APPLE__) || defined(__CYGWIN__)
     std::function<void(const char*, const dirent&, List<std::string>&)>
 #else
@@ -284,9 +291,9 @@ public:
     /**
      * @brief 在指定路径中创建所有目录
      * 
-     * @param strDirPath 目录的绝对或相对路径
+     * @param strDirPath 目录的绝对路径 , 分隔符用 \\ 不能用 /
      * @return true 
-     * @return false 
+     * @return false 1. 路径格式错误; 3. 权限不足
      */
     static bool CreateDirectory(const char* strDirPath)
     {
@@ -318,18 +325,27 @@ public:
 
         return true;
 #else
-        return 0 == SHCreateDirectoryEx(NULL, strDirPath, NULL);
+        if(Exists(strDirPath))
+        {
+            return true;
+        }
+        if(SHCreateDirectoryEx(NULL, strDirPath, NULL))
+        {
+            printf("Directory::CreateDirectory Failed , Error Code %d\n", GetLastError());
+            return false;
+        }
+        return true;
 #endif
     }
     /**
-     * @brief 调用 shell 复制指定目录 , 未测试路径
+     * @brief 调用 shell 复制指定目录, 将 src 拷贝至 dest\\src
      * 
-     * @param src 
-     * @param dest 
+     * @param src 绝对或相对路径
+     * @param dest 绝对或相对路径
      * @return true 
      * @return false 
      */
-    bool CopyDirectory(const char* src, const char* dest, bool overwrite)
+    static bool CopyDirectory(const char* src, const char* dest, bool overwrite)
     {
 #if defined(__linux) || defined(__APPLE__) || defined(__CYGWIN__)
         if (access(src, F_OK))
@@ -461,7 +477,7 @@ public:
      * 
      * @param strEmptyDirPath 目录的绝对或相对路径
      * @return true 
-     * @return false 
+     * @return false 1. 目录非空; 2. 权限不足
      */
     inline static bool Delete(const char* strEmptyDirPath)
     {
@@ -473,7 +489,7 @@ public:
      * @param strDirPath 目录的绝对或相对路径
      * @param recursive 是否递归删除子文件内容
      * @return true 
-     * @return false 
+     * @return false 1. 权限不足
      */
     inline static bool Delete(const char* strDirPath, bool recursive)
     {
@@ -639,13 +655,11 @@ public:
     /**
      * @brief 获取程序的工作目录
      * 
-     * @return const char* 返回长度为 _MAX_PATH 的栈内存
+     * @param buf 长度为 _MAX_PATH 的内存块
      */
-    inline static const char* GetCurrentDirectory()
+    inline static void GetCurrentDirectory(char (&buf)[_MAX_PATH])
     {
-	    char buf[_MAX_PATH];
 	    _getcwd(buf, sizeof(buf));
-        return buf;
     }
     /**
      * @brief 获取指定目录下的第一级子目录列表
@@ -657,14 +671,12 @@ public:
      *  ?est 忽略名称的第一个字符, 名字格式满足 est 的所有名称
      * @return List<std::string> 
      */
-    static List<std::string> GetDirectorys(const char* strPath, const char* strSearchPattern = "*")
+    static bool GetDirectorys(List<std::string> list, const char* strPath, const char* strSearchPattern = "*")
     {
-        List<std::string> list;
         if(!Directory::Exists(strPath))
         {
-            return list;
+            return false;
         }
-
         char path[_MAX_PATH] = {0};
         strcpy(path, strPath);
         Search_If(path, strSearchPattern, list, 
@@ -679,7 +691,7 @@ public:
         {
             list[i] = prefix + list[i]; 
         }
-        return list;
+        return true;
     }
     /**
      * @brief 获取指定目录下的递归(可选)子目录列表
@@ -692,31 +704,32 @@ public:
      * @param option 
      * @return List<std::string> 
      */
-    static List<std::string> GetDirectorys(const char* strPath, const char* strSearchPattern, SearchOption option)
+    static bool GetDirectorys(List<std::string>& list, const char* strPath, const char* strSearchPattern, SearchOption option)
     {
-        List<std::string> list = GetDirectorys(strPath, strSearchPattern);
-        if(TopDirectoryOnly == option)
+        if(!GetDirectorys(list, strPath, strSearchPattern))
         {
-            return list;
+            return false;
         }
-        size_t begin = 0;
-        size_t count = list.Count();
-        while(_GetCurrentSubDirectorys(list, begin, count)){}
-        return list;
+        if(TopDirectoryOnly != option)
+        {
+            size_t begin = 0;
+            size_t count = list.Count();
+            while(_GetCurrentSubDirectorys(list, begin, count)){}
+        }
+        return true;
     }
     /**
-     * @brief 返回指定目录中与指定的搜索模式匹配的文件的名称（包含其路径）。
+     * @brief 返回指定目录中与指定的搜索模式匹配的文件的名称及后缀
      * 
      * @param strPath 
      * @param strSearchPattern 
      * @return List<std::string> 
      */
-    static List<std::string> GetFiles(const char* strPath, const char* strSearchPattern = "*.*")
+    static bool GetFiles(List<std::string>& list, const char* strPath, const char* strSearchPattern = "*.*")
     {
-        List<std::string> list;
         if(!Directory::Exists(strPath))
         {
-            return list;
+            return false;
         }
         Search_If(strPath, strSearchPattern, list, 
 #if defined(__linux) || defined(__APPLE__) || defined(__CYGWIN__)
@@ -724,24 +737,20 @@ public:
 #else
         [](const _finddata_t& d)->bool { return !(_A_SUBDIR & d.attrib); });
 #endif   
-        std::string prefix(strPath);
-        prefix += "\\";
-        for(size_t i = 0; i < list.Count(); i++)
-        {
-            list[i] = prefix + list[i]; 
-        }
-        return list;
+        return true;
     }
     /**
      * @brief 返回满足指定条件的所有文件和子目录的名称
      * 
+     * @param results 
      * @param strPath 
      * @param strSearchPattern 
-     * @return List<std::string> 
+     * @return true 
+     * @return false 
      */
-    static List<std::string> GetFileSystemEntries(const char* strPath, const char* strSearchPattern = "*")
+    static bool GetFileSystemEntries(List<std::string>& results, const char* strPath, const char* strSearchPattern = "*")
     {
-        List<std::string> results;
+        
 #if defined(__linux) || defined(__APPLE__) || defined(__CYGWIN__)
         char condition[_MAX_PATH] = {0};
         strcat
@@ -803,7 +812,7 @@ public:
             }
         }while (0 == _findnext(hFile, &file_data));
         _findclose(hFile);
-        return results;
+        return true;
 #endif
     }
     /**
@@ -814,7 +823,7 @@ public:
      * @return true 
      * @return false 
      */
-    bool Move(const char* src, const char* dest)
+    static bool Move(const char* src, const char* dest)
     {
         if(Exists(src) && CopyDirectory(src, dest, true))
         {
