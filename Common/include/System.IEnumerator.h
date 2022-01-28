@@ -1,26 +1,39 @@
 /*
  * @Description: 
+ * 优化虚函数表查询 :
+ * refrence : http://t.zoukankan.com/stdpain-p-14590681.html
+ * final 语法上功能与 c# 中密封类类似
+ * 1. final 关键字 :  
+ *      class SumExpressionV2 final: public Expression
+ *      ((SumExpression*)(expression))->update(&context, block[i]);
+ * 优点 : 优化后性能与非虚函数几乎相同, 远远大于虚函数查表。 final 关键字可以让编译器有勇气内联
+ * 缺点 : 表达式有点复杂 final 和 (SumExpression*) 缺一不可
+ * 2. CRTP
+ * 
+ * 
  * @Version: 1.0
  * @Autor: like
  * @Date: 2022-01-23 20:31:41
  * @LastEditors: like
- * @LastEditTime: 2022-01-23 20:35:15
+ * @LastEditTime: 2022-01-24 19:05:24
  */
 #ifndef SYSTEM_IENUMERATOR_HPP
 #define SYSTEM_IENUMERATOR_HPP
+
+#define ENABLE_CRTP /* 静态分发使能 */
+
 #include <System.IDisposable.h>
 
 namespace System
 {
     template<class T>
     class IEnumerator;
-    
     template<class T>
     class IEnumerable;
-    
     template<class T>
     class ICollection;
 };
+
 template<class T>
 class System::IEnumerator : public IDisposable
 {
