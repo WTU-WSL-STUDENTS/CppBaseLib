@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-08-18 20:19:50
  * @LastEditors: like
- * @LastEditTime: 2021-09-13 10:57:36
+ * @LastEditTime: 2022-02-08 15:51:52
  */
 #ifndef SYSTEM_XML_HPP
 #define SYSTEM_XML_HPP
@@ -12,7 +12,7 @@
  * https://www.w3school.com.cn/xml/xml_encoding.asp
 */
 #include <tinyxml.h>
-#include <System.List.hpp>
+// #include <System.List.hpp>
 
 namespace System::Xml
 {

@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-01-06 16:49:36
  * @LastEditors: like
- * @LastEditTime: 2022-01-23 20:54:21
+ * @LastEditTime: 2022-02-11 10:43:38
  */
 
 #include <System.IO.Directory.hpp>
@@ -53,14 +53,14 @@ int main()
     PRINTF_TEST_BOOL(GetFullPath("./", buf));
     printf("%s\n", buf);
 
-    List<std::string> list;
+    StackList<std::string> list;
     size_t i = 0;
     PRINTF_TEST_BOOL(Directory::GetFiles(list, "./", "*.exe"));
     for(; i < list.Count(); i++)
     {
         printf("\"%s\"\n", list[i].c_str());
     }
-    Search_With(buf, "*.pdb", list, [](const char* path, const _finddata_t& data, List<std::string>& container)->void
+    Search_With(buf, "*.pdb", list, [](const char* path, const _finddata_t& data, StackList<std::string>& container)->void
     {
         char buf[_MAX_PATH] = {0};
         strcat

@@ -7,16 +7,19 @@
  * @Autor: like
  * @Date: 2021-08-12 16:04:40
  * @LastEditors: like
- * @LastEditTime: 2022-01-28 09:45:45
+ * @LastEditTime: 2022-02-11 10:42:41
  */
 #ifndef SYSTEM_LIST_HPP
 #define SYSTEM_LIST_HPP
+#include <CompliedEntry.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h> 
+#include <functional>
 #include <System.IEnumerator.h>
 
 #ifdef ASSERT_ENABLE
+#include <assert.h>
 #define LIST_DEBUG(condition) assert(condition)
 #endif
 #define LIST_COUNT_MAX SIZE_MAX / sizeof(T)
@@ -27,9 +30,7 @@ namespace System
 {   
     template<class T>    
     class IList;
-    template<class T>
-    class ListEnumrator;
-    template<class T>
+    template<class T, template<class> class ListItemMemoryDisposePolicy>
     class List;
 }
 
@@ -37,71 +38,54 @@ template<class T>
 class System::IList : public ICollection<T>
 {
 public:
-    virtual int  IndexOf(const T& item)             = 0;
-    virtual void Insert(size_t index, const T& item)= 0;
-    virtual bool RemoveAt(size_t index)             = 0;
+    virtual size_t  IndexOf(const T& item)              = 0;
+    virtual void    Insert(size_t index, const T& item) = 0;
+    virtual bool    RemoveAt(size_t index)              = 0;
 };
 
-template<class T>
-class System::ListEnumrator final: public IEnumerator<T>
-{
-friend class List<T>;
-private:
-    T**  m_pScan0;
-    int m_nPosition;
-    int m_nCount;
-public:
-    ListEnumrator(T** begin, size_t len):m_pScan0(begin), m_nPosition(-1), m_nCount(len){}
-    T* Current() override 
-    {
-        return (*m_pScan0 + m_nPosition);
-    }
-    bool MoveNext() override 
-    {
-        return ++m_nPosition < m_nCount;
-    }
-    void Reset() override 
-    {
-        m_nPosition = -1;
-    }
-    void Dispose() override{}
-};
 /**
  * @brief 
  * 
- * @tparam T : 
- * 1. 指向堆内存的指针
- *  优点
- *  - List 容量大
- *  缺点
- *  - 如果 Add 的指针指向栈内存, 会存在访问错误
- * 2. 堆栈内存结构
- *  优点
- *  - 数据排列整齐, 方便实现 Span 有利于 Cache 命中
- *  缺点
- *  堆栈数据都会以副本的形式存储到 List 中, 因此最大容量受 T 数据结构大小影响
+ * @tparam T 
+ * @tparam ListItemMemoryDisposePolicy item 的内存释放策略, 在执行删除或析构操作时, 会对所有 item 执行的内存释放策略 ListItemMemoryDisposePolicy<T>::Free 默认提供三种释放策略
+ * 0. StructerItemMemoryDisposePolicy   : 不执行任何释放操作
+ *  - T 数据结构在 Statck 上
+ *  - T 指针指向静态存储区
+ *  - 忽略 T 指针的释放动作, 全权由调用者自行释放 ( List 析构前自行遍历进行释放 )
+ * 1. NewItemMemoryDisposePolicy        : 基于 delete 的内存释放 
+ *  - T 指针通过 new 创建, 并且 List 实例拥有该指针所有权
+ * 2. MallocItemMemoryDisposePolicy     : 基于 free 的内存释放 
+ * - T 指针通过 malloc / calloc / relloc 创建, 并且 List 实例拥有该指针所有权
  */
-template<class T, template<class>class ListItemMemPolicy>
-class System::List : IList<T>
+template<class T, template<class> class ListItemMemoryDisposePolicy>
+class System::List : public IList<T> ,public ListItemMemoryDisposePolicy<T>
 {
 private:
     T* m_pScan0;    /* 连续内存块 */
-    ListItemMemPolicy<T> m_policy;
     size_t m_nCapacity; 
     size_t m_nCount;
-    bool isReadOnly;
+    bool m_bIsReadOnly;
     /**
      * @brief 内存扩容
      * 
+     * @param nMemoryGrouthRate 
      */
     inline void MemoryGrowth(int nMemoryGrouthRate = LIST_MEMORY_GROUTH_RATE)
     {   
         LIST_DEBUG(LIST_COUNT_MAX == m_nCapacity);
         /* 确保 sizeof(T) * capacity 不溢出 */
-        m_nCapacity = (LIST_COUNT_MAX >> nMemoryGrouthRate) < m_nCapacity ? LIST_COUNT_MAX : m_nCapacity << nMemoryGrouthRate;
-        m_pScan0 = (T*)realloc(m_pScan0, sizeof(T) * m_nCapacity);
+        size_t nCapacity = (LIST_COUNT_MAX >> nMemoryGrouthRate) < m_nCapacity ? LIST_COUNT_MAX : m_nCapacity << nMemoryGrouthRate;
+        
+        T* p = (T*)malloc(sizeof(T) *  nCapacity);
+        if(NULL == p)
+        {
+            throw "Out of memory\n";
+        }
+        memcpy(p, m_pScan0, m_nCapacity * sizeof(T));
+        free(m_pScan0);
+        m_pScan0 = p;
+        m_nCapacity = nCapacity;
     }
-    List(){}
 public:
     /**
      * @brief 表示一种方法，该方法定义一组条件并确定指定对象是否符合这些条件
@@ -113,20 +97,53 @@ public:
      * 
      */
     typedef std::function<int(const T&, const T&)> ICompare;
+    /**
+     * @brief List 迭代器实现
+     * 
+     */
+    class Enumerator final: public IEnumerator<T>
+    {
+    friend class List<T, ListItemMemoryDisposePolicy>;
+    private:
+        T**  m_pScan0;
+        int m_nPosition;
+        int m_nCount;
+        Enumerator(T** begin, size_t len):m_pScan0(begin), m_nPosition(-1), m_nCount(len){}
+    public:
+        ~Enumerator(){}
+        inline T* Current() override 
+        {
+            return (*m_pScan0 + m_nPosition);
+        }
+        inline bool MoveNext() override 
+        {
+            return ++m_nPosition < m_nCount;
+        }
+        inline void Reset() override 
+        {
+            m_nPosition = -1;
+        }
+        inline void Dispose() override{}
+    };
 
     /**
      * @brief 初始化容器, 该实例为空并且具有指定的初始容量
      * 
      * @param capacity 初始容量
      */
-    List(int capacity = 8): m_nCapacity(capacity), m_pScan0((T*)malloc(sizeof(T) * m_nCapacity)), m_nCount(0), isReadOnly(false){}
-    List(IEnumerable<T> ie/* T 如果是指针, 那么释放所有权归当前实例所有 */) : isReadOnly(false)
+    List(size_t capacity = 8): m_nCapacity(capacity), m_pScan0((T*)malloc(sizeof(T) * capacity)), m_nCount(0), m_bIsReadOnly(false){}
+    List(IEnumerable<T> ie/* T 的释放策略只能设置为 Structer, 多个List存储相同指针, 其他释放策略会导致指针重复释放 */) : m_bIsReadOnly(false)
     {
         ICollection<T>* ic = (ICollection<T>*)&ie;
         m_nCount = ic->Count();
         m_nCapacity = m_nCount;
         m_pScan0 = (T*)malloc(sizeof(T) * m_nCapacity);
         ic->CopyTo(m_pScan0, 0);
+    }
+    List(std::initializer_list<T> list) : List(list.size())
+    {
+        memcpy(m_pScan0, list.begin(), sizeof(T) * list.size());
+        m_nCount = list.size();
     }
     /**
      * @brief 完整的释放内存有两个步骤 : 1. 遍历 IEnumerator 进行元素内存释放; 2. 调用 IEnumerator::Dispose()
@@ -137,6 +154,10 @@ public:
         this->Clear();
         free(m_pScan0);
     }
+    T& operator[](int index)
+    {
+        return *(m_pScan0 + index);
+    } 
     /**
      * @brief 末尾增加数据. O(1)
      * @param item 
@@ -144,20 +165,22 @@ public:
      */
     virtual void Add(const T& item) override
     {
+        LIST_DEBUG(!IsReadOnly());
         if(m_nCount == m_nCapacity)
         {
             MemoryGrowth();
         }
-        m_policy.Copy(m_pScan0 + m_nCount, item);
+        memcpy(m_pScan0 + m_nCount, &item, sizeof(T));
         m_nCount++;
     }
     /**
-     * @brief 将指定集合的元素添加到 List<T> 的末尾
+     * @brief 将指定集合的元素添加到 List<T> 的末尾, 如果 T 为指针类型, 释放的所有权归属于父 List<T>
      * 
      * @param ie 
      */
     void AddRange(IEnumerable<T> ie)
     {
+        LIST_DEBUG(!IsReadOnly());
         ICollection<T>* ic = (ICollection<T>*)&ie;
         size_t c = ic->Count();
         if(c + m_nCount <= m_nCapacity)
@@ -181,9 +204,10 @@ public:
      */
     virtual void Clear() override
     {
+        VOIDRET_ASSERT(!IsReadOnly());
         while(m_nCount)
         {
-            m_policy.Free(m_pScan0[--m_nCount]);
+            ListItemMemoryDisposePolicy<T>::Free(m_pScan0 + --m_nCount);
         }
     }
     /**
@@ -197,12 +221,20 @@ public:
     {
         for(size_t i = 0; i < m_nCount; i++)
         {
-            if(m_policy.Equals(m_pScan0 + i, &item))
+            if(0 == memcmp(m_pScan0 + i, &item, sizeof(T)))
             {
                 return true;
             }
         }
         return false;
+    }
+    inline size_t Capacity()
+    {
+        return m_nCapacity;
+    }
+    virtual size_t Count() override
+    {
+        return m_nCount;
     }
     /**
      * @brief 将 List<T> 或它的一部分复制到一个数组中
@@ -226,7 +258,7 @@ public:
         memcpy(array, m_pScan0, m_nCount * sizeof(T));
         return true;
     }
-    virtual void CopyTo (T* array, int arrayIndex) override
+    virtual void CopyTo(T* array, int arrayIndex) override
     {
         VOIDRET_ASSERT(array);
         memcpy(array + arrayIndex, m_pScan0, m_nCount * sizeof(T));
@@ -317,7 +349,12 @@ public:
         }
         return SIZE_MAX;
     }
-    void ForEach(function<void(const T&)> action)
+    /**
+     * @brief 对 List<T> 的每个元素执行指定操作
+     * 
+     * @param action 
+     */
+    void ForEach(std::function<void(const T&)> action)
     {
         for(size_t i = 0; i < m_nCount; i++)
         {
@@ -331,7 +368,7 @@ public:
      */
     virtual IEnumerator<T>* GetEnumerator() override
     {
-        return new ListEnumrator<T>(scan0, count);
+        return new Enumerator(&m_pScan0, m_nCount);
     }
     /**
      * @brief 查找指定元素的位置 O(n)
@@ -343,7 +380,7 @@ public:
     {
         for(size_t i = 0; i < m_nCount; i++)
         {
-            if(m_policy.Equals(m_pScan0 + i, &item))
+            if(0 == memcmp(m_pScan0 + i, &item, sizeof(T)))
             {
                 return i;
             }
@@ -355,7 +392,7 @@ public:
         VALRET_ASSERT(index + count <= m_nCount, SIZE_MAX);
         for(size_t i = index; i < m_nCount - count; i++)
         {
-            if(m_policy.Equals(m_pScan0 + i, &item))
+            if(0 == memcmp(m_pScan0 + i, &item, sizeof(T)))
             {
                 return i;
             }
@@ -367,7 +404,7 @@ public:
         VALRET_ASSERT(index < m_nCount, SIZE_MAX);
         for(size_t i = index; i < m_nCount; i++)
         {
-            if(m_policy.Equals(m_pScan0 + i, &item))
+            if(0 == memcmp(m_pScan0 + i, &item, sizeof(T)))
             {
                 return i;
             }
@@ -383,31 +420,34 @@ public:
      */
     virtual void Insert(size_t index, const T& item) override
     {
+        LIST_DEBUG(!IsReadOnly());
         LIST_DEBUG(index < m_nCount);
         if(m_nCount < m_nCapacity)
         {
             /*1. 整体后移; 2. 插入*/
             for(size_t i = m_nCount; i > index;)
             {
-                memcpy(m_pScan0[i--], m_pScan0[i], sizeof(T));
+                memcpy(m_pScan0 + i--, m_pScan0 + i, sizeof(T));
             }
-            m_policy.Copy(m_pScan0 + index, item);
+            memcpy(m_pScan0 + index, &item, sizeof(T));
+
         }
         else/* 尾插 */
         {
             MemoryGrowth();
-            m_policy.Copy(m_pScan0 + m_nCount, item);
+            memcpy(m_pScan0 + m_nCount, &item, sizeof(T));
         }
         m_nCount++;
     }
     /**
-     * @brief 如果 T 为指针类型, 释放的所有权归属于父 List<T>
+     * @brief 将集合中的元素插入 List<T> 的指定索引处, 如果 T 为指针类型, T 的释放策略只能设置为 Structer, 多个List存储相同指针, 其他释放策略会导致指针重复释放
      * 
      * @param index 应在此处插入新元素的从零开始的索引
      * @param ie 应将其元素插入到 List<T> 中的集合。 集合自身不能为 null，但它可以包含为 null 的元素（如果类型 T 为引用类型）
      */
     void InsertRange(int index, IEnumerable<T> ie)
     {
+        LIST_DEBUG(!IsReadOnly());
         LIST_DEBUG(index < m_nCount);
         ICollection<T>* ic = (ICollection<T>*)&ie;
         size_t c = ic->Count();
@@ -426,11 +466,27 @@ public:
             AddRange(ie);
         }
     }
+    /**
+     * @brief 获取一个值，该值指示 IList 是否为只读。
+     * 
+     * @return true 
+     * @return false 
+     */
+    virtual bool IsReadOnly() override
+    {
+        return m_bIsReadOnly;
+    }
+    /**
+     * @brief 返回 List<T> 或它的一部分中某个值的最后一个匹配项的从零开始的索引
+     * 
+     * @param item 
+     * @return size_t 
+     */
     size_t LastIndexOf(const T& item)
     {
         for(size_t i = m_nCount; i >0;)
         {
-            if(m_policy.Equals(m_pScan0 + --i, &item))
+            if(0 == memcmp(m_pScan0 + --i, &item, sizeof(T)))
             {
                 return i;
             }
@@ -442,7 +498,7 @@ public:
         VALRET_ASSERT(index < m_nCount, SIZE_MAX);
         for(size_t i = index; i < SIZE_MAX; i--)
         {
-            if(m_policy.Equals(m_pScan0 + i, &item))
+            if(0 == memcmp(m_pScan0 + i, &item, sizeof(T)))
             {
                 return i;
             }
@@ -454,7 +510,7 @@ public:
         VALRET_ASSERT(index < m_nCount && count <= index + 1, SIZE_MAX);      
         for(size_t i = 0; i < count; i++)
         {
-            if(m_policy.Equals(m_pScan0 + index - i, &item))
+            if(0 == memcmp(m_pScan0 + index - i, &item, sizeof(T)))
             {
                 return i;
             }
@@ -482,9 +538,10 @@ public:
      */
     void RemoveAll(IPredicate match)
     {
+        LIST_DEBUG(!IsReadOnly());
         for(size_t i = m_nCount; i > 0;)
         {
-            if(match(m_pScan0 + --i))
+            if(match(m_pScan0[--i]))
             {
                 RemoveAt(i);
             }
@@ -495,15 +552,17 @@ public:
      * 
      * @param index 
      */
-    void RemoveAt(int index)
+    virtual bool RemoveAt(size_t index) override
     {
-        LIST_DEBUG(index < m_nCount);
-        m_policy.Free(m_pScan0 + idx);
-        for(size_t i = idx; i < m_nCount; i++)
+        LIST_DEBUG(!IsReadOnly());
+        VALRET_ASSERT(index < m_nCount, false);
+        ListItemMemoryDisposePolicy<T>::Free(m_pScan0 + index);
+        for(size_t i = index; i < m_nCount;)
         {
-            memcpy(m_pScan0 + idx++, m_pScan0 + idx, sizeof(T));
+            memcpy(m_pScan0 + i++, m_pScan0 + i, sizeof(T));
         }
         m_nCount--;
+        return true;
     }
     /**
      * @brief 从 List<T> 中移除一系列元素
@@ -513,10 +572,11 @@ public:
      */
     void RemoveRange(size_t index, size_t count)
     {
+        LIST_DEBUG(!IsReadOnly());
         LIST_DEBUG(index + count <= m_nCount);
         for(size_t i = 0; i < count; i++)
         {
-            m_policy.Free(m_pScan0 + index + i);  
+            ListItemMemoryDisposePolicy<T>::Free(m_pScan0 + index + i);  
         }
         memmove(m_pScan0 + index, m_pScan0 + index + count, sizeof(T) * (m_nCount - index - count));/* memcpy 循环和 memmove 效率还未验证 */
         m_nCount -= count;
@@ -528,12 +588,16 @@ public:
     void Reverse()
     {
         VOIDRET_ASSERT(1 < m_nCount);
-        T* begin = m_pScan0;
-        T* end = m_pScan0 + m_nCount - 1;
-        for(size_t i = 0; i < (m_nCount >> 1); i++, begin++, end--)
+        T* begin= m_pScan0;
+        T* end  = m_pScan0 + m_nCount - 1;
+        T* temp = (T*)malloc(sizeof(T));
+        for(size_t i = 0; i < m_nCount / 2; i++, begin++, end--)
         {
-            *begin ^= *end ^= *begin ^= *end;
+            memcpy(temp, begin, sizeof(T));
+            memcpy(begin, end, sizeof(T));
+            memcpy(end, temp, sizeof(T));
         }
+        free(temp);
     }
     /**
      * @brief 将指定范围中元素的顺序反转
@@ -545,12 +609,16 @@ public:
     {
         LIST_DEBUG(index + count <= m_nCount);
         VOIDRET_ASSERT(1 < m_nCount);
-        T* begin = m_pScan0 + index;
-        T* end = m_pScan0 + index + count;
-        for(size_t i = index; i < (count >> 1); i++, begin++, end--)
+        T* begin= m_pScan0 + index;
+        T* end  = m_pScan0 + index + count - 1;
+        T* temp = (T*)malloc(sizeof(T));
+        for(size_t i = 0; i < count / 2; i++, begin++, end--)
         {
-            *begin ^= *end ^= *begin ^= *end;
+            memcpy(temp, begin, sizeof(T));
+            memcpy(begin, end, sizeof(T));
+            memcpy(end, temp, sizeof(T));
         }
+        free(temp);
     }
     /**
      * @brief 如果分区大小小于或等于16个元素，则它将使用插入排序算法。
@@ -563,7 +631,7 @@ public:
         if(17 > m_nCount)/* https://www.cnblogs.com/nicaicai/p/12596565.html */
         {
             T* p = m_pScan0;
-            T* val = *T*)malloc(sizeof(T));    
+            T* val = (T*)malloc(sizeof(T));    
             for(int i = 1, index; i < (int)m_nCount; i++)
             {
                 memcpy(val, p + i, sizeof(T));
@@ -591,7 +659,7 @@ public:
         void* p = malloc(sizeof(T) * m_nCount);
         memcpy(p, m_pScan0, sizeof(T) * m_nCount);
         free(m_pScan0);
-        m_pScan0 = p;
+        m_pScan0 = (T*)p;
         m_nCapacity = m_nCount;
     }
     /**
@@ -604,65 +672,18 @@ public:
     bool TrueForAll(IPredicate match)
     {
         size_t i = 0;
-        while(i < m_nCount && match(m_pScan0[i])
+        while(i < m_nCount && match(m_pScan0[i]))
         {
             i++;
         }
         return i == m_nCount;
-    }
-
-
-    /**
-     * @description: 当前数据量
-     * @param {*}
-     * @return {返回当前List内存储的数据}
-     * @author: like
-     */        
-    virtual size_t Count() override{return count;}
-    T& operator[](int index)
-    {
-        return *(scan0 + index);
-    }
-    /**
-     * @description: 是否为只读，该接口永远返回false，未实现相关功能
-     * @param {*}
-     * @return {返回true}
-     * @author: like
-     */        
-    virtual bool IsReadOnly() override{return isReadOnly;}
-    List<T>* Clone()
-    {
-        List<T>* dest = new List<T>(capacity);
-        dest.count = count;
-        memcpy(dest.scan0, scan0, count * sizeof(T));
-        return 
-    }
+    }      
 };
 
-// T 为 new 出来的指针
 template<typename T>
-class NewPtrListPolocy final
+class NewItemMemoryDisposePolicy
 {
 public:
-    NewPtrListPolocy(){}
-    /**
-     * @brief src 为 new 出来的指针对应 List 的拷贝策略
-     * 
-     * @param dest 
-     * @param src 
-     */
-    inline void Copy(T* dest, const T&  src)
-    {
-        *dest = src;
-    }
-    inline bool Equals(const T* cmp1, const T* cmp2)
-    {
-        return cmp1 == cmp2;
-    }
-    inline int Compare(const T* cmp1, const T* cmp2)
-    {
-        return cmp1 == cmp2;
-    }
     /**
      * @brief src 为 new 出来的指针对应 List 的释放策略
      * 
@@ -678,22 +699,10 @@ public:
     }
     
 };
-// T 为 API 分配出来的指针
 template<typename T>
-class MallocPtrListPolocy final
+class MallocItemMemoryDisposePolicy
 {
 public:
-    MallocPtrListPolocy(){}
-    /**
-     * @brief src 为 API 分配出来的指针对应 List 的拷贝策略
-     * 
-     * @param dest 
-     * @param src 
-     */
-    inline void Copy(T* dest, const T&  src)
-    {
-        *dest = src;
-    }
     /**
      * @brief src 为 API 分配出来的指针对应 List 的释放策略
      * 
@@ -708,24 +717,12 @@ public:
         }
     }
 };
-/* T 为元素的结构 */
 template<typename T>
-class StructerListPolocy final
+class StructerItemMemoryDisposePolicy
 {
 public:
-    StructerListPolocy(){}
     /**
-     * @brief src 为 API 分配出来的指针对应 List 的拷贝策略
-     * 
-     * @param dest 
-     * @param src 
-     */
-    inline void Copy(T* dest, const T&  src)
-    {
-        memcpy(dest, &src, sizeof(T));
-    }
-    /**
-     * @brief src 为 API 分配出来的指针对应 List 的释放策略
+     * @brief 结构体的释放策略
      * 
      * @param src 
      */
@@ -733,4 +730,11 @@ public:
     {
     }
 };
+
+template <typename T>
+using HeapList = System::List<T, NewItemMemoryDisposePolicy>;
+template <typename T>
+using MallocList = System::List<T, MallocItemMemoryDisposePolicy>;
+template <typename T>
+using StackList = System::List<T, StructerItemMemoryDisposePolicy>;
 #endif

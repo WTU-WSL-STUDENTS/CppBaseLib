@@ -56,7 +56,7 @@ public:
     virtual bool IsReadOnly()                       = 0;
     virtual void Add(const T& item)                 = 0;
     virtual void Clear ()                           = 0;
-    virtual int Contains(const T& item)             = 0;
+    virtual bool Contains(const T& item)            = 0;
     virtual void CopyTo(T* container, int offset)   = 0;
     virtual bool Remove (const T& item)             = 0;
 };

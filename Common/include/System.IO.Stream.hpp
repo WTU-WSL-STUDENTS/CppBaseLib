@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-10-08 15:10:47
  * @LastEditors: like
- * @LastEditTime: 2022-01-18 09:10:39
+ * @LastEditTime: 2022-02-11 20:41:34
  */
 #ifndef SYSTEM_IO_STREAM_H
 #define SYSTEM_IO_STREAM_H
@@ -18,7 +18,6 @@ namespace System::IO
 class System::IO::Stream : public IDisposable
 {
 protected:
-    size_t nLength;
     int nCurrentPos;
     int nReadTimeout;
     int nWriteTimeout;
@@ -70,10 +69,7 @@ public:
      * 
      * @return size_t 
      */
-    virtual size_t Length()
-    {
-        return nLength;
-    }
+    virtual size_t Length() = 0;
     /**
      * @brief 获取当前流中的位置
      * 

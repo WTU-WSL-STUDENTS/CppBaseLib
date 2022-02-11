@@ -4,12 +4,12 @@
  * @Autor: like
  * @Date: 2022-01-06 16:29:57
  * @LastEditors: like
- * @LastEditTime: 2022-01-23 20:50:43
+ * @LastEditTime: 2022-02-11 14:30:19
  */
 #ifndef SYSTEM_IO_DIRECTORY_HPP
 #define SYSTEM_IO_DIRECTORY_HPP
 
-#include <System.IO.File.hpp>
+#include <System.IO.FileStream.hpp>
 #include <System.List.hpp>
 #include <System.DateTime.hpp>
 #include <string>
@@ -72,7 +72,7 @@ namespace System::IO
      * @brief 按照搜索条件, 将搜索结果按照 func 过滤后将 文件 / 目录 名称存入容器中
      * 
      */
-    bool Search_If(const char* path, const char* searchPattern, List<std::string>& results, 
+    bool Search_If(const char* path, const char* searchPattern, StackList<std::string>& results, 
 #if defined(__linux) || defined(__APPLE__) || defined(__CYGWIN__)
     std::function<bool(const dirent&)>
 #else
@@ -148,11 +148,11 @@ namespace System::IO
      * @brief 按照搜索条件, 将搜索结果按照 func 组包后将结果存入容器中
      * 
      */
-    bool Search_With(const char* path, const char* searchPattern, List<std::string>& results, 
+    bool Search_With(const char* path, const char* searchPattern, StackList<std::string>& results, 
 #if defined(__linux) || defined(__APPLE__) || defined(__CYGWIN__)
-    std::function<void(const char*, const dirent&, List<std::string>&)>
+    std::function<void(const char*, const dirent&, StackList<std::string>&)>
 #else
-    std::function<void(const char*, const _finddata_t&, List<std::string>&)>
+    std::function<void(const char*, const _finddata_t&, StackList<std::string>&)>
 #endif
     func )
     {
@@ -218,8 +218,6 @@ namespace System::IO
 #endif
         return results.Count();
     }
-
-    
 };
 
 class System::IO::Directory
@@ -234,7 +232,7 @@ private:
      * @return true 
      * @return false 
      */
-    static bool _GetCurrentSubDirectorys(List<std::string>& container, size_t& begin, size_t& count)
+    static bool _GetCurrentSubDirectorys(StackList<std::string>& container, size_t& begin, size_t& count)
     {
         char path[_MAX_PATH] = {0};
         for(;begin < count; begin++) /* search all sub dir at same level */
@@ -243,7 +241,7 @@ private:
             strcpy(path, container[begin].c_str());
             Search_With(path, "*", container,
 #if defined(__linux) || defined(__APPLE__) || defined(__CYGWIN__)
-            [](const char* path, const dirent& d, List<std::string>& container)->void 
+            [](const char* path, const dirent& d, StackList<std::string>& container)->void 
             { 
                 if(DT_DIR & d.d_tpye) 
                 {
@@ -261,7 +259,7 @@ private:
                 }
             });
 #else
-            [](const char* path, const _finddata_t& d, List<std::string>& container)->void 
+            [](const char* path, const _finddata_t& d, StackList<std::string>& container)->void 
             { 
                 if(_A_SUBDIR & d.attrib)
                 {
@@ -669,9 +667,9 @@ public:
      *  p* 以字母 p 开头的所有名称
      *  *s 以字母 s 结尾的所有名称
      *  ?est 忽略名称的第一个字符, 名字格式满足 est 的所有名称
-     * @return List<std::string> 
+     * @return StackList<std::string> 
      */
-    static bool GetDirectorys(List<std::string> list, const char* strPath, const char* strSearchPattern = "*")
+    static bool GetDirectorys(StackList<std::string> list, const char* strPath, const char* strSearchPattern = "*")
     {
         if(!Directory::Exists(strPath))
         {
@@ -702,9 +700,9 @@ public:
      *  *s 以字母 s 结尾的所有名称
      *  ?est 忽略名称的第一个字符, 名字格式满足 est 的所有名称
      * @param option 
-     * @return List<std::string> 
+     * @return StackList<std::string> 
      */
-    static bool GetDirectorys(List<std::string>& list, const char* strPath, const char* strSearchPattern, SearchOption option)
+    static bool GetDirectorys(StackList<std::string>& list, const char* strPath, const char* strSearchPattern, SearchOption option)
     {
         if(!GetDirectorys(list, strPath, strSearchPattern))
         {
@@ -723,9 +721,9 @@ public:
      * 
      * @param strPath 
      * @param strSearchPattern 
-     * @return List<std::string> 
+     * @return StackList<std::string> 
      */
-    static bool GetFiles(List<std::string>& list, const char* strPath, const char* strSearchPattern = "*.*")
+    static bool GetFiles(StackList<std::string>& list, const char* strPath, const char* strSearchPattern = "*.*")
     {
         if(!Directory::Exists(strPath))
         {
@@ -748,7 +746,7 @@ public:
      * @return true 
      * @return false 
      */
-    static bool GetFileSystemEntries(List<std::string>& results, const char* strPath, const char* strSearchPattern = "*")
+    static bool GetFileSystemEntries(StackList<std::string>& results, const char* strPath, const char* strSearchPattern = "*")
     {
         
 #if defined(__linux) || defined(__APPLE__) || defined(__CYGWIN__)

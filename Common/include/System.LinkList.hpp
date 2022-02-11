@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-08-13 14:07:19
  * @LastEditors: like
- * @LastEditTime: 2021-08-20 18:10:07
+ * @LastEditTime: 2022-02-11 10:46:01
  */
 #ifndef SYSTEM_STACK_HPP
 #define SYSTEM_STACK_HPP
@@ -157,7 +157,7 @@ namespace System
          * @return {指定元素的位置}
          * @author: like
          */        
-        virtual int Contains(const T& item) override
+        virtual bool Contains(const T& item) override
         {
             // int loopCount = (int)count;
             // while(--loopCount > -1)
@@ -167,7 +167,7 @@ namespace System
             //         return loopCount;
             //     }
             // } 
-            return -1;
+            return false;
         }
         /**
          * @description: 从buffer的指定位置开始，将List数据整体复制到buffer内
