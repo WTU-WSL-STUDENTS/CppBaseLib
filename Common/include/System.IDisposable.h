@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-01-17 14:36:47
  * @LastEditors: like
- * @LastEditTime: 2022-01-19 20:07:22
+ * @LastEditTime: 2022-02-12 14:06:37
  */
 #ifndef SYSTEM_IDISPOSABLE_H
 #define SYSTEM_IDISPOSABLE_H
@@ -25,6 +25,7 @@ namespace System::Threading::Tasks
 {
     /* TODO : */
     struct ValueTask{};
+    class Task{};
 }
 class System::IAsyncDisposable
 {

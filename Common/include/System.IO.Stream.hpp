@@ -4,24 +4,35 @@
  * @Autor: like
  * @Date: 2021-10-08 15:10:47
  * @LastEditors: like
- * @LastEditTime: 2022-02-11 20:41:34
+ * @LastEditTime: 2022-02-20 21:57:24
  */
 #ifndef SYSTEM_IO_STREAM_H
 #define SYSTEM_IO_STREAM_H
 
-#include <System.IDisposable.h>
+#include <System.Threading.WaitHandle.hpp>
+#include <System.Threading.Tasks.Task.hpp>
+
+using Task = System::Threading::Tasks::Task;
+using ValueTask = System::Threading::Tasks::ValueTask;
 
 namespace System::IO
 {
+    enum SeekOrigin;
     class Stream;
 }
-class System::IO::Stream : public IDisposable
+enum System::IO::SeekOrigin
+{
+    Begin = 0,
+    Current,
+    End
+};
+class System::IO::Stream : public IDisposable, public IAsyncDisposable
 {
 protected:
-    int nCurrentPos;
-    int nReadTimeout;
-    int nWriteTimeout;
+    int m_nReadTimeout;
+    int m_nWriteTimeout;
     Stream(){}
+    virtual void Dispose(bool disposing) = 0;
 public:
     /**
      * @brief 当在派生类中重写时，获取指示当前流是否支持读取
@@ -63,7 +74,6 @@ public:
     {
         return false;
     }
-    virtual void Dispose(){}
     /**
      * @brief 获取流字节长度
      * 
@@ -75,11 +85,7 @@ public:
      * 
      * @return int 
      */
-    virtual int GetPosition()
-    {
-        VALRET_ASSERT(CanSeek(), -1);
-        return nCurrentPos;
-    }
+    virtual long GetPosition() = 0;
     /**
      * @brief 设置当前流中的位置
      * 
@@ -87,22 +93,93 @@ public:
      * @return true 
      * @return false 
      */
-    virtual bool SetPosition(int pos)
-    {
-        VALRET_ASSERT(CanSeek(), false);
-        nCurrentPos = pos;
-        return true;
-    }
+    virtual bool SetPosition(long pos) =  0;
     virtual int ReadTimeout()
     {
         VALRET_ASSERT(CanTimeout(), -1);
-        return nReadTimeout;
+        return m_nReadTimeout;
     }
     virtual int WriteTimeout()
     {
         VALRET_ASSERT(CanTimeout(), -1);
-        return nWriteTimeout;
+        return m_nWriteTimeout;
     }
+    virtual Task CopyToAsync(Stream &destination, size_t bufferSize = 81920) = 0;
+    void Dispose() override
+    {
+        Dispose(true);
+    }
+    /**
+     * @brief 异步释放 FileStream 使用的非托管资源
+     * 
+     * @return ValueTask 
+     */
+    ValueTask DisposeAsync() override
+    {
+        throw "Not Support";
+    }
+    virtual void Flush() = 0;
+    /**
+     * @brief 异步清除此流的所有缓冲区并导致所有缓冲数据都写入基础设备中
+     * 
+     * @return Task 
+     */
+    virtual Task FlushAsync() = 0;
+    /**
+     * @brief 当在派生类中重写时，从当前流读取字节序列，并将此流中的位置提升读取的字节数
+     * 
+     * @param buffer 
+     * @param count 
+     */
+    virtual size_t Read(char* buffer, size_t count) = 0;
+    virtual size_t Read(char* buffer, long offset, size_t count) = 0;
+    /**
+     * @brief 从当前流异步读取字节序列，并将流中的位置提升读取的字节数
+     * 
+     * @param buffer 
+     * @param offset 
+     * @param count 
+     * @return Task 
+     */
+    virtual Task ReadAsync(char* buffer, long offset, size_t count) = 0;
+    /**
+     * @brief 从流中读取一个字节，并将流内的位置向前提升一个字节，或者如果已到达流结尾，则返回 -1
+     * 
+     * @return int 
+     */
+    virtual int ReadByte() = 0;
+    /**
+     * @brief 当在派生类中重写时，设置当前流中的位置
+     * 
+     * @param offset 
+     * @param origin 
+     * @return true 
+     * @return false 
+     */
+    virtual bool Seek(long offset, SeekOrigin origin) = 0;
+    /**
+     * @brief 当在派生类中重写时，向当前流中写入字节序列，并将此流中的当前位置提升写入的字节数
+     * 
+     * @param buffer 
+     * @param count 
+     */
+    virtual void Write(const char* buffer, size_t count) = 0;
+    virtual void Write(const char* buffer, long offset, size_t count) = 0;
+    /**
+     * @brief 当在派生类中重写时，向当前流中写入字节序列，并将此流中的当前位置提升写入的字节数
+     * 
+     * @param buffer 
+     * @param offset 
+     * @param count 
+     * @return Task 
+     */
+    virtual Task WriteAsync(char* buffer, long offset, size_t count) = 0;
+    /**
+     * @brief 当在派生类中重写时，向当前流中写入字节序列，并将此流中的当前位置提升写入的字节数
+     * 
+     * @param value 
+     */
+    virtual void WriteByte(char value) = 0;  
 };
 
 #endif
