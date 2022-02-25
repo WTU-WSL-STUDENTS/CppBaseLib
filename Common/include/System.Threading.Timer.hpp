@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-01-19 16:19:50
  * @LastEditors: like
- * @LastEditTime: 2022-01-19 21:59:38
+ * @LastEditTime: 2022-02-21 16:55:11
  */
 #ifndef SYSTEM_THREADING_TIMER_HPP
 #define SYSTEM_THREADING_TIMER_HPP
@@ -17,7 +17,7 @@ namespace System::Threading
     typedef void (*TimerCallback)(Object);
     class Timer;
 };
-class System::Threading::Timer : public IDisposable, public IAsyncDisposable
+class System::Threading::Timer : public IDisposable//, public IAsyncDisposable
 {
 private:
     struct _TimerCallbackArgs

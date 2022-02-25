@@ -4,12 +4,12 @@
  * @Autor: like
  * @Date: 2022-01-06 16:29:57
  * @LastEditors: like
- * @LastEditTime: 2022-02-11 14:30:19
+ * @LastEditTime: 2022-02-21 19:58:33
  */
 #ifndef SYSTEM_IO_DIRECTORY_HPP
 #define SYSTEM_IO_DIRECTORY_HPP
 
-#include <System.IO.FileStream.hpp>
+#include <System.IO.File.hpp>
 #include <System.List.hpp>
 #include <System.DateTime.hpp>
 #include <string>
@@ -24,6 +24,8 @@
 #include <dirent.h>
 #endif
 
+using namespace std;
+
 namespace System::IO
 {
     class Directory;
@@ -35,14 +37,6 @@ namespace System::IO
         /* 在搜索操作中包括当前目录和所有它的子目录 */
         AllDirectories      
     };
-    inline static bool GetFullPath(const char* relativePath, char (&absolutePath)[_MAX_PATH])
-    {
-#if defined(__linux) || defined(__APPLE__) || defined(__CYGWIN__)
-        return realpath(relativePath, absolutePath);
-#else
-        return _fullpath(absolutePath, relativePath, _MAX_PATH);
-#endif
-    }
     /**
      * @brief 判断指定路径是否为目录
      * 

@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-08-11 08:47:54
  * @LastEditors: like
- * @LastEditTime: 2022-01-07 21:23:17
+ * @LastEditTime: 2022-02-21 19:12:38
  */
 #ifndef SYSTEM_INI_H
 #define SYSTEM_INI_H
@@ -48,12 +48,7 @@ namespace System::IO
     bool ReadIni(const char* iniPath, IniFile& readedIni)
     {
         FileStream* fs = File::OpenRead(iniPath);
-        if(!fs || !fs->Valid())
-        {
-            printf("ReadIni Create Ini FileStream Failed: %s\n", iniPath);
-            return false;
-        }
-        std::FILE* scan0 = fs->GetFileHandle();
+        std::FILE* scan0 = FileStreamEx::FileHandle(*fs);
         IniSection sec;
         memset(sec.section, 0, sizeof(sec.section));
         char buffer[INI_KEYVAL_FILE_SIZE] = {0};
@@ -92,17 +87,13 @@ namespace System::IO
         {
             readedIni.push_back(sec);
         }
-        return 0 == fs->Close();
+        delete fs;
+        return true;
     }
     bool WriteIni(const char* iniPath, IniFile readedIni)
     {
-        FileStream * fs = new FileStream(iniPath);//File::OpenWrite(iniPath);
-        if(!fs || !fs->Valid())
-        {
-            printf("WriteIni Create Ini FileStream Failed: %s,%d\n", iniPath, GetLastError());
-            return false;
-        }
-        std::FILE* p = fs->GetFileHandle();
+        FileStream * fs = File::OpenWrite(iniPath);
+        std::FILE* p = FileStreamEx::FileHandle(*fs);
         for(IniFile::iterator it = readedIni.begin(); it != readedIni.end(); it++)
         {
             fprintf(p, "[%s]\n", it->section);
@@ -111,7 +102,7 @@ namespace System::IO
                 fprintf(p, "%s=%s\n", it1->key, it1->val);
             }
         }
-        fs->Close();
+        delete fs;
         return true;
     }
 }

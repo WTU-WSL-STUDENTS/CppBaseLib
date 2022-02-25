@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-01-18 08:58:39
  * @LastEditors: like
- * @LastEditTime: 2022-01-18 12:16:21
+ * @LastEditTime: 2022-02-22 21:23:03
  */
 #include <System.Threading.EventWaitHandle.hpp>
 #include <System.Threading.Mutex.hpp>
@@ -15,9 +15,6 @@ using namespace System::Threading;
 #define THREAD_COUNT 4
 HANDLE hThreads[THREAD_COUNT];
 
-EventWaitHandle ewh[] = {AutoResetEvent(false), ManualResetEvent(true)};
-Mutex mtx;
-Semaphore sem(2, 2);/* 最高并发 2, 当前空闲 2 */
 
 DWORD WINAPI WaitOneTestThreadProc(LPVOID);
 DWORD WINAPI MutexTestThreadProc(LPVOID);
@@ -28,6 +25,7 @@ class WaitOneTest
 public:
     WaitOneTest()
     {
+        EventWaitHandle ewh[] = {AutoResetEvent(false), ManualResetEvent(true)};
         DWORD dwThreadID; 
         for(int i = 0; i < THREAD_COUNT; i++) 
         {
@@ -60,6 +58,7 @@ public:
     MutexTest()
     {
         DWORD dwThreadID; 
+        Mutex mtx;
         for(int i = 0; i < THREAD_COUNT; i++) 
         {
             hThreads[i] = CreateThread(
@@ -85,6 +84,7 @@ public:
     SemaphoreTest()
     {
         DWORD dwThreadID; 
+        Semaphore sem(2, 2);/* 最高并发 2, 当前空闲 2 */
         for(int i = 0; i < THREAD_COUNT; i++) 
         {
             hThreads[i] = CreateThread(
@@ -109,14 +109,29 @@ int main()
 {
     // WaitOneTest waitTest;
     // MutexTest mtxTest;
-    SemaphoreTest semTest;
-    for(int i = 0; i < THREAD_COUNT; i++) 
+    // SemaphoreTest semTest;
+    // for(int i = 0; i < THREAD_COUNT; i++) 
+    // {
+    //     CloseHandle(hThreads[i]);
+    // }
+    // ewh[0].Dispose();
+    // ewh[1].Dispose();
+    // mtx.Dispose();
+    WaitHandle** whs = new WaitHandle*[THREAD_COUNT];
+    for(int i = 0; i < THREAD_COUNT; i++)
     {
-        CloseHandle(hThreads[i]);
+        whs[i] = new AutoResetEvent(true);
     }
-    ewh[0].Dispose();
-    ewh[1].Dispose();
-    mtx.Dispose();
+
+    if(WaitHandle::WaitAll(whs, THREAD_COUNT, -1))
+    {
+        printf("Wait All Sucess\n");
+    }
+    // for(int i = 0; i < THREAD_COUNT; i++)
+    // {
+    //     delete whs[i];
+    // }
+    printf("Sucess exit\n");
     return 0;
 }
 

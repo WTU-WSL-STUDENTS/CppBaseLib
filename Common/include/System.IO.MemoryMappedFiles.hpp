@@ -12,14 +12,39 @@
 /* https://docs.microsoft.com/zh-cn/dotnet/api/system.io.memorymappedfiles?view=net-5.0 */
 namespace System::IO::MemoryMappedFiles
 {
-    typedef enum _MemoryMappedFileAccess 
+    enum MemoryMappedFileAccess 
     {
-        ReadWrite = 0,  /* 对文件的读写访问权限。 */
-        Read,           /* 对文件的只读访问权限。 */
-        Write,          /* 对文件的读写访问权限，限制条件是其他进程不会看到任何写入操作。 */
-        ReadExecute,    /* 对可以存储和运行可执行代码的文件的读取访问权限。 */
-        ReadWriteExecute/* 对可以存储和运行可执行代码的文件的读写访问权限。 */
-    }MemoryMappedFileAccess;
+        /**
+         * @brief 对文件的读写访问权限
+         * 
+         */
+        ReadWrite = 0, 
+        /**
+         * @brief 对文件的只读访问权限
+         * 
+         */
+        Read,        
+        /**
+         * @brief 对文件的只写访问权限
+         * 
+         */
+        Write,  
+        /**
+         * @brief 对文件的读写访问权限，限制条件是其他进程不会看到任何写入操作
+         * 
+         */
+        CopyOnWrite,      
+        /**
+         * @brief 对可以存储和运行可执行代码的文件的读取访问权限
+         * 
+         */
+        ReadExecute,   
+        /**
+         * @brief 对可以存储和运行可执行代码的文件的读写访问权限
+         * 
+         */
+        ReadWriteExecute
+    };
     std::map<MemoryMappedFileAccess, int> PageAccessMapping =
     {
         {ReadWrite,         PAGE_READWRITE},
@@ -36,53 +61,44 @@ namespace System::IO::MemoryMappedFiles
         {ReadExecute,       FILE_MAP_READ|FILE_MAP_EXECUTE},
         {ReadWriteExecute,  FILE_MAP_READ|FILE_MAP_WRITE|FILE_MAP_EXECUTE}
     };
-    typedef enum _MemoryMappedFileOptions
+    enum MemoryMappedFileOptions
     {
         None = 0,
-        DelayAllocatePages = 67108864 /* 内存懒分配 */
-    }MemoryMappedFileOptions;
-    typedef struct _MemMappingInfo
+        DelayAllocatePages = 1 << 26 /* 内存懒分配 */
+    };
+    struct MemMappingInfo
     {
         HANDLE p;
         size_t size;
         MemoryMappedFileAccess access;
         MemoryMappedFileOptions opt;
-    }MemMappingInfo;
+    };
     typedef std::map<const char*, MemMappingInfo> MemoryHandleMap;
     MemoryHandleMap memoryHandleMap;
     class MemoryMappedViewAccessor;
     class MemoryMappedFile;
 }
 
-class System::IO::MemoryMappedFiles::MemoryMappedViewAccessor: public System::IO::Stream
+class System::IO::MemoryMappedFiles::MemoryMappedViewAccessor
 {
-    friend class System::IO::MemoryMappedFiles::MemoryMappedFile;
+    friend class MemoryMappedFile;
 private:
     void* Buffer;
     int   Offset;
     size_t   Length;
-    MemoryMappedViewAccessor(void* buf, int offset, size_t len):Buffer(buf), Offset(offset), Length(len){}
+    MemoryMappedViewAccessor(void* buf, int offset, size_t len) : Buffer(buf), Offset(offset), Length(len){}
 public:
     ~MemoryMappedViewAccessor()
     {
-        if (Buffer)
+        if(Buffer)
         {
             UnmapViewOfFile(Buffer);
             Buffer = NULL;
         }
-
     }
-    void* GetBuffer(){return Buffer;}
-    size_t GetSize(){return Length;}
-    void Memset(int val)
-    {
-        memset(Buffer, val, Length);
-    }
-    void Memcpy(void* dest, size_t len)
-    {
-        memcpy(dest, Buffer, len);
-    }
-    void Fush(size_t size)
+    inline void* GetBuffer(){return Buffer;}
+    inline size_t GetSize(){return Length;}
+    inline void Flush(size_t size)
     {
         FlushViewOfFile(Buffer, size);
     }
@@ -93,7 +109,7 @@ class System::IO::MemoryMappedFiles::MemoryMappedFile/* https://docs.microsoft.c
 private:
     const char* key;
     MemoryMappedFile(const char* _key) : key(_key){}
-    static bool HandleExists(const char* key){return memoryHandleMap.find(key) != memoryHandleMap.end();}
+    static inline bool HandleExists(const char* key){return memoryHandleMap.find(key) != memoryHandleMap.end();}
 public:
     ~MemoryMappedFile()
     {
@@ -109,7 +125,7 @@ public:
     }
     static MemoryMappedFile* CreateFromFile (const char* path)/* 创建文件共享内存，如果当前进程或其他进程已经创建过，返回NULL */
     {
-        size_t size = FileSize(path);
+        size_t size = File::FileSize(path);
         MemoryMappedFileAccess access;
         if(0 == size)
         {

@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-10-08 15:10:47
  * @LastEditors: like
- * @LastEditTime: 2022-02-20 21:57:24
+ * @LastEditTime: 2022-02-24 17:10:14
  */
 #ifndef SYSTEM_IO_STREAM_H
 #define SYSTEM_IO_STREAM_H
@@ -26,7 +26,7 @@ enum System::IO::SeekOrigin
     Current,
     End
 };
-class System::IO::Stream : public IDisposable, public IAsyncDisposable
+class System::IO::Stream : public IDisposable//, public IAsyncDisposable
 {
 protected:
     int m_nReadTimeout;
@@ -104,19 +104,10 @@ public:
         VALRET_ASSERT(CanTimeout(), -1);
         return m_nWriteTimeout;
     }
-    virtual Task CopyToAsync(Stream &destination, size_t bufferSize = 81920) = 0;
+    virtual Task* CopyToAsync(Stream& destination, size_t& bufferSize) = 0;
     void Dispose() override
     {
         Dispose(true);
-    }
-    /**
-     * @brief 异步释放 FileStream 使用的非托管资源
-     * 
-     * @return ValueTask 
-     */
-    ValueTask DisposeAsync() override
-    {
-        throw "Not Support";
     }
     virtual void Flush() = 0;
     /**
@@ -124,7 +115,7 @@ public:
      * 
      * @return Task 
      */
-    virtual Task FlushAsync() = 0;
+    virtual Task* FlushAsync() = 0;
     /**
      * @brief 当在派生类中重写时，从当前流读取字节序列，并将此流中的位置提升读取的字节数
      * 
@@ -141,7 +132,7 @@ public:
      * @param count 
      * @return Task 
      */
-    virtual Task ReadAsync(char* buffer, long offset, size_t count) = 0;
+    virtual Task* ReadAsync(char* buffer, long& offset, size_t& count) = 0;
     /**
      * @brief 从流中读取一个字节，并将流内的位置向前提升一个字节，或者如果已到达流结尾，则返回 -1
      * 
@@ -163,8 +154,8 @@ public:
      * @param buffer 
      * @param count 
      */
-    virtual void Write(const char* buffer, size_t count) = 0;
-    virtual void Write(const char* buffer, long offset, size_t count) = 0;
+    virtual size_t Write(const char* buffer, size_t count) = 0;
+    virtual size_t Write(const char* buffer, long offset, size_t count) = 0;
     /**
      * @brief 当在派生类中重写时，向当前流中写入字节序列，并将此流中的当前位置提升写入的字节数
      * 
@@ -173,7 +164,7 @@ public:
      * @param count 
      * @return Task 
      */
-    virtual Task WriteAsync(char* buffer, long offset, size_t count) = 0;
+    virtual Task* WriteAsync(char* buffer, long& offset, size_t& count) = 0;
     /**
      * @brief 当在派生类中重写时，向当前流中写入字节序列，并将此流中的当前位置提升写入的字节数
      * 

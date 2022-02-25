@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-01-19 11:09:49
  * @LastEditors: like
- * @LastEditTime: 2022-01-21 17:04:47
+ * @LastEditTime: 2022-02-18 19:11:46
  */
 #ifndef SYSTEM_THREADING_THREADPOOL_HPP
 #define SYSTEM_THREADING_THREADPOOL_HPP
@@ -14,10 +14,14 @@
 
 namespace System::Threading
 {
-    typedef void (*WaitCallback)(Object);               /* https://docs.microsoft.com/zh-cn/dotnet/api/system.threading.waitcallback?view=net-5.0 */
+    typedef DWORD (*WaitCallback)(Object);               /* https://docs.microsoft.com/zh-cn/dotnet/api/system.threading.waitcallback?view=net-5.0 */
     typedef void (*WaitOrTimerCallback)(Object, bool);  /* https://docs.microsoft.com/zh-cn/dotnet/api/system.threading.waitortimercallback?view=net-5.0 */
     class ThreadPool;           /* https://docs.microsoft.com/zh-cn/dotnet/api/system.threading.threadpool?view=net-5.0 */
     class RegisteredWaitHandle; /* https://docs.microsoft.com/zh-cn/dotnet/api/system.threading.registeredwaithandle?view=net-5.0 */ 
+};
+namespace System::Threading::Tasks
+{
+    class Task;
 };
 /**
  * @brief 表示在调用 RegisterWaitForSingleObject 时已注册的句柄。 此类不能被继承。
@@ -57,31 +61,15 @@ public:
 };
 class System::Threading::ThreadPool : public IDisposable
 {
+    friend class System::Threading::Tasks::Task;
 private:
-    static long m_nCompletedWorkCount;
-    static long m_nPedingWorkCount;
     static ThreadPool* m_pThreadPool;
-    template<typename Func>
-    struct _ThreadPoolCallbackArgs
-    {
-        Func cb;
-        Object args;
-    };
-    template<typename Func>
-    static void __stdcall _ThreadPoolCallback(PTP_CALLBACK_INSTANCE Instance,PVOID args, PTP_WORK sender)
-    {
-        UNREFERENCED_PARAMETER(Instance);
-        UNREFERENCED_PARAMETER(sender);
-        _ThreadPoolCallbackArgs<Func>* pArgs = (_ThreadPoolCallbackArgs<Func>*)args; 
-        pArgs->cb(pArgs->args);
-        m_nCompletedWorkCount++;
-    }
-    TP_CALLBACK_ENVIRON CallBackEnviron;
+    TP_CALLBACK_ENVIRON environment;
     PTP_POOL pool;
     PTP_CLEANUP_GROUP group;
     ThreadPool() 
     {
-        InitializeThreadpoolEnvironment(&CallBackEnviron);
+        InitializeThreadpoolEnvironment(&environment);
         if(NULL == (pool = CreateThreadpool(NULL)))
         {
             printf("CreateThreadpool Failed, Error Code %d\n", GetLastError());
@@ -92,8 +80,8 @@ private:
             printf("CreateThreadpoolCleanupGroup Failed, Error Code %d\n", GetLastError());
             return;
         }
-        SetThreadpoolCallbackPool(&CallBackEnviron, pool);
-        SetThreadpoolCallbackCleanupGroup(&CallBackEnviron, group, NULL);
+        SetThreadpoolCallbackPool(&environment, pool);
+        SetThreadpoolCallbackCleanupGroup(&environment, group, NULL);
     }
 protected:
     virtual void Dispose(bool disposing)
@@ -115,39 +103,12 @@ public:
         return m_pThreadPool ? *m_pThreadPool : *(m_pThreadPool = new ThreadPool());
     }
     /**
-     * @brief 获取迄今为止已处理的工作项数
-     * 
-     * @return int 
-     */
-    inline long CompletedWorkItemCount()
-    {
-        return m_nCompletedWorkCount;
-    }
-    /**
      * @brief 该接口一般不用调用 , 线程池释放权交给操作系统 
      * 
      */
     inline void Dispose() override
     {
         Dispose(true);
-    }
-    /**
-     * @brief 获取当前已加入处理队列的工作项数
-     * 
-     * @return long 
-     */
-    inline long PendingWorkItemCount()
-    {
-        return m_nPedingWorkCount;
-    }
-    /**
-     * @brief 获取当前存在的线程池线程数
-     * 
-     * @return int 
-     */
-    inline int ThreadCount()
-    {
-        throw "Not Support";
     }
     /**
      * @brief 设置最大线程数
@@ -183,17 +144,6 @@ public:
      * @brief 将方法排入队列以便执行。 此方法在有线程池线程变得可用时执行
      * 
      * @param cb 
-     * @return true 
-     * @return false 
-     */
-    inline bool QueueUserWorkItem(WaitCallback cb)
-    {
-        return QueueUserWorkItem(cb, NULL);
-    } 
-    /**
-     * @brief 将方法排入队列以便执行。 此方法在有线程池线程变得可用时执行
-     * 
-     * @param cb 
      * @param args 
      * @return true 
      * @return false 
@@ -212,11 +162,17 @@ public:
             return true;
         }
         printf("QueueUserWorkItem Failed , Error Code %d\n", GetLastError());
+        throw "NotSupportedException";
         return false;
     } 
-    inline bool TrySubmitThreadpoolCallback (PTP_SIMPLE_CALLBACK cb, Object args)
+    inline bool QueueUserWorkItem(WaitCallback cb)
     {
-        if(::TrySubmitThreadpoolCallback(cb, args, &CallBackEnviron))
+        return QueueUserWorkItem(cb, NULL);
+    } 
+    
+    inline bool TrySubmitThreadpoolCallback(PTP_SIMPLE_CALLBACK cb, Object args)
+    {
+        if(::TrySubmitThreadpoolCallback(cb, args, &environment))
         {
             return true;
         }
@@ -244,7 +200,5 @@ public:
         return rwh;
     }
 };
-long System::Threading::ThreadPool::m_nCompletedWorkCount = 0;
-long System::Threading::ThreadPool::m_nPedingWorkCount = 0;
 System::Threading::ThreadPool* System::Threading::ThreadPool::m_pThreadPool = NULL;
 #endif

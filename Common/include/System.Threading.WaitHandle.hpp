@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-01-17 15:23:58
  * @LastEditors: like
- * @LastEditTime: 2022-01-21 14:44:18
+ * @LastEditTime: 2022-02-24 15:05:08
  */
 #ifndef SYSTEM_THREADING_WAITHANDLE_HPP
 #define SYSTEM_THREADING_WAITHANDLE_HPP
@@ -27,7 +27,7 @@ namespace System::Threading
  * # Refrence
  * - WaitOne            : WaitForSingleObject       - https://docs.microsoft.com/zh-cn/windows/win32/api/synchapi/nf-synchapi-waitforsingleobject
  * - WaitAll / WaitAny  : WaitForMultipleObjects    - https://docs.microsoft.com/zh-cn/windows/win32/api/synchapi/nf-synchapi-waitformultipleobjects
- *
+ * - SignalAndWait      : SignalObjectAndWait       - https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-signalobjectandwait
  */
 class System::Threading::WaitHandle : public IDisposable
 {
@@ -47,7 +47,7 @@ protected:
         {
             if(!CloseHandle(m_hWaitHandle))
             {
-                printf("System::Threading::WaitHandle Dispose Failed , Error Code : %d\n", GetLastError());
+                printf("System::Threading::WaitHandle Dispose Failed , Error Code : %d, %p\n", GetLastError(), m_hWaitHandle);
                 return;
             }
             m_hWaitHandle = NULL;
@@ -55,6 +55,10 @@ protected:
         }
     }
 public:
+    virtual ~WaitHandle()
+    {
+        Dispose(true);
+    }
     const int WaitTimeout = 258;
     /**
      * @brief 获取或设置本机操作系统句柄
@@ -114,30 +118,13 @@ public:
         return false;
     }
     /**
-     * @brief 阻止当前线程，直到当前的 WaitHandle 收到信号或到达指定时间间隔为止，并指定是否在等待之前退出同步域
-     * 
-     * @param millisecond 等待的毫秒数, -1 表示无限期等待 
-     * @param exitContext 
-     * @return true 
-     * @return false 
-     */
-    virtual bool WaitOne(DWORD millisecond, bool exitContext/* 退出上下文不知道如何实现 */)
-    {  
-        if(exitContext)
-        {
-            /* TODO : 退出上下文同步域 */
-        }
-        WaitOne(millisecond);
-        return true;
-    }
-    /**
      * @brief 等待指定数组中的所有元素都收到信号
      * 
      * @param waitHandles 
      * @param count 
      * @return true 
      */
-    static bool WaitAll(WaitHandle* waitHandles, DWORD count)
+    static inline bool WaitAll(WaitHandle** waitHandles, DWORD count)
     {
         return WaitAll(waitHandles, count, INFINITE);
     }
@@ -150,16 +137,17 @@ public:
      * @return true 
      * @return false 1. 超时
      */
-    static bool WaitAll(WaitHandle* waitHandles, DWORD count, DWORD millisecond)
+    static bool WaitAll(WaitHandle** waitHandles, DWORD count, DWORD millisecond)
     {
-        if(count > WAIT_ABANDONED_0)
+        if(count > MAXIMUM_WAIT_OBJECTS)
         {
-            throw "WaitAll  Support Max Handle Count : 128";
+            printf("WaitAll  Support Max Handle Count : 64");
+            return false;
         }
         HANDLE* handles = (HANDLE*)malloc(sizeof(HANDLE) * count);
         for(DWORD i = 0; i < count; i++)
         {
-            handles[i] = waitHandles[i].m_hWaitHandle;
+            handles[i] = waitHandles[i]->m_hWaitHandle;
         }
         DWORD status =  WaitForMultipleObjects(count, handles, true, millisecond);
         free(handles);
@@ -179,27 +167,9 @@ public:
         }
         else if (WAIT_ABANDONED_0 >= status && status <= (status - WAIT_ABANDONED_0))/* 虽然没有通过等待, 但所在线程已经被释放 */
         {
-            waitHandles[status - WAIT_ABANDONED_0].Dispose(); 
-            return true;
+            waitHandles[status - WAIT_ABANDONED_0]->Dispose(); 
         }
-    }
-    /**
-     * @brief 等待指定数组中的所有元素接收信号或到达指定时间间隔为止，并指定是否在等待之前退出同步域
-     * 
-     * @param waitHandles 
-     * @param count 
-     * @param millisecond 
-     * @param exitContext 
-     * @return true 
-     * @return false 
-     */
-    static bool WaitAll(WaitHandle* waitHandles, DWORD count, DWORD millisecond, bool exitContext)
-    {
-        if(exitContext)
-        {
-            /* TODO : 退出上下文同步域 */
-        }
-        return WaitAll(waitHandles, count, millisecond);
+        return true;
     }
     /**
      * @brief 等待指定数组中的任一元素收到信号
@@ -208,19 +178,19 @@ public:
      * @param count 
      * @return int 数组索引
      */
-    static int WaitAny(WaitHandle* waitHandles, DWORD count)
+    static int WaitAny(WaitHandle** waitHandles, DWORD count)
     {
         return WaitAny(waitHandles, count, INFINITE);
     }
     /**
-     * @brief 等待指定数组中的任意元素接收信号或到达指定时间间隔
+     * @brief 等待指定数组中的任意元素接收信号或到达指定时间间隔, 最多一次等 MAXIMUM_WAIT_OBJECTS 个
      * 
      * @param waitHandles 
      * @param count 
      * @param millisecond 
      * @return int 1. 成功等待返回数组索引; 2. 超时返回 millisecond; 3. 等待失败返回 -1
      */
-    static int WaitAny(WaitHandle* waitHandles, DWORD count, DWORD millisecond)
+    static int WaitAny(WaitHandle** waitHandles, DWORD count, DWORD millisecond)
     {
         if(count > WAIT_ABANDONED_0)
         {
@@ -229,7 +199,7 @@ public:
         HANDLE* handles = (HANDLE*)malloc(sizeof(HANDLE) * count);
         for(DWORD i = 0; i < count; i++)
         {
-            handles[i] = waitHandles[i].m_hWaitHandle;
+            handles[i] = waitHandles[i]->m_hWaitHandle;
         }
         DWORD status = WaitForMultipleObjects(count, handles, false, millisecond);
         free(handles);
@@ -249,40 +219,18 @@ public:
         }
         else if (WAIT_ABANDONED_0 >= status && status <= (status - WAIT_ABANDONED_0))/* 虽然没有通过等待, 但所在线程已经被释放 */
         {
-            waitHandles[status - WAIT_ABANDONED_0].Dispose(true);
-            return status - WAIT_ABANDONED_0;
+            printf("WaitHandle has abandoned\n");
+            return status - WAIT_ABANDONED_0;/* abandoned handle index */
         }
-    }
-    /**
-     * @brief 等待指定数组中的任意元素接收信号或到达指定时间间隔，并指定是否在等待之前退出同步域
-     * 
-     * @param waitHandles 
-     * @param count 
-     * @param millisecond 
-     * @param exitContext 
-     * @return int 
-     */
-    static int WaitAny(WaitHandle* waitHandles, DWORD count, DWORD millisecond, bool exitContext)
-    {
-        if(exitContext)
-        {
-            /* TODO : 退出上下文同步域 */
-        }
-        return WaitAny(waitHandles, count, millisecond);
     }
     /**
      * @brief 如果信号和等待都成功完成，则为 true；如果等待没有完成，则此方法一直阻塞不返回
      * 
      * @return true 
      */
-    static bool SignalAndWait(WaitHandle toSignal, WaitHandle toWaitOn)
+    static inline bool SignalAndWait(WaitHandle toSignal, WaitHandle toWaitOn)
     {
-        if(!SetEvent(toSignal.m_hWaitHandle))
-        {
-            printf("SignalAndWait(WaitHandle toSignal, WaitHandle toWaitOn) SetEvent Failed , Error Code : %d\n", GetLastError());
-            return false;
-        }
-        return toWaitOn.WaitOne();
+        return SignalAndWait(toSignal, toWaitOn, -1, false);
     }
     /**
      * @brief 向一个 WaitHandle 发出信号并等待另一个，指定超时间隔为 32 位有符号整数，并指定在进入等待前是否退出上下文的同步域
@@ -296,13 +244,13 @@ public:
      */
     static bool SignalAndWait(WaitHandle toSignal, WaitHandle toWaitOn, DWORD millisecond, bool exitContext)
     {
-        if(!SetEvent(toSignal.m_hWaitHandle))
+        DWORD nRet = SignalObjectAndWait(toSignal.m_hWaitHandle, toWaitOn.m_hWaitHandle, millisecond, exitContext);
+        if(WAIT_OBJECT_0 == nRet)
         {
-            printf("SignalAndWait(WaitHandle toSignal, WaitHandle toWaitOn) SetEvent Failed , Error Code : %d\n", GetLastError());
-            return false;
+            return true;
         }
-        return toWaitOn.WaitOne(millisecond, exitContext);
+        printf("SignalObjectAndWait Failed , Return Code : %d, Error Code : %d\n", nRet, GetLastError());
+        return false;
     }
 };
-
 #endif

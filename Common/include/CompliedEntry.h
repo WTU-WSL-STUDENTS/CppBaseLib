@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-07-23 10:21:28
  * @LastEditors: like
- * @LastEditTime: 2022-01-19 12:10:05
+ * @LastEditTime: 2022-02-25 10:11:30
  */
 #ifndef COMPLIED_ENTRY_H
 #define COMPLIED_ENTRY_H
@@ -56,25 +56,41 @@ namespace System
 
 #define ASSERT_ENABLE
 #ifdef ASSERT_ENABLE
-#define VOIDRET_ASSERT(condtion)\
-        do\
-        {\
-            if(!(condtion)){return;}\
+#include <assert.h>
+#define VOIDRET_ASSERT(condition)       \
+        do                              \
+        {                               \
+            if(!(condition)){return;}   \
         } while (0)
-#define VALRET_ASSERT(condtion, retVal)\
-        do\
-        {\
-            if(!(condtion)){return retVal;}\
+#define VALRET_ASSERT(condition, retVal)    \
+        do                                  \
+        {                                   \
+            if(!(condition)){return retVal;}\
         }while(0)
-#define ERROR_ASSERT(condtion, errorIndex)\
-        do\
-        {\
-            if(!(condtion)){throw errorIndex;}\
+#define ERROR_ASSERT(condition, errorMsg)                           \
+        do                                                          \
+        {                                                           \
+            bool cond = condition;                                  \
+            if(!(cond))                                             \
+            {                                                       \
+                printf("Error assert " #condition #errorMsg"\n");   \
+                assert(cond);                                       \
+            }                                                       \
         }while(0)
-
+#define WINAPI_ASSERT(condition, errorMsg)                  \
+        do                                                  \
+        {                                                   \
+            bool cond = condition;                          \
+            if(!(cond))                                     \
+            {                                               \
+                printf("Winapi assert " #condition #errorMsg\
+                " , error code : %d\n", GetLastError());    \
+                assert(cond);                               \
+            }                                               \
+        }while(0)
 #else
-#define VOIDRET_ASSERT(condtion)
-#define VALRET_ASSERT(condtion, retVal)
+#define VOIDRET_ASSERT(condition)
+#define VALRET_ASSERT(condition, retVal)
 #endif
 
 

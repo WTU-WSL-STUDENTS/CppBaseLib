@@ -4,13 +4,14 @@
  * @Autor: like
  * @Date: 2021-09-06 11:01:40
  * @LastEditors: like
- * @LastEditTime: 2022-01-07 21:23:30
+ * @LastEditTime: 2022-02-21 19:42:28
  */
 #include <System.Text.Json.hpp>
 #include <System.IO.File.hpp>
 #include <fstream>
 #include <iostream>
 
+using namespace std;
 using namespace System::IO;
 
 const char* jsonPath = "test.json";
@@ -76,7 +77,7 @@ void CreateJson()
     printf("j2\n%s\n", j2.dump(2).c_str());
     string str = j.dump(4);
     FileStream* fs = File::Create(jsonPath);
-    printf("Save Json %s\n", str.length() == fs->Write((System::byte*)str.c_str(), str.length()) ? "SUCESS" : "FAILED");
+    fs->Write(str.c_str(), str.length());
     delete fs;
 }
 
@@ -84,8 +85,8 @@ json ReadJson()
 {
     printf("Begin ReadJson\n");
     json j;
-    System::byte* str = NULL;
-    size_t byteCount;
+    size_t byteCount = File::FileSize(jsonPath);
+    char* str = (char*)malloc(byteCount);
     size_t readedCount = File::ReadAllBytes(jsonPath, str, byteCount);
     if(readedCount != byteCount)
     {
