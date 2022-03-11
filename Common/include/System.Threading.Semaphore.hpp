@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-01-17 21:47:52
  * @LastEditors: like
- * @LastEditTime: 2022-01-18 11:57:09
+ * @LastEditTime: 2022-03-11 17:16:36
  */
 #ifndef SYSTEM_THREADING_SEMAPHORE_HPP
 #define SYSTEM_THREADING_SEMAPHORE_HPP
@@ -16,12 +16,13 @@ namespace System::Threading
     class Semaphore;
 };
 
-class System::Threading::Semaphore : public WaitHandle
+class System::Threading::Semaphore final : public WaitHandle
 {
 protected:
     const char* m_strName;
     Semaphore(const char* strName) : m_strName(strName){}
 public:
+    DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(Semaphore)
     Semaphore(int initialCount, int maximumCount, const char* strName = NULL) : m_strName(strName),
         WaitHandle(CreateSemaphore(NULL, initialCount, maximumCount, strName))
     {
@@ -36,10 +37,10 @@ public:
      * @param strName 
      * @return Semaphore 
      */
-    inline static Semaphore OpenExisting(const char* strName)
+    inline static Semaphore* OpenExisting(const char* strName)
     {
-        Semaphore semaphore(strName);
-        if(semaphore.m_bDisposed = NULL == (semaphore.m_hWaitHandle = OpenSemaphore(EVENT_ALL_ACCESS, false, strName)))
+        Semaphore* semaphore = new Semaphore(strName);
+        if(semaphore->m_bDisposed = NULL == (semaphore->m_hWaitHandle = OpenSemaphore(EVENT_ALL_ACCESS, false, strName)))
         {
             printf("Semaphore::OpenExisting Failed , Error Code : %d\n", GetLastError());
         }     

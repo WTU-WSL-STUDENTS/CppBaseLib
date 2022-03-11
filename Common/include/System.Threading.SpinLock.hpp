@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-01-17 21:47:52
  * @LastEditors: like
- * @LastEditTime: 2022-02-25 16:32:07
+ * @LastEditTime: 2022-03-11 16:08:51
  */
 #ifndef SYSTEM_THREADING_SPINLOKC_HPP
 #define SYSTEM_THREADING_SPINLOKC_HPP
@@ -33,6 +33,7 @@ class System::Threading::SpinWait
 private:
     size_t m_nCount;
 public:
+    DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(SpinWait)
     SpinWait() : m_nCount(0){}
     ~SpinWait(){}
     /**
@@ -127,7 +128,9 @@ private:
     long m_nStatus;
     DWORD m_nThreadId;
 public:
+    DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(SpinLock)
     SpinLock() : m_nStatus(0), m_nThreadId(-1){}
+    ~SpinLock(){}
     /**
      * @brief 获取锁当前是否已由任何线程占用
      * 

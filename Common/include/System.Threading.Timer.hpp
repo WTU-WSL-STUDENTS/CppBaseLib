@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-01-19 16:19:50
  * @LastEditors: like
- * @LastEditTime: 2022-02-21 16:55:11
+ * @LastEditTime: 2022-03-11 16:20:07
  */
 #ifndef SYSTEM_THREADING_TIMER_HPP
 #define SYSTEM_THREADING_TIMER_HPP
@@ -17,7 +17,7 @@ namespace System::Threading
     typedef void (*TimerCallback)(Object);
     class Timer;
 };
-class System::Threading::Timer : public IDisposable//, public IAsyncDisposable
+class System::Threading::Timer final : public IDisposable//, public IAsyncDisposable
 {
 private:
     struct _TimerCallbackArgs
@@ -35,6 +35,7 @@ private:
 
     PTP_TIMER m_pTimer;
 public:
+    DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(Timer)
     Timer(TimerCallback cb) : Timer(cb, NULL, -1, -1){}
     Timer(TimerCallback cb, Object args, DWORD dueTime, DWORD period)
     {
@@ -45,6 +46,10 @@ public:
             return;
         }
         Change(dueTime, period);
+    }
+    ~Timer()
+    {
+        Dispose();
     }
     /**
      * @brief 当前系统线程池中定时器的个数

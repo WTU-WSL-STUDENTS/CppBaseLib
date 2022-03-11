@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-02-15 09:40:37
  * @LastEditors: like
- * @LastEditTime: 2022-02-25 15:03:37
+ * @LastEditTime: 2022-03-11 17:14:38
  */
 #ifndef SYSTEM_THREADING_READERWRITERLOCKSLIM_HPP
 #define SYSTEM_THREADING_READERWRITERLOCKSLIM_HPP
@@ -24,12 +24,13 @@ namespace System::Threading
  * https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-initializecriticalsection
  * https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-initializecriticalsectionandspincount
  */
-class System::Threading::CriticalSection
+class System::Threading::CriticalSection final
 {
     friend class ConditionVariable;
 private:
     CRITICAL_SECTION sec;
 public:
+    DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(CriticalSection)
     CriticalSection(DWORD spinCount = 0)
     {
         if(spinCount)
@@ -63,6 +64,7 @@ class System::Threading::ReaderWriterLockSlim
 private:
     SRWLOCK rwl;
 public:
+    DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(ReaderWriterLockSlim)
     ReaderWriterLockSlim()
     {
         InitializeSRWLock(&rwl);
@@ -134,6 +136,7 @@ private:
     size_t m_nReadCount;
     size_t m_nWriteCount;
 public:
+    DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(ReaderWriterLock)
     ReaderWriterLock() : wmre(ManualResetEvent(false)), rmre(ManualResetEvent(false)), m_nReadCount(0), m_nWriteCount(0){}
     ~ReaderWriterLock(){}
     /**
@@ -250,6 +253,7 @@ class System::Threading::ConditionVariable
 private:
     CONDITION_VARIABLE cv;
 public:
+    DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(ConditionVariable)
     ConditionVariable()
     {
         InitializeConditionVariable(&cv);

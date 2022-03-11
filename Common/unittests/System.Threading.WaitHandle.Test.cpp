@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-01-18 08:58:39
  * @LastEditors: like
- * @LastEditTime: 2022-02-22 21:23:03
+ * @LastEditTime: 2022-03-11 18:27:34
  */
 #include <System.Threading.EventWaitHandle.hpp>
 #include <System.Threading.Mutex.hpp>
@@ -25,7 +25,7 @@ class WaitOneTest
 public:
     WaitOneTest()
     {
-        EventWaitHandle ewh[] = {AutoResetEvent(false), ManualResetEvent(true)};
+        EventWaitHandle* ewh[] = {new AutoResetEvent(false), new ManualResetEvent(true)};
         DWORD dwThreadID; 
         for(int i = 0; i < THREAD_COUNT; i++) 
         {
@@ -46,9 +46,18 @@ public:
         char c1;
         while('q' != (c1 = getchar()))
         {
-            if('1' == c1)       ewh[0].Set();  
-            else if('2' == c1)  ewh[1].Set();
-            else if('3' == c1)  ewh[1].Reset();
+            if('1' == c1)       ewh[0]->Set();  
+            else if('2' == c1)  ewh[1]->Set();
+            else if('3' == c1)  ewh[1]->Reset();
+        }
+        for(int i = 0; i < sizeof(ewh)/ sizeof(System::Object); i++)
+        {
+            delete ewh[i];
+            ewh[i] = NULL;
+        }
+        for(int i = 0; i < THREAD_COUNT; i++) 
+        {
+            CloseHandle(hThreads[i]);
         }
     }
 };
@@ -76,6 +85,10 @@ public:
             }
         }
         WaitForMultipleObjects(THREAD_COUNT, hThreads, TRUE, INFINITE);
+        for(int i = 0; i < THREAD_COUNT; i++) 
+        {
+            CloseHandle(hThreads[i]);
+        }
     }
 };
 class SemaphoreTest
@@ -102,21 +115,20 @@ public:
             }
         }
         WaitForMultipleObjects(THREAD_COUNT, hThreads, TRUE, INFINITE);
+        for(int i = 0; i < THREAD_COUNT; i++) 
+        {
+            CloseHandle(hThreads[i]);
+        }
     }
 };
 
 int main()
 {
-    // WaitOneTest waitTest;
-    // MutexTest mtxTest;
-    // SemaphoreTest semTest;
-    // for(int i = 0; i < THREAD_COUNT; i++) 
-    // {
-    //     CloseHandle(hThreads[i]);
-    // }
-    // ewh[0].Dispose();
-    // ewh[1].Dispose();
-    // mtx.Dispose();
+    MEMORYLEAK_ASSERT;
+    WaitOneTest waitTest;
+    MutexTest mtxTest;
+    SemaphoreTest semTest;
+    
     WaitHandle** whs = new WaitHandle*[THREAD_COUNT];
     for(int i = 0; i < THREAD_COUNT; i++)
     {
@@ -127,10 +139,11 @@ int main()
     {
         printf("Wait All Sucess\n");
     }
-    // for(int i = 0; i < THREAD_COUNT; i++)
-    // {
-    //     delete whs[i];
-    // }
+    for(int i = 0; i < THREAD_COUNT; i++)
+    {
+        delete whs[i];
+    }
+    delete[] whs;
     printf("Sucess exit\n");
     return 0;
 }
@@ -178,12 +191,12 @@ int main()
  */
 DWORD WINAPI WaitOneTestThreadProc(LPVOID lpParam) 
 {
-    EventWaitHandle* ewh = (EventWaitHandle*)lpParam;
+    EventWaitHandle** ewh = (EventWaitHandle**)lpParam;
 
     printf("Thread %d waiting for event...\n", GetCurrentThreadId());
-    ewh[0].WaitOne();
+    ewh[0]->WaitOne();
     printf("Thread %d ################\n", GetCurrentThreadId());
-    ewh[1].WaitOne();
+    ewh[1]->WaitOne();
     printf("Thread %d exiting\n", GetCurrentThreadId());
     return 1;
 }
@@ -193,12 +206,12 @@ DWORD WINAPI WaitOneTestThreadProc(LPVOID lpParam)
  */
 DWORD WINAPI MutexTestThreadProc(LPVOID lpParam)
 {
-    Mutex mtx = *(Mutex*)lpParam;
-    mtx.WaitOne();
+    Mutex* mtx = (Mutex*)lpParam;
+    mtx->WaitOne();
     printf("Thread %d Writting to Database...\n", GetCurrentThreadId());
     ::Sleep(300);
     printf("Thread %d exiting\n", GetCurrentThreadId());
-    mtx.ReleaseMutex();
+    mtx->ReleaseMutex();
     return 1;
 }
 /**
@@ -220,10 +233,10 @@ DWORD WINAPI MutexTestThreadProc(LPVOID lpParam)
  */
 DWORD WINAPI SemaphoreTestThreadProc(LPVOID lpParam)
 {
-    Semaphore sem = *(Semaphore*)lpParam;
+    Semaphore* sem = (Semaphore*)lpParam;
     printf("Thread %d begin and waits for the semaphore....\n", GetCurrentThreadId());
-    sem.WaitOne();
+    sem->WaitOne();
     ::Sleep(1000);
-    printf("Thread %d exit and release Semaphore , Current Semaphore Count : %d\n", GetCurrentThreadId(), sem.Release() + 1);
+    printf("Thread %d exit and release Semaphore , Current Semaphore Count : %d\n", GetCurrentThreadId(), sem->Release() + 1);
     return 1;
 }

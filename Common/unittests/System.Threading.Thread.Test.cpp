@@ -1,58 +1,84 @@
+/*
+ * @Description: 
+ * @Version: 1.0
+ * @Autor: like
+ * @Date: 2021-10-08 15:10:49
+ * @LastEditors: like
+ * @LastEditTime: 2022-03-11 15:24:40
+ */
 #include <System.Threading.Thread.hpp>
 #include <iostream>
 #include <string>
 
 using namespace std;
 using namespace System::Threading;
-static unsigned int PrintSomething(void* args)
+
+static void ThreadProc() 
 {
-    char* str = (char*)args;
-    Thread::Sleep(3000);
-    printf("PrintFrom PrintSomething:%s\n", str);
-    return 0;
+    for (int i = 0; i < 10; i++) 
+    {
+        printf("ThreadProc: %d\n", i);
+        Thread::Sleep(0);
+    }
 }
-class HowToDisposeLoop
+void Test1()
+{ 
+    printf("Main thread: Start a second thread.\n");
+    // The constructor for the Thread class requires a ThreadStart
+    // delegate that represents the method to be executed on the
+    // thread.  C# simplifies the creation of this delegate.
+    Thread t(ThreadStart(ThreadProc), NULL);
+    printf("Main thread priorty %d, second thread priorty %d\n", GetThreadPriority(GetCurrentThread()), GetThreadPriority(t.Handle()));
+    // Start ThreadProc.  Note that on a uniprocessor, the new
+    // thread does not get any processor time until the main thread
+    // is preempted or yields.  Uncomment the Thread.Sleep that
+    // follows t.Start() to see the difference.
+    t.Start();
+    Thread::Sleep(0);
+
+    for (int i = 0; i < 4; i++) 
+    {
+        printf("Main thread: Do some work.\n");
+        Thread::Sleep(0);
+    }
+    printf("Main thread: Call Join(), to wait until ThreadProc ends.\n");
+    t.WaitOne();
+    printf("Main thread: ThreadProc.Join has returned.  Press Enter to end program.\n");
+    getchar();
+}
+
+void Test2()
 {
-public:
-    Thread* t;
-    HowToDisposeLoop()
+    Thread newThread([](void* args)->DWORD
     {
-        t = new Thread((THREAD_EVENT)Loop, this);
-        printf("Create Thread:%s", t->tInfo.CurrentStatus == Created ? "sucess" : "failed");
-        printf("Start():%s\n", t->Start() ? "sucess" : "failed");
-        printf("Do Other Things In main(), Do Not Delay By Sleep !\n");
-    }
-    ~HowToDisposeLoop()
-    {
-        printf("Disopse:%s\n", t->Disopse() ? "sucess" : "failed");
-    }
-    static unsigned int Loop(void* args)
-    {
-        HowToDisposeLoop* p = (HowToDisposeLoop*)args;
-        while(Running == p->t->tInfo.CurrentStatus)
+        int n = 0;
+        while(true)
         {
-            Thread::Sleep(100);
-            printf("Loop...\n");
+            n++;
+            printf("New thread running.\n");
+            Thread::Sleep(200);
         }
-        return 0;
-    }
-};
+        return n;
+    });
+    printf("IsAlive %s, %d\n", newThread.IsAlive() ? "true" : "false", newThread.GetExitCode());
+    newThread.Start();
+    printf("IsAlive %s, %d\n", newThread.IsAlive() ? "true" : "false", newThread.GetExitCode());
+    newThread.WaitOne(1000);
+    
+    // Abort newThread.
+    printf("Main aborting new thread.\n");
+    newThread.Abort(0xff);
+
+    // Wait for the thread to terminate.
+    printf("IsAlive %s, %d\n", newThread.IsAlive() ? "true" : "false", newThread.GetExitCode());
+    newThread.WaitOne();
+    printf("IsAlive %s, %d\n", newThread.IsAlive() ? "true" : "false", newThread.GetExitCode());
+    printf("New thread terminated - Main exiting.");
+}
+
 int main()
 {
-    Thread t((THREAD_EVENT)PrintSomething, "input args from main");
-    printf("Create Thread:%s", t.tInfo.CurrentStatus == Created ? "sucess" : "failed");
-    printf("Start():%s\n", t.Start() ? "sucess" : "failed");
-    printf("Do Other Things In main(), Do Not Delay By Sleep !\n");
-    printf("WaitThreadFinshed:%s\n", t.WaitThreadFinshed() ? "sucess" : "failed");
-    printf("Disopse:%s\n", t.Disopse() ? "sucess" : "failed");
-
-    /* test2 */
-    HowToDisposeLoop test2;
-    Thread::Sleep(1000);
-    
-    // test2.t->tInfo.CurrentStatus = Canceled;
-    // Thread::Sleep(150);/* 如果将状态设置为Canceled的话，需要延时一下，延时时间建议为循环执行一次的时间，等线程函数执行结束，将结果更新到实际的info中 */
-    test2.t->tInfo.CurrentStatus = Finished;/* 如果将线程状态设置为Finished,则不需要延时 */
-    printf("WaitThreadFinshed:%s\n", test2.t->WaitThreadFinshed() ? "sucess" : "failed");
+    Test1();
+    Test2();
     return 0;
 }

@@ -11,7 +11,7 @@
  * @Autor: like
  * @Date: 2022-02-14 16:23:30
  * @LastEditors: like
- * @LastEditTime: 2022-02-25 10:35:48
+ * @LastEditTime: 2022-03-11 16:23:21
  */
 #ifndef SYSTEM_THREADING_BARRIER_HPP
 #define SYSTEM_THREADING_BARRIER_HPP
@@ -27,13 +27,14 @@ namespace System::Threading
  * https://docs.microsoft.com/en-us/windows/win32/sync/synchronization-barriers
  * 
  */
-class System::Threading::Barrier
+class System::Threading::Barrier final
 {
 private:
     SYNCHRONIZATION_BARRIER barrier;
     long m_nCurrentPhaseNumber;
     long m_nParticipantCount;
 public:
+    DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(Barrier)
     /**
      * @brief 使多个任务能够采用并行方式依据某种算法在多个阶段中协同工作
      * 

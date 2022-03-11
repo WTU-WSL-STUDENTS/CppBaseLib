@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-01-17 21:05:10
  * @LastEditors: like
- * @LastEditTime: 2022-02-15 15:50:18
+ * @LastEditTime: 2022-03-11 16:22:47
  */
 #ifndef SYSTEM_THREADING_MUTEX_HPP
 #define SYSTEM_THREADING_MUTEX_HPP
@@ -19,18 +19,23 @@ namespace System::Threading
  * Refrence
  * - CreateMutex / ReleaseMutex - https://docs.microsoft.com/en-us/windows/win32/sync/using-mutex-objects
  */
-class System::Threading::Mutex : public WaitHandle
+class System::Threading::Mutex final : public WaitHandle
 {
 protected:
     const char* m_strName;
     Mutex(const char* strName, HANDLE h) : m_strName(strName), WaitHandle(h){}
 public:
+    DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(Mutex)
     Mutex(const char* strName = NULL) : m_strName(strName), WaitHandle(CreateMutex(NULL, false, strName))
     {
         if(m_bDisposed)
         {
             printf("Create Mutex Failed , Error Code : %d", GetLastError());
         }
+    }
+    ~Mutex()
+    {
+        Dispose();
     }
     /**
      * @brief »¥³âÌå½â³ý×èÈû

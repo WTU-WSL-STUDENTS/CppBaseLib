@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-01-19 11:09:49
  * @LastEditors: like
- * @LastEditTime: 2022-02-18 19:11:46
+ * @LastEditTime: 2022-03-11 16:45:54
  */
 #ifndef SYSTEM_THREADING_THREADPOOL_HPP
 #define SYSTEM_THREADING_THREADPOOL_HPP
@@ -59,7 +59,7 @@ public:
         return false;
     }
 };
-class System::Threading::ThreadPool : public IDisposable
+class System::Threading::ThreadPool final : public IDisposable
 {
     friend class System::Threading::Tasks::Task;
 private:
@@ -98,7 +98,12 @@ protected:
         }
     }
 public:
-    static ThreadPool Ref()
+    ~ThreadPool()
+    {
+        Dispose();
+    }
+    DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(ThreadPool)
+    static ThreadPool& Ref()
     {
         return m_pThreadPool ? *m_pThreadPool : *(m_pThreadPool = new ThreadPool());
     }

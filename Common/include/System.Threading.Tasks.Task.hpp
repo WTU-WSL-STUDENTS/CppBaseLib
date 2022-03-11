@@ -19,7 +19,6 @@
 // #include <functional>
 // #include <future>
 #include <vector>
-#define DECLARE_ENUM_FLAG(n) (1 << n)
 
 namespace System
 {
@@ -238,7 +237,7 @@ public:
 typedef int CreationOptions;
 typedef long TaskCurrentStatus;
 typedef HeapList<System::Threading::Tasks::Task*> AttachedTasks;
-class System::Threading::Tasks::Task : public IAsyncResult//, public IDisposable
+class System::Threading::Tasks::Task final : public IAsyncResult//, public IDisposable
 {
 private:
     PTP_WORK work;
@@ -280,6 +279,7 @@ private:
         work = CreateThreadpoolWork((PTP_WORK_CALLBACK)MyWorkCallback, this, &(ThreadPool::Ref().environment));
     }
 public:
+    DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(Task)
     /**
      * @brief 独立 Task 构造函数
      * 

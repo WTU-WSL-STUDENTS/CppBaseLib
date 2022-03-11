@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-01-17 15:31:33
  * @LastEditors: like
- * @LastEditTime: 2022-01-19 21:50:25
+ * @LastEditTime: 2022-03-11 17:12:12
  */
 //https://docs.microsoft.com/zh-cn/dotnet/api/system.threading.waithandle?view=net-5.0
 #ifndef SYSTEM_THREADING_EVENTWAITHANDLE
@@ -14,20 +14,20 @@
 
 namespace System::Threading
 {
+    enum EventResetMode;
     class EventWaitHandle;  /* https://docs.microsoft.com/zh-cn/dotnet/api/system.threading.eventwaithandle?view=net-5.0  */
     class AutoResetEvent;   /* https://docs.microsoft.com/zh-cn/dotnet/api/system.threading.autoresetevent?view=net-5.0 */
     class ManualResetEvent; /* https://docs.microsoft.com/zh-cn/dotnet/api/system.threading.manualresetevent?view=net-5.0 */
-    /**
-     * @brief 指示在接收信号后是自动重置 EventWaitHandle 还是手动重置
-     * 
-     */
-    enum EventResetMode
-    {
-        AutoReset = 0,
-        ManualReset
-    };
 };
-
+/**
+ * @brief 指示在接收信号后是自动重置 EventWaitHandle 还是手动重置
+ * 
+ */
+enum System::Threading::EventResetMode
+{
+    AutoReset = 0,
+    ManualReset
+};
 /**
  * @brief 表示一个线程同步事件
  * # Refrence
@@ -40,6 +40,7 @@ protected:
     const char* m_strName;  /* 如果要与其他进程共享同步对象，则为名称；否则为 null 或空字符串。 该名称区分大小写 */
     EventWaitHandle(const char* strName) : m_strName(strName){}
 public:
+    DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(EventWaitHandle)
     EventWaitHandle(bool initialState/* is signaled */, EventResetMode mode, const char* strName = NULL) : m_strName(strName), 
         WaitHandle(CreateEvent(NULL, EventResetMode::AutoReset != mode, initialState, strName))
     {
@@ -52,16 +53,16 @@ public:
      * @brief 打开指定名称为同步事件（如果已经存在)
      * 
      * @param strName 要打开并与其他进程共享的同步对象的名称。 该名称区分大小写
-     * @return EventWaitHandle 
+     * @return EventWaitHandle* 
      */
-    inline static EventWaitHandle OpenExisting(const char* strName)
+    inline static EventWaitHandle* OpenExisting(const char* strName)
     {
-        EventWaitHandle event(strName);
-        if(event.m_bDisposed = NULL == (event.m_hWaitHandle = OpenEvent(EVENT_ALL_ACCESS, false, strName)))
+        EventWaitHandle* p = new EventWaitHandle(strName);
+        if(p->m_bDisposed = NULL == (p->m_hWaitHandle = OpenEvent(EVENT_ALL_ACCESS, false, strName)))
         {
             printf("EventWaitHandle::OpenExisting Failed , Error Code : %d\n", GetLastError());
         }     
-        return event;
+        return p;
     }
     /**
      * @brief 将事件状态设置为终止状态，允许阻塞等待的线程继续
@@ -102,6 +103,7 @@ public:
 class System::Threading::AutoResetEvent : public System::Threading::EventWaitHandle
 {
 public:
+    DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(AutoResetEvent)
     AutoResetEvent(bool initialState) : EventWaitHandle(initialState, EventResetMode::AutoReset){}
 };
 
@@ -112,6 +114,7 @@ public:
 class System::Threading::ManualResetEvent : public System::Threading::EventWaitHandle
 {
 public:
+    DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(ManualResetEvent)
     ManualResetEvent(bool initialState) : EventWaitHandle(initialState, EventResetMode::ManualReset){}
 };
 

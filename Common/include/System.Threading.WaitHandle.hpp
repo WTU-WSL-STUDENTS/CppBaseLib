@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-01-17 15:23:58
  * @LastEditors: like
- * @LastEditTime: 2022-02-24 15:05:08
+ * @LastEditTime: 2022-03-11 17:08:17
  */
 #ifndef SYSTEM_THREADING_WAITHANDLE_HPP
 #define SYSTEM_THREADING_WAITHANDLE_HPP
@@ -111,7 +111,7 @@ public:
         }
         else if(WAIT_TIMEOUT == status)
         {
-            printf("WaitAll WaitForSingleObject Timeout\n");
+            printf("WaitOne WaitForSingleObject Timeout\n");
             return false;
         }
         printf("WaitOne WaitForSingleObject Failed , Error Code : %d\n", GetLastError());
