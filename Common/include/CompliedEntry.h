@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-07-23 10:21:28
  * @LastEditors: like
- * @LastEditTime: 2022-03-11 17:43:20
+ * @LastEditTime: 2022-03-16 11:21:50
  */
 #ifndef COMPLIED_ENTRY_H
 #define COMPLIED_ENTRY_H
@@ -57,6 +57,7 @@ namespace System
 #define ASSERT_ENABLE
 #ifdef ASSERT_ENABLE
 #   include <assert.h>
+#   include <stdio.h>
 #   define VOIDRET_ASSERT(condition)    \
         do                              \
         {                               \
@@ -101,5 +102,6 @@ namespace System
 #define DECLARE_ENUM_FLAG(n) (1 << n)
 /* 禁用拷贝构造函数和赋值构造 */
 #define DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(TypeName) TypeName(const TypeName&) = delete; TypeName& operator=(const TypeName&) = delete;
-
+/* readonly */
+#define readonly const
 #endif

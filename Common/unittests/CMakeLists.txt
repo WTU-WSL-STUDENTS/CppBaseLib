@@ -29,6 +29,8 @@ include_directories(../include)
 # include_directories(${THIRD_PARTY_PATH}/ftplib-4.0-1)
 # add_executable(System.Net.FtpWebRequest.Test System.Net.FtpWebRequest.Test.cpp)
 # target_link_libraries(System.Net.FtpWebRequest.Test ${Lib_Path}/ftplib)
+add_executable(System.Net.IPAddress.Test System.Net.IPAddress.Test.cpp)
+add_executable(System.Net.Sockets.Socket.Test System.Net.Sockets.Socket.Test.cpp)
 
 # add_executable(System.Socket.Tcp.Client.Test System.Socket.Tcp.Client.Test.cpp)
 # add_executable(System.Socket.Tcp.Server.Test System.Socket.Tcp.Server.Test.cpp)
