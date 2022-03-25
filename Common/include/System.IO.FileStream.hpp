@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-09-13 07:43:18
  * @LastEditors: like
- * @LastEditTime: 2022-02-25 09:15:48
+ * @LastEditTime: 2022-03-24 17:02:57
  */
 #ifndef SYSTEM_IO_FILESTREAM_HPP
 #define SYSTEM_IO_FILESTREAM_HPP
@@ -84,12 +84,12 @@ enum System::IO::FileMode_::Option
      */
     OpenOrCreate,
     /**
-     * @brief 指定操作系统应打开现有文件。 该文件被打开时，将被截断为零字节大小。 这需要 Write 权限。 尝试从使用 FileMode.Truncate 打开的文件中进行读取将导致 ArgumentException 异常。
+     * @brief 指定操作系统应打开现有文件。 该文件被打开时，将被截断为零字节大小。 这需要 Write 权限。 尝试从使用 FileMode.Truncate 打开的文件中进行读取将导致 "ArgumentException" 异常。
      * 
      */
     Truncate,
     /**
-     * @brief 若存在文件，则打开该文件并查找到文件尾，或者创建一个新文件。 这需要 Append 权限。 FileMode.Append 只能与 FileAccess.Write 一起使用。 试图查找文件尾之前的位置时会引发 IOException 异常，并且任何试图读取的操作都会失败并引发 NotSupportedException 异常。
+     * @brief 若存在文件，则打开该文件并查找到文件尾，或者创建一个新文件。 这需要 Append 权限。 FileMode.Append 只能与 FileAccess.Write 一起使用。 试图查找文件尾之前的位置时会引发 IOException 异常，并且任何试图读取的操作都会失败并引发 "NotSupportedException" 异常。
      * 
      */
     Append
@@ -277,9 +277,9 @@ public:
         }
         int nAuth = GEN_FILE_ACCESS_MODE_INDEX(access, mode, type);
         if(FileMode::CreateNew == mode)
-            ERROR_ASSERT(_access(path, 0), IOException);
-        ERROR_ASSERT(accessModeMappingToLetter.end() != accessModeMappingToLetter.find(nAuth), SecurityException);
-        ERROR_ASSERT(NULL != (m_pf = fopen(path, accessModeMappingToLetter[nAuth])), DirectoryNotFoundException);
+            ERROR_ASSERT(_access(path, 0), "IOException");
+        ERROR_ASSERT(accessModeMappingToLetter.end() != accessModeMappingToLetter.find(nAuth), "SecurityException");
+        ERROR_ASSERT(NULL != (m_pf = fopen(path, accessModeMappingToLetter[nAuth])), "DirectoryNotFoundException");
     }
     ~FileStream()
     { 
@@ -372,7 +372,7 @@ public:
      */
     Task* CopyToAsync(Stream& destination, size_t& bufferSize) override
     {
-        ERROR_ASSERT(CanRead() && destination.CanWrite(), NotSupportedException);
+        ERROR_ASSERT(CanRead() && destination.CanWrite(), "NotSupportedException");
         Task* t = new Task([](AsyncState c)->void
         {
             FileStream* fs      = (FileStream*)c[0];
@@ -400,7 +400,7 @@ public:
     }
     Task* FlushAsync() override
     {
-        ERROR_ASSERT(CanWrite(), NotSupportedException);
+        ERROR_ASSERT(CanWrite(), "NotSupportedException");
         Task* t = new Task([](AsyncState args)->void
         {
             static_cast<FileStream*>(args[0])->Flush();
@@ -418,12 +418,12 @@ public:
     }
     size_t Read(char* buffer, long offset, size_t count) override
     {
-        ERROR_ASSERT(Seek(offset, SeekOrigin::Current), ArgumentException);
+        ERROR_ASSERT(Seek(offset, SeekOrigin::Current), "ArgumentException");
         return Read(buffer, count);
     }
     Task* ReadAsync(char* buffer, long& offset, size_t& count) override
     {
-        ERROR_ASSERT(CanRead(), NotSupportedException);
+        ERROR_ASSERT(CanRead(), "NotSupportedException");
         Task* t = new Task([](AsyncState c)->void
         {
             FileStream* fs  = static_cast<FileStream*>(c[0]);
@@ -446,7 +446,7 @@ public:
     }
     bool Seek(long offset, SeekOrigin origin) override
     {
-        ERROR_ASSERT(CanSeek(), NotSupportedException);     
+        ERROR_ASSERT(CanSeek(), "NotSupportedException");     
         RWL_READ_BLOCK
         (
             int n = fseek(m_pf, offset, origin);
@@ -455,7 +455,7 @@ public:
     }
     size_t Write(const char* buffer, size_t count) override
     {
-        ERROR_ASSERT(CanWrite(), NotSupportedException);
+        ERROR_ASSERT(CanWrite(), "NotSupportedException");
         RWL_WRITE_BLOCK
         (
             size_t len = fwrite(buffer, sizeof(char), count, m_pf);
@@ -464,12 +464,12 @@ public:
     }
     size_t Write(const char* buffer, long offset, size_t count)
     {
-        ERROR_ASSERT(Seek(offset, SeekOrigin::Current), ArgumentException);
+        ERROR_ASSERT(Seek(offset, SeekOrigin::Current), "ArgumentException");
         return Write(buffer, count);
     }
     Task* WriteAsync(char* buffer, long& offset, size_t& count) override
     {
-        ERROR_ASSERT(CanWrite(), NotSupportedException);
+        ERROR_ASSERT(CanWrite(), "NotSupportedException");
         Task* t = new Task([](AsyncState c)->void
         {
             FileStream* fs  = static_cast<FileStream*>(c[0]);
@@ -485,7 +485,7 @@ public:
     }
     inline void WriteByte(char value) override
     {
-        ERROR_ASSERT(CanWrite(), NotSupportedException);
+        ERROR_ASSERT(CanWrite(), "NotSupportedException");
         RWL_WRITE_BLOCK
         (
             fputc(value, m_pf);

@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-07-23 10:21:28
  * @LastEditors: like
- * @LastEditTime: 2022-03-16 11:21:50
+ * @LastEditTime: 2022-03-25 16:27:17
  */
 #ifndef COMPLIED_ENTRY_H
 #define COMPLIED_ENTRY_H
@@ -74,7 +74,7 @@ namespace System
             bool cond = condition;                                  \
             if(!(cond))                                             \
             {                                                       \
-                printf("Error assert " #condition #errorMsg"\n");   \
+                printf("%s ( %d ) %s , error assert " #condition" \n", __FILE__, __LINE__, errorMsg);   \
                 assert(cond);                                       \
             }                                                       \
         }while(0)
@@ -84,8 +84,7 @@ namespace System
             bool cond = condition;                          \
             if(!(cond))                                     \
             {                                               \
-                printf("Winapi assert " #condition #errorMsg\
-                " , error code : %d\n", GetLastError());    \
+                printf("%s ( %d ) %s( code : %d ) , winapi assert "#condition"\n", __FILE__, __LINE__, errorMsg, GetLastError());   \
                 assert(cond);                               \
             }                                               \
         }while(0)
@@ -104,4 +103,9 @@ namespace System
 #define DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(TypeName) TypeName(const TypeName&) = delete; TypeName& operator=(const TypeName&) = delete;
 /* readonly */
 #define readonly const
+/**
+ * @brief 标记当前指针非资源拥有者
+ * 
+ */
+#define WEAK_PTR(type) type*
 #endif

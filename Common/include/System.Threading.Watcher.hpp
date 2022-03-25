@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-02-16 15:13:02
  * @LastEditors: like
- * @LastEditTime: 2022-02-25 14:34:29
+ * @LastEditTime: 2022-03-25 16:31:01
  */
 #ifndef SYSTEM_THREADING_WATCHER_HPP
 #define SYSTEM_THREADING_WATCHER_HPP
@@ -46,7 +46,7 @@ public:
         {
             if(!WaitOnAddress(obj, copy, sizeof(T), INFINITE))
             {
-                WINAPI_ASSERT(false, Watcher::Wait() WaitOnAddress);
+                WINAPI_ASSERT(false, "Watcher::Wait() WaitOnAddress");
                 break;
             }
         }while(0 == memcmp(copy, obj, sizeof(T)));/* obj 收到唤醒信号, 需要检查 obj 内容发生了改变才允许退出 */

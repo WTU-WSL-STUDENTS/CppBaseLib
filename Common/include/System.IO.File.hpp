@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-01-07 21:16:24
  * @LastEditors: like
- * @LastEditTime: 2022-02-24 15:39:48
+ * @LastEditTime: 2022-03-24 17:03:06
  */
 #ifndef SYSTEM_IO_FILE_HPP
 #define SYSTEM_IO_FILE_HPP
@@ -149,7 +149,7 @@ public:
     static void Copy(const char* srcPath, const char* destPath, bool overwrite = true)
     {
         size_t len = FileSize(srcPath);
-        ERROR_ASSERT(-1 != len, IOException);
+        ERROR_ASSERT(-1 != len, "IOException");
 
         FileStream* src = new FileStream(srcPath, FileMode::Open);
         FileStream* dest = overwrite ? new FileStream(destPath, FileMode::Create) : new FileStream(destPath, FileMode::CreateNew);
@@ -339,7 +339,7 @@ public:
     static bool Move(const char* srcPath, const char* destPath, bool overwrite = true)
     {
         size_t len = FileSize(srcPath);
-        ERROR_ASSERT(-1 != len, IOException);
+        ERROR_ASSERT(-1 != len, "IOException");
         FileStream src(srcPath);
         FileStream dest = overwrite ? FileStream(destPath, FileMode::Create): FileStream(destPath, FileMode::CreateNew);
         char* buf = (char*)malloc(len);
@@ -410,7 +410,7 @@ public:
         Task* t = new Task([](AsyncState args)->void
         {
             void** c = (void**)args;
-            ERROR_ASSERT(ReadAllBytes(static_cast<const char*>(c[0]), static_cast<char*>(c[1]), *static_cast<size_t*>(c[2])), Unknown);
+            ERROR_ASSERT(ReadAllBytes(static_cast<const char*>(c[0]), static_cast<char*>(c[1]), *static_cast<size_t*>(c[2])), "Unknown");
         }, CreateAsyncState(const_cast<char*>(filePath), buffer, &bufLen));
         t->Start();
         return t;

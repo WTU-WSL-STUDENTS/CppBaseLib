@@ -4,12 +4,21 @@
  * @Autor: like
  * @Date: 2021-08-06 19:31:39
  * @LastEditors: like
- * @LastEditTime: 2022-03-18 18:25:43
+ * @LastEditTime: 2022-03-25 16:59:19
  */
 #ifndef SYSTEM_NET_SOCKETS_SOCKET_HPP
 #define SYSTEM_NET_SOCKETS_SOCKET_HPP
 #include <System.Net.IPAddress.hpp>
-// #include <MSWSock.h>
+#include <CompliedIndexer.h>
+
+/**
+ * @brief 默认情况下 Socket 库的生命周期与进程绑定。
+ * 如果要禁用该功能, 采用手动初始化 & 释放指定版本的 Socket 库, 请在此之前定义 #define BIND_SOCKET_LIB_LIFETIME_WITH_PROCESS 0
+ * 
+ */
+#ifndef BIND_SOCKET_LIB_LIFETIME_WITH_PROCESS
+#   define BIND_SOCKET_LIB_LIFETIME_WITH_PROCESS 1
+#endif
 
 namespace System::Net::Sockets
 {
@@ -129,10 +138,30 @@ enum System::Net::Sockets::SocketFlags
  */
 enum class System::Net::Sockets::SocketOptionLevel
 {
+    /**
+     * @brief https://docs.microsoft.com/en-us/windows/win32/winsock/ipproto-ip-socket-options
+     * 
+     */
     IP      = IPPROTO_IP,
+    /**
+     * @brief https://docs.microsoft.com/en-us/windows/win32/winsock/ipproto-tcp-socket-options
+     * 
+     */
     Tcp     = IPPROTO_TCP,
+    /**
+     * @brief https://docs.microsoft.com/en-us/windows/win32/winsock/ipproto-udp-socket-options
+     * 
+     */
     Udp     = IPPROTO_UDP,
+    /**
+     * @brief https://docs.microsoft.com/en-us/windows/win32/winsock/ipproto-ipv6-socket-options
+     * 
+     */
     IPv6    = IPPROTO_IPV6,
+    /**
+     * @brief https://docs.microsoft.com/en-us/windows/win32/winsock/sol-socket-socket-options
+     * 
+     */
     Socket  = SOL_SOCKET
 };
 /**
@@ -249,7 +278,39 @@ enum System::Net::Sockets::SocketOptionName
      * 
      */
     TTL                 = IP_TTL,
-    
+    /**
+     * @brief IP 多路广播环回。
+     * 在windows平台, IP_MULTICAST_LOOP 应用到接收端.在接收端启用IP_MULTICAST_LOOP. loop设置为1，表示接收自身发送出去的数据，设置为0表示不接收
+     * 在Linux平台, IP_MULTICAST_LOOP 应用到发送端
+     * 
+     * Note  The Winsock version of the IP_MULTICAST_LOOP option is semantically different than the UNIX version of the IP_MULTICAST_LOOP option:
+     *
+     *  In Winsock, the IP_MULTICAST_LOOP option applies only to the receive path.
+     *  In the UNIX version, the IP_MULTICAST_LOOP option applies to the send path.
+     * 
+     * For example, applications ON and OFF (which are easier to track than X and Y) join the same group on the same interface; 
+     * application ON sets the IP_MULTICAST_LOOP option on, 
+     * application OFF sets the IP_MULTICAST_LOOP option off. 
+     * If ON and OFF are Winsock applications, OFF can send to ON, but ON cannot sent to OFF. 
+     * In contrast, if ON and OFF are UNIX applications, ON can send to OFF, but OFF cannot send to ON.
+     * 
+     */
+    MulticastLoopback   = IP_MULTICAST_LOOP,
+    /**
+     * @brief 加入组播
+     * 
+     */
+    AddMembership       = IP_ADD_MEMBERSHIP,
+    /**
+     * @brief 退出组播
+     * 
+     */
+    DropMembership      = IP_DROP_MEMBERSHIP,
+    /**
+     * @brief 设置是否分包
+     * 
+     */
+    DontFragment        = IP_DONTFRAGMENT,
     /************************************* 
      * IPV4 Setting
      * https://docs.microsoft.com/en-us/windows/win32/winsock/ipproto-ipv4-socket-options
@@ -309,7 +370,7 @@ enum System::Net::Sockets::SocketType
 };
 class System::Net::Sockets::Socket
 {
-private:
+#if BIND_SOCKET_LIB_LIFETIME_WITH_PROCESS
     class SocketlibraryInitlializer
     {
     public:
@@ -328,182 +389,201 @@ private:
      * 
      */
     static readonly SocketlibraryInitlializer m_socketlibraryInitlializer;
-
-private:
+#endif
+protected:
+    AddressFamily   m_addressFamily;
     SocketType      m_sockType;
     ProtocolType    m_protoType;
     
     bool            m_bIsBlocking;
-    bool            m_bUdpFragmentEnable;
 
     SOCKET          m_socket;
-    SocketAddress   m_addr;
     Socket(){}
 public:
     Socket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType) : 
-        m_sockType(socketType), m_protoType(protocolType), 
-        m_bIsBlocking(true),        /* 默认为阻塞模式 */ 
-        m_bUdpFragmentEnable(false) /* Udp 默认禁用分包 */
+        m_addressFamily(addressFamily), m_sockType(socketType), m_protoType(protocolType), 
+        m_bIsBlocking(true) /* 默认为阻塞模式 */ 
     {
-        m_addr.ipv4Addr.sin_family = (UInt16)addressFamily;
         SOCKETAPI_ASSERT
         (
             INVALID_SOCKET != (m_socket = socket((int)addressFamily, socketType, protocolType)), 
             "https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-socket"
         );
     }
-    ~Socket()
-    {
-        SOCKETAPI_ASSERT(SOCKET_ERROR != closesocket(m_socket), "Dispose Socket failed, create socket failed");
-    }
+    /**
+     * @brief m_socket 调用 Close() 进行资源释放, 通过 Accept 创建的 Socket 对象不需要调用 Close()
+     * 
+     */
+    virtual ~Socket(){}
     /**
      * @brief 获取 Socket 的操作系统句柄
      * 
-     * @return SOCKET 
      */
-    SOCKET Handle()
+    DECLARE_CONST_GETTER(SOCKET, Handle, 
     {
         return m_socket;
-    }
+    })
     /**
      * @brief 获取 Socket 的地址族
      * 
-     * @return AddressFamily 
      */
-    inline AddressFamily AddressFamily()
+    DECLARE_CONST_GETTER(AddressFamily, AddressFamily,
     {
-        return m_addr.GetFamily();
-    }
+        return m_addressFamily;
+    })
+    /**
+     * @brief 获取 Socket 的类型
+     * 
+     */
+    DECLARE_CONST_GETTER(SocketType, SocketType,
+    {
+        return m_sockType;
+    })
     /**
      * @brief 获取已经从网络接收且可供读取的数据量
      * 
-     * @return DWORD 
      */
-    DWORD Available()
+    DECLARE_CONST_GETTER(DWORD, Available,
     {
         DWORD nLen;
         IOControl(IOControlCode::DataToRead, nLen);
         return nLen;
-    }
+    })
     /**
      * @brief Socket 是否处于阻塞模式
      * 
      * @return true 
      * @return false 
      */
-    bool GetBlockingEnable()
+    DECLARE_INDEXER(bool, Blocking, 
     {
         return m_bIsBlocking;
-    }
-    void SetBlockingEnable(bool blocking)
+    },
     {
-        VOIDRET_ASSERT(blocking != m_bIsBlocking);
-        DWORD nArg = !blocking;
+        VOIDRET_ASSERT(SETTER_VALUE != m_bIsBlocking);
+        DWORD nArg = m_bIsBlocking;
         if(0 == IOControl(IOControlCode::NonBlockingIO, nArg))
         {
-            m_bIsBlocking = blocking;
+            m_bIsBlocking = SETTER_VALUE;
         }
-    }
+    })
     /**
      * @brief 查询当前 socket 是否处于 TCP 连接状态
+     * 判定当前仍然处于连接状态的方法 :
+     *  以非阻塞模式发送 0 字节数据, 发送成功或发送失败的 ErrorCode 为 WAEWOULDBLOCK 
      * 
-     * @return true 以非阻塞模式发送 0 字节数据, 发送成功或发送失败的 ErrorCode 为 WAEWOULDBLOCK, 判定当前仍然处于连接状态
-     * @return false 
      */
-    bool IsConnected()
+    DECLARE_CONST_GETTER(bool, Connected,
     {
         ERROR_ASSERT(ProtocolType::IPPROTO_TCP == m_protoType, "NotSupportedException");
-        bool bTemp = m_bIsBlocking;
-        SetBlockingEnable(false);
-        if(SOCKET_ERROR == send(m_socket, "", 0, SocketFlags::None) && WSAEWOULDBLOCK != WSAGetLastError())
-        {
-            SetBlockingEnable(bTemp);
-            return false;
+        if(!m_bIsBlocking)
+        {                
+            return SOCKET_ERROR != send(m_socket, "", 0, SocketFlags::None) || WSAEWOULDBLOCK == WSAGetLastError();
         }
-        SetBlockingEnable(bTemp);
-        return true;
-    }
+        DWORD nBlockMode = 1;
+        ERROR_ASSERT(0 == IOControl(IOControlCode::NonBlockingIO, nBlockMode), "GetConnected set nonblockmode failed");
+        bool bIsConnect = SOCKET_ERROR != send(m_socket, "", 0, SocketFlags::None) || WSAEWOULDBLOCK == WSAGetLastError();
+        nBlockMode = 0;
+        ERROR_ASSERT(0 == IOControl(IOControlCode::NonBlockingIO, nBlockMode), "GetConnected recover blockmode failed");
+        return bIsConnect;
+    })
     /**
-     * @brief  设置 UDP 是否允许分包
+     * @brief UDP 是否禁用分包
      * 
-     * @return true 
-     * @return false 
      */
-    bool GetFragmentEnable()
+    DECLARE_INDEXER(bool, DontFragment, 
     {
-        ERROR_ASSERT(ProtocolType::IPPROTO_UDP == m_protoType, "NotSupportedException");
-        return m_bUdpFragmentEnable;
-    }
-    void SetFragmentEnable(bool blocking)
+        bool bEnable = false;
+        GetSocketOption(SocketOptionLevel::IP, SocketOptionName::DontFragment, bEnable);
+        return bEnable; 
+    },
     {
-        ERROR_ASSERT(ProtocolType::IPPROTO_UDP == m_protoType, "NotSupportedException");
-        m_bUdpFragmentEnable = true;
-    }
+        SetSocketOption(SocketOptionLevel::IP, SocketOptionName::DontFragment, SETTER_VALUE);
+    })
     /**
-     * @brief 该值指定是否 Socket 是用于 IPv4 和 IPv6 的双模式套接字
+     * @brief Socket 是否用于 IPv4 和 IPv6 的双模式套接字
      * 
-     * @return true 
-     * @return false 
      */
-    bool GetDualModeEnable()
+    DECLARE_INDEXER(bool, DualMode,
     {
-        ERROR_ASSERT(AddressFamily::InterNetworkV6 == m_addr.GetFamily(), "NotSupportedException");
+        ERROR_ASSERT(AddressFamily::InterNetworkV6 == m_addressFamily, "NotSupportedException");
         bool bEnable = false;
         GetSocketOption(SocketOptionLevel::IPv6, SocketOptionName::Ipv6Only, bEnable);
         return bEnable;
-    }
-    void SetDualModeEnable(bool bEnable)
+    },
     {
-        ERROR_ASSERT(AddressFamily::InterNetworkV6 == m_addr.GetFamily(), "NotSupportedException");
-        SetSocketOption(SocketOptionLevel::IPv6, SocketOptionName::Ipv6Only, bEnable);
-    }
+        ERROR_ASSERT(AddressFamily::InterNetworkV6 == m_addressFamily, "NotSupportedException");
+        SetSocketOption(SocketOptionLevel::IPv6, SocketOptionName::Ipv6Only, SETTER_VALUE);    
+    })
     /**
-     * @brief 该值指定 Socket 是否可以发送或接收广播数据包
+     * @brief Socket 是否可以发送或接收广播数据包
      * 
-     * @return true 
-     * @return false 
      */
-    bool GetBroadcastEnable()
+    DECLARE_INDEXER(bool, EnableBroadcast, 
     {
         ERROR_ASSERT(ProtocolType::IPPROTO_UDP == m_protoType, "NotSupportedException");
         bool bEnable = false;
         GetSocketOption(SocketOptionLevel::Udp, SocketOptionName::Broadcast, bEnable);
         return bEnable;
-    }
-    void SetBroadcastEnable(bool bEnable)
+    },
     {
         ERROR_ASSERT(ProtocolType::IPPROTO_UDP == m_protoType, "NotSupportedException");
-        SetSocketOption(SocketOptionLevel::Udp, SocketOptionName::Broadcast, bEnable);
-    }
+        SetSocketOption(SocketOptionLevel::Udp, SocketOptionName::Broadcast, SETTER_VALUE);
+    })
     /**
-     * @brief 该值指定 Tcp Socket 是否仅允许一个进程绑定到端口
+     * @brief Tcp Socket 是否仅允许一个进程绑定到端口
      * 
-     * @return true 
-     * @return false 
      */
-    bool GetExclusiveAddressUseEnable()
+    DECLARE_INDEXER(bool, ExclusiveAddressUse,
     {
-        ERROR_ASSERT(ProtocolType::IPPROTO_TCP == m_protoType, "NotSupportedException");
+        TCPIP_AF_ASSERT(m_addressFamily);
         bool bEnable = false;
         GetSocketOption(SocketOptionLevel::Socket, SocketOptionName::ExclusiveAddressUse, bEnable);
         return bEnable;
-    }
-    void SetExclusiveAddressUseEnable(bool bEnable)
+    },
     {
-        ERROR_ASSERT(ProtocolType::IPPROTO_TCP == m_protoType, "NotSupportedException");
-        SetSocketOption(SocketOptionLevel::Socket, SocketOptionName::ExclusiveAddressUse, bEnable);
-    }
-    LingerOption GetLingerState()
+        TCPIP_AF_ASSERT(m_addressFamily);
+        SetSocketOption(SocketOptionLevel::Socket, SocketOptionName::ExclusiveAddressUse, SETTER_VALUE);
+    })
+    /**
+     * @brief Socket 在尝试发送所有挂起数据时是否延迟关闭套接字
+     * 
+     */
+    DECLARE_INDEXER(LingerOption, LingerState,
     {
         LingerOption state;
         int size = sizeof(LingerOption);
         GetSocketOption(SocketOptionLevel::Socket, SocketOptionName::Linger, (char*)&state, size);
         return state;
-    }
-    void SetLingerState(LingerOption state)
+    },
     {
-        SetSocketOption(SocketOptionLevel::Socket, SocketOptionName::Linger, (char*)&state, sizeof(LingerOption));
-    }
+        SetSocketOption(SocketOptionLevel::Socket, SocketOptionName::Linger, (char*)&SETTER_VALUE, sizeof(LingerOption));
+    })
+    /**
+     * @brief 获取 Tcp 连接对方的 SocketAddress
+     * 在第一个 IO 操作后调用
+     *  stream   : Connect
+     *  datagram : sendto / receivefrom
+     */
+    DECLARE_CONST_GETTER(SocketAddress, LocalEndPoint,
+    {
+        SocketAddress addr;
+        SOCKETAPI_ASSERT(0 == getpeername(m_socket, (struct sockaddr *)addr.Item, (socklen_t*)&addr.Size), "Get local end point failed");
+        return addr;
+    })
+    /**
+     * @brief 传出的多路广播数据包是否传递到发送应用程序
+     * 
+     */
+    DECLARE_INDEXER(bool, MulticastLoopback,
+    {
+        bool bEnable = false;
+        GetSocketOption(SocketOptionLevel::IP, SocketOptionName::MulticastLoopback, bEnable);
+        return bEnable; 
+    },
+    {
+        SetSocketOption(SocketOptionLevel::IP, SocketOptionName::MulticastLoopback, SETTER_VALUE);
+    })
     /**
      * @brief 指定 Tcp Socket 是否正在使用 Nagle 算法（默认开启）。
      * Small Packet Problem
@@ -515,116 +595,110 @@ public:
      * 如何解决这种问题？ 
      * Nagle就提出了一种通过减少需要通过网络发送包的数量来提高TCP/IP传输的效率，这就是Nagle算法
      * 
-     * @return true 
-     * @return false 
      */
-    bool GetNoDelayEnable()
+    DECLARE_INDEXER(bool, NoDelay,
     {
         ERROR_ASSERT(ProtocolType::IPPROTO_TCP == m_protoType, "NotSupportedException");
         bool bEnable = false;
         GetSocketOption(SocketOptionLevel::Socket, (SocketOptionName)TCP_NODELAY, bEnable);
         return bEnable;
-    }
-    void SetNoDelayEnable(bool bEnable)
+    },
     {
         ERROR_ASSERT(ProtocolType::IPPROTO_TCP == m_protoType, "NotSupportedException");
-        SetSocketOption(SocketOptionLevel::Socket, (SocketOptionName)TCP_NODELAY, bEnable);
-    }
+        SetSocketOption(SocketOptionLevel::Socket, (SocketOptionName)TCP_NODELAY, SETTER_VALUE);
+    })
     /**
-     * @brief 获取或设置一个值，它指定 Socket 接收缓冲区的大小。默认值为 8192
+     * @brief Socket 接收缓冲区的大小。默认值为 8192
      * 
-     * @return int 
      */
-    int GetReceiveBufferSize()
+    DECLARE_INDEXER(int, ReceiveBufferSize,
     {
-        int size;
-        GetSocketOption(SocketOptionLevel::Socket, SocketOptionName::ReceiveBuffer, size);
-        return size;
-    }
-    void SetReceiveBufferSize(int size)
+        int nSize = 8192;
+        GetSocketOption(SocketOptionLevel::Socket, SocketOptionName::ReceiveBuffer, nSize);
+        return nSize;
+    },
     {
-        SetSocketOption(SocketOptionLevel::Socket, SocketOptionName::ReceiveBuffer, size);
-    }
+        SetSocketOption(SocketOptionLevel::Socket, SocketOptionName::ReceiveBuffer, SETTER_VALUE);
+    })
     /**
      * @brief 超时值（以毫秒为单位）。 默认值为 0，指示超时期限无限大。 指定 -1 还会指示超时期限无限大
      * 
-     * @return int 
      */
-    int GetReceiveTimeout()
+    DECLARE_INDEXER(int, ReceiveTimeout,
     {
-        int size;
-        GetSocketOption(SocketOptionLevel::Socket, SocketOptionName::ReceiveTimeout, size);
-        return size;
-    }
-    void SetReceiveTimeout(int size)
+        int nTimeout = -1;
+        GetSocketOption(SocketOptionLevel::Socket, SocketOptionName::ReceiveTimeout, nTimeout);
+        return nTimeout;
+    },
     {
-        SetSocketOption(SocketOptionLevel::Socket, SocketOptionName::ReceiveTimeout, size);
-    }
+        SetSocketOption(SocketOptionLevel::Socket, SocketOptionName::ReceiveTimeout, SETTER_VALUE);
+    })
     /**
      * @brief 获取或设置一个值，它指定 Socket 发送缓冲区的大小。默认值为 8192
      * 
-     * @return int 
      */
-    int GetSendBufferSize()
+    DECLARE_INDEXER(int, SendBufferSize,
     {
-        int size;
-        GetSocketOption(SocketOptionLevel::Socket, SocketOptionName::SendBuffer, size);
-        return size;
-    }
-    void SetSendBufferSize(int size)
+        int nSize = 8192;
+        GetSocketOption(SocketOptionLevel::Socket, SocketOptionName::SendBuffer, nSize);
+        return nSize;
+    },
     {
-        SetSocketOption(SocketOptionLevel::Socket, SocketOptionName::SendBuffer, size);
-    }
+        SetSocketOption(SocketOptionLevel::Socket, SocketOptionName::SendBuffer, SETTER_VALUE);
+    })
     /**
      * @brief 超时值（以毫秒为单位）。 默认值为 0，指示超时期限无限大。 指定 -1 还会指示超时期限无限大
      * 
-     * @return int 
      */
-    int GetSendTimeout()
+    DECLARE_INDEXER(int, SendTimeout,
     {
-        int size;
-        GetSocketOption(SocketOptionLevel::Socket, SocketOptionName::SendTimeout, size);
-        return size;
-    }
-    void SetSendTimeout(int size)
+        int nTimeout = -1;
+        GetSocketOption(SocketOptionLevel::Socket, SocketOptionName::SendTimeout, nTimeout);
+        return nTimeout;
+    },
     {
-        SetSocketOption(SocketOptionLevel::Socket, SocketOptionName::SendTimeout, size);
-    }
+        SetSocketOption(SocketOptionLevel::Socket, SocketOptionName::SendTimeout, SETTER_VALUE);
+    })
     /**
      * @brief 指定 Socket 发送的 Internet 协议 (IP) 数据包的生存时间 (TTL) 值
      * 
-     * @return byte 
      */
-    byte GetTtl()
+    DECLARE_INDEXER(byte, Ttl,
     {
+        TCPIP_AF_ASSERT(m_addressFamily);
         byte val;
         int size = sizeof(byte);
         GetSocketOption(SocketOptionLevel::Socket, SocketOptionName::TTL, (char*)&val, size);
-        ERROR_ASSERT(sizeof(byte) == size, "GetTtl failed");
         return val;
-    }
-    void SetTtl(byte size)
+    },
     {
-        SetSocketOption(SocketOptionLevel::IP, SocketOptionName::TTL, (char*)&size, 1);
-    }
+        TCPIP_AF_ASSERT(m_addressFamily);
+        SetSocketOption(SocketOptionLevel::IP, SocketOptionName::TTL, (char*)&SETTER_VALUE, sizeof(byte));
+    })
     /**
      * @brief 为新建连接创建新的 Socket
      * 从侦听套接字的连接请求队列中同步提取第一个挂起的连接请求，然后创建并返回新的 Socket 。 
      * 不能使用返回的此 Socket 来接受来自连接队列的其他任何连接。 
      * 但是，可以调用方法标识远程主机 Socket 的网络地址和端口号
      * 
-     * @return Socket* 
+     * @param remoteEP 返回客户端的网络地址信息
+     * @return Socket* 返回客户端的资源句柄
      */
-    Socket* Accept()
+    Socket* Accept(SocketAddress &remoteEP)
     {
         Socket* s = new Socket();
         SOCKETAPI_ASSERT
         (
-            INVALID_SOCKET  != (s->m_socket = accept(m_socket, (SOCKADDR *)s->m_addr.Item, &s->m_addr.Size)),
+            INVALID_SOCKET  != (s->m_socket = accept(m_socket, (SOCKADDR *)remoteEP.Item, &remoteEP.Size)),
             "https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-accept"
         );
         return s;
     }
+    /**
+     * @brief 使 Socket 与一个本地端口相关联
+     * 
+     * @param localEP 
+     */
     void Bind(SocketAddress &localEP)
     { 
         SOCKETAPI_ASSERT
@@ -632,6 +706,21 @@ public:
             SOCKET_ERROR != bind(m_socket, (SOCKADDR *)localEP.Item, localEP.Size),
             "https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-bind"
         );
+    }
+    /**
+     * @brief 关闭 Socket 连接并释放所有关联的资源
+     * 对于面向连接的协议，建议在 Shutdown 调用方法之前调用 Close 。 这可确保所有数据在连接的套接字关闭之前都已发送和接收。
+     * 
+     * 如果需要 Close 先调用而不调用 Shutdown ，
+     * 可以通过将选项设置 DontLinger Socket 为 false 并指定非零超时间隔来确保将排队等待传出传输的数据发送。 
+     * Close 会被阻塞，直到发送此数据或指定的超时过期
+     * 
+     */
+    void Close()
+    {
+        VOIDRET_ASSERT(INVALID_SOCKET != m_socket);
+        SOCKETAPI_ASSERT(SOCKET_ERROR != closesocket(m_socket), "Dispose Socket failed, create socket failed");
+        m_socket = INVALID_SOCKET;
     }
     /**
      * @brief 与远程主机建立连接
@@ -651,34 +740,12 @@ public:
      * 
      * @param backlog 客户端最大连接量, 如果一个已经处于监听状态的 Socket 调用该接口, backlog 不会修改。
      */
-    void Listen(int backlog = SOMAXCONN)
+    void Listen(int backlog = SOMAXCONN) 
     {
         SOCKETAPI_ASSERT
         (
             SOCKET_ERROR != listen(m_socket, backlog), 
             "https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-listen"
-            /**
-                WSANOTINITIALISED
-                    A successful WSAStartup call must occur before using this function.
-                WSAENETDOWN
-                    The network subsystem has failed.
-                WSAEADDRINUSE
-                    The socket's local address is already in use and the socket was not marked to allow address reuse with SO_REUSEADDR. This error usually occurs during execution of the bind function, but could be delayed until this function if the bind was to a partially wildcard address (involving ADDR_ANY) and if a specific address needs to be committed at the time of this function.
-                WSAEINPROGRESS
-                    A blocking Windows Sockets 1.1 call is in progress, or the service provider is still processing a callback function.
-                WSAEINVAL
-                    The socket has not been bound with bind.
-                WSAEISCONN
-                    The socket is already connected.
-                WSAEMFILE
-                    No more socket descriptors are available.
-                WSAENOBUFS
-                    No buffer space is available.
-                WSAENOTSOCK
-                    The descriptor is not a socket.
-                WSAEOPNOTSUPP
-                    The referenced socket is not of a type that supports the listen operation. 
-             */
         );
     }
     /**
@@ -702,7 +769,7 @@ public:
      * @return true 在指定 mode 条件下出现上述情况, 返回 true
      * @return false 
      */
-    bool Poll(int microSeconds, SelectMode mode)
+    bool Poll(int microSeconds, SelectMode mode) 
     {
         fd_set fds;
         FD_ZERO(&fds);
@@ -720,7 +787,7 @@ public:
      * @param errorcode 
      * @return int 实际接收的长度, 不会超过 ReceiveBuffer 的容量。 If the connection has been gracefully closed, the return value is zero.
      */
-    int Receive(char* buffer, int size, SocketFlags socketFlags, SocketError &errorcode)
+    int Receive(char* buffer, int size, SocketFlags socketFlags, SocketError &errorcode) 
     {
         int nRet;
         /* https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-recv */
@@ -739,7 +806,7 @@ public:
      * @param remoteEP 
      * @return int 实际接收的长度, 不会超过 ReceiveBuffer 的容量。 If the connection has been gracefully closed, the return value is zero.
      */
-    int ReceiveFrom(char* buffer, int size, SocketFlags socketFlags, SocketAddress &remoteEP)
+    int ReceiveFrom(char* buffer, int size, SocketFlags socketFlags, SocketAddress &remoteEP) 
     {
         int nRet;
         SOCKETAPI_ASSERT
@@ -759,53 +826,12 @@ public:
      * @param errorcode 
      * @return int 实际发送的长度, 如果数据长度超过了 SendBuffer 的剩余容量, 会进行截断 
      */
-    int Send(const char* buffer, int size, SocketFlags socketFlags, SocketError &errorcode)
+    int Send( char* buffer, int size, SocketFlags socketFlags, SocketError &errorcode) 
     {
         int nRet;
         /* https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-send */
         if(SOCKET_ERROR == (nRet = send(m_socket, buffer, size, socketFlags)))
         {
-            /**
-                WSANOTINITIALISED
-                    A successful WSAStartup call must occur before using this function.
-                WSAENETDOWN
-                    The network subsystem has failed.
-                WSAEACCES
-                    The requested address is a broadcast address, but the appropriate flag was not set. Call setsockopt with the SO_BROADCAST socket option to enable use of the broadcast address.
-                WSAEINTR
-                    A blocking Windows Sockets 1.1 call was canceled through WSACancelBlockingCall.
-                WSAEINPROGRESS
-                    A blocking Windows Sockets 1.1 call is in progress, or the service provider is still processing a callback function.
-                WSAEFAULT
-                    The buf parameter is not completely contained in a valid part of the user address space.
-                WSAENETRESET
-                    The connection has been broken due to the keep-alive activity detecting a failure while the operation was in progress.
-                WSAENOBUFS
-                    No buffer space is available.
-                WSAENOTCONN
-                    The socket is not connected.
-                WSAENOTSOCK
-                    The descriptor is not a socket.
-                WSAEOPNOTSUPP
-                    MSG_OOB was specified, but the socket is not stream-style such as type SOCK_STREAM, OOB data is not supported in the communication domain associated with this socket, or the socket is unidirectional and supports only receive operations.
-                WSAESHUTDOWN
-                    The socket has been shut down; it is not possible to send on a socket after shutdown has been invoked with how set to SD_SEND or SD_BOTH.
-                WSAEWOULDBLOCK
-                    The socket is marked as nonblocking and the requested operation would block.
-                WSAEMSGSIZE
-                    The socket is message oriented, and the message is larger than the maximum supported by the underlying transport.
-                WSAEHOSTUNREACH
-                    The remote host cannot be reached from this host at this time.
-                WSAEINVAL
-                    The socket has not been bound with bind, or an unknown flag was specified, or MSG_OOB was specified for a socket with SO_OOBINLINE enabled.
-                WSAECONNABORTED
-                    The virtual circuit was terminated due to a time-out or other failure. The application should close the socket as it is no longer usable.
-                WSAECONNRESET
-                    The virtual circuit was reset by the remote side executing a hard or abortive close. For UDP sockets, the remote host was unable to deliver a previously sent UDP datagram and responded with a "Port Unreachable" ICMP packet. The application should close the socket as it is no longer usable.
-                WSAETIMEDOUT
-                    The connection has been dropped, because of a network failure or because the system on the other end went down without notice. 
-             * 
-             */
             errorcode = WSAGetLastError();
         }
         return nRet;
@@ -819,60 +845,10 @@ public:
      * @param remoteEP 
      * @return int 实际发送的长度, 如果数据长度超过了 SendBuffer 的剩余容量, 会进行截断 
      */
-    int SendTo(const char* buffer, int size, SocketFlags socketFlags, const SocketAddress &remoteEP)
+    int SendTo(const char* buffer, int size, SocketFlags socketFlags, const SocketAddress &remoteEP) 
     {
         int nRet;
         /* https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-sendto */
-        /**
-            WSANOTINITIALISED
-                A successful WSAStartup call must occur before using this function.
-            WSAENETDOWN
-                The network subsystem has failed.
-            WSAEACCES
-                The requested address is a broadcast address, but the appropriate flag was not set. Call setsockopt with the SO_BROADCAST parameter to allow the use of the broadcast address.
-            WSAEINVAL
-                An unknown flag was specified, or MSG_OOB was specified for a socket with SO_OOBINLINE enabled.
-            WSAEINTR
-                A blocking Windows Sockets 1.1 call was canceled through WSACancelBlockingCall.
-            WSAEINPROGRESS
-                A blocking Windows Sockets 1.1 call is in progress, or the service provider is still processing a callback function.
-            WSAEFAULT
-                The buf or to parameters are not part of the user address space, or the tolen parameter is too small.
-            WSAENETRESET
-                The connection has been broken due to keep-alive activity detecting a failure while the operation was in progress.
-            WSAENOBUFS
-                No buffer space is available.
-            WSAENOTCONN
-                The socket is not connected (connection-oriented sockets only).
-            WSAENOTSOCK
-                The descriptor is not a socket.
-            WSAEOPNOTSUPP
-                MSG_OOB was specified, but the socket is not stream-style such as type SOCK_STREAM, OOB data is not supported in the communication domain associated with this socket, or the socket is unidirectional and supports only receive operations.
-            WSAESHUTDOW
-                The socket has been shut down; it is not possible to sendto on a socket after shutdown has been invoked with how set to SD_SEND or SD_BOTH.
-            WSAEWOULDBLOCK
-                The socket is marked as nonblocking and the requested operation would block.
-            WSAEMSGSIZE
-                The socket is message oriented, and the message is larger than the maximum supported by the underlying transport.
-            WSAEHOSTUNREACH
-                The remote host cannot be reached from this host at this time.
-            WSAECONNABORTED
-                The virtual circuit was terminated due to a time-out or other failure. The application should close the socket as it is no longer usable.
-            WSAECONNRESET
-                The virtual circuit was reset by the remote side executing a hard or abortive close. For UPD sockets, the remote host was unable to deliver a previously sent UDP datagram and responded with a "Port Unreachable" ICMP packet. The application should close the socket as it is no longer usable.
-            WSAEADDRNOTAVAIL
-                The remote address is not a valid address, for example, ADDR_ANY.
-            WSAEAFNOSUPPORT
-                Addresses in the specified family cannot be used with this socket.
-            WSAEDESTADDRREQ
-                A destination address is required.
-            WSAENETUNREACH
-                The network cannot be reached from this host at this time.
-            WSAEHOSTUNREACH
-                A socket operation was attempted to an unreachable host.
-            WSAETIMEDOUT
-                The connection has been dropped, because of a network failure or because the system on the other end went down without notice.
-            */
         SOCKETAPI_ASSERT(SOCKET_ERROR != (nRet = sendto(m_socket, buffer, size, socketFlags, (SOCKADDR *)remoteEP.Item, remoteEP.Size)), "SendTo failed");
         return nRet;
     }
@@ -883,7 +859,7 @@ public:
      * @param optionInOutValue 输入 / 输出参数
      * @return int 返回 0 代表成功
      */
-    inline int IOControl(IOControlCode ioControlCode, DWORD &optionInOutValue)
+    inline int IOControl(IOControlCode ioControlCode, DWORD &optionInOutValue) const
     {
         int nRet;
         SOCKETAPI_ASSERT
@@ -901,7 +877,7 @@ public:
      * @param buffer 
      * @param optlen 
      */
-    inline void GetSocketOption(SocketOptionLevel optionLevel, SocketOptionName optionName, char* buffer, int &optlen)
+    inline void GetSocketOption(SocketOptionLevel optionLevel, SocketOptionName optionName, char* buffer, int &optlen) const
     {
         SOCKETAPI_ASSERT
         (
@@ -910,12 +886,12 @@ public:
             "https://docs.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-getsockopt"
         );
     }
-    inline void GetSocketOption(SocketOptionLevel optionLevel, SocketOptionName optionName, bool &optionValue)
+    inline void GetSocketOption(SocketOptionLevel optionLevel, SocketOptionName optionName, bool &optionValue) const
     {
         int optlen = sizeof(bool);
         GetSocketOption(optionLevel, optionName, (char *)&optionValue, optlen);
     }
-    inline void GetSocketOption(SocketOptionLevel optionLevel, SocketOptionName optionName, int &optionValue)
+    inline void GetSocketOption(SocketOptionLevel optionLevel, SocketOptionName optionName, int &optionValue) const
     {
         int optlen = sizeof(int);
         GetSocketOption(optionLevel, optionName, (char *)&optionValue, optlen);
@@ -947,7 +923,7 @@ public:
         SetSocketOption(optionLevel, optionName, (char *)&optionValue, sizeof(int));
     }
     /**
-     * @brief 禁用 Socket 上的发送和接收
+     * @brief 禁用 Socket 上的发送和接收， 如果存在未收发的数据, 会立刻放弃处理。 如果需要处理，请通过设置 Linger 来处理关闭动作
      * 
      * @param how 
      */
@@ -1000,5 +976,8 @@ public:
         } 
     }
 };
-readonly System::Net::Sockets::Socket::SocketlibraryInitlializer System::Net::Sockets::Socket::m_socketlibraryInitlializer;
+#if BIND_SOCKET_LIB_LIFETIME_WITH_PROCESS
+    readonly System::Net::Sockets::Socket::SocketlibraryInitlializer System::Net::Sockets::Socket::m_socketlibraryInitlializer;
+#endif
+
 #endif

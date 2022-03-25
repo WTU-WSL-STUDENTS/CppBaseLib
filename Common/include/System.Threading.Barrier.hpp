@@ -11,7 +11,7 @@
  * @Autor: like
  * @Date: 2022-02-14 16:23:30
  * @LastEditors: like
- * @LastEditTime: 2022-03-11 16:23:21
+ * @LastEditTime: 2022-03-25 16:29:43
  */
 #ifndef SYSTEM_THREADING_BARRIER_HPP
 #define SYSTEM_THREADING_BARRIER_HPP
@@ -43,7 +43,7 @@ public:
      */
     Barrier(long participantCount, long spinCount = -1) : m_nParticipantCount(participantCount), m_nCurrentPhaseNumber(-1)
     {
-        WINAPI_ASSERT(InitializeSynchronizationBarrier(&barrier, participantCount, spinCount), Barrier());
+        WINAPI_ASSERT(InitializeSynchronizationBarrier(&barrier, participantCount, spinCount), "Barrier()");
     }
     ~Barrier()
     {

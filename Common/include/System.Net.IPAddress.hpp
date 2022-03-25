@@ -4,14 +4,20 @@
  * @Autor: like
  * @Date: 2022-03-14 15:39:04
  * @LastEditors: like
- * @LastEditTime: 2022-03-18 18:21:51
+ * @LastEditTime: 2022-03-25 14:51:01
  */
 #ifndef SYSTEM_NET_IP_ADDRESS_HPP
 #define SYSTEM_NET_IP_ADDRESS_HPP
+
 #include <WS2tcpip.h>
 #pragma comment(lib,"ws2_32.lib")
-#include <CompliedEntry.h>
 #include <string.h>
+#include <CompliedEntry.h>
+
+#ifdef __WINDOWS
+#   pragma warning(disable:4996)
+#endif
+
 #ifdef ASSERT_ENABLE
 #   define SOCKETAPI_ASSERT(condition, errorMsg)        \
     do                                                  \
@@ -19,11 +25,15 @@
         bool cond = condition;                          \
         if(!(cond))                                     \
         {                                               \
-            printf("\nWinapi assert " #condition          \
+            printf("\nWinapi assert " #condition        \
             "\n%s , error code : %d\n", errorMsg, WSAGetLastError());    \
+            WSASetLastError(0);                         \
             assert(cond);                               \
         }                                               \
     }while(0)
+#   define PORT_ASSERT(port)        ERROR_ASSERT(IPEndPoint::MinPort < (port) && (port) < IPEndPoint::MaxPort, "ArgumentOutOfRangeException")
+#   define TCPIP_AF_ASSERT(family)  ERROR_ASSERT(AddressFamily::InterNetwork == (AddressFamily)(family) || AddressFamily::InterNetworkV6 == (AddressFamily)(family), "AddressFamily not support")
+  
 #endif
 #define MAX_InterNetwork_LENGTH (4 * 4)
 #define MAX_InterNetworkV6_LENGTH (8 * 5)
@@ -47,9 +57,9 @@
 namespace System::Net
 {
     enum class AddressFamily : ADDRESS_FAMILY;
+    class IPAddress;
     class SocketAddress;
     class EndPoint;
-    class IPAddress;
     class IPEndPoint;
 };
 enum class System::Net::AddressFamily : ADDRESS_FAMILY
@@ -78,68 +88,6 @@ enum class System::Net::AddressFamily : ADDRESS_FAMILY
      * 
      */
     InterNetworkV6  = AF_INET6
-};
-class System::Net::SocketAddress
-{
-public:
-    /**
-     * @brief 获取 SocketAddress 的基础缓冲区大小
-     * 
-     */
-    int Size;
-    union
-    {
-        sockaddr_in     ipv4Addr;
-        sockaddr_in6    ipv6Addr;
-        /**
-         * @brief SocketAddress 的基础缓冲区大小
-         * 
-         */
-        unsigned char   Item[sizeof(sockaddr_in6)];
-    };
-    SocketAddress(){}
-    SocketAddress(AddressFamily family) : Size(AddressFamily::InterNetworkV6 == family ? sizeof(sockaddr_in6) : sizeof(sockaddr_in))
-    {
-        ipv6Addr.sin6_family = static_cast<ADDRESS_FAMILY>(family);
-    }
-    inline AddressFamily GetFamily()
-    {
-        return (AddressFamily)ipv6Addr.sin6_family;
-    }
-    inline UInt16 GetNetworkPort()
-    {
-        return ipv6Addr.sin6_port;
-    }
-};
-/**
- * @brief 标识网络地址。 这是一个抽象类
- * 
- */
-class System::Net::EndPoint
-{
-protected:
-    EndPoint(){}
-public:
-    virtual ~EndPoint(){}
-    /**
-     * @brief 获取终结点所属的地址族
-     * 
-     * @return AddressFamily 
-     */
-    virtual AddressFamily GetAddressFamily() = 0;
-    /**
-     * @brief 通过 SocketAddress 实例创建 EndPoint 实例
-     * 
-     * @param socketAddress 
-     * @return EndPoint* 
-     */
-    virtual EndPoint* Create(const SocketAddress& socketAddress) = 0;
-    /**
-     * @brief 将终结点信息序列化为 SocketAddress 实例
-     * 
-     * @return SocketAddress* 
-     */
-    virtual SocketAddress* Serialize() = 0;
 };
 class System::Net::IPAddress
 {
@@ -171,12 +119,26 @@ public:
     /**
      * @brief Construct a new IPAddress object
      * 
-     * @param nNetworkIp InterNetwork 网络字节序
+     * @param nNetworkIp InterNetwork 网络字节序 127 0 0 1 -> 0x0100007f
      */
     IPAddress(UInt32 nNetworkIp)
     {
         m_eFamily = AddressFamily::InterNetwork;
-        memcpy(&ipv4Addr, &nNetworkIp, sizeof(UInt32));
+        ipv4Addr.S_un.S_addr = nNetworkIp;
+    }
+    /**
+     * @brief IPAddress 转字符串
+     * 
+     * @param buffer 
+     */
+    void ToString(char* buffer) const
+    {
+        SOCKETAPI_ASSERT
+        (
+            inet_ntop((int)m_eFamily, &ipv6Addr, buffer, MAX_IP_LENGTH), 
+            "ToString failed"
+            "https://docs.microsoft.com/en-us/windows/win32/api/ws2tcpip/nf-ws2tcpip-inet_ntop"
+        );
     }
     bool operator==(IPAddress& other)
     {
@@ -239,20 +201,6 @@ public:
      * 
      */
     static readonly IPAddress IPv6None;
-    /**
-     * @brief IPAddress 转字符串
-     * 
-     * @param buffer 
-     */
-    void ToString(char* buffer)
-    {
-        SOCKETAPI_ASSERT
-        (
-            inet_ntop((int)m_eFamily, &ipv6Addr, buffer, MAX_IP_LENGTH), 
-            "ToString failed"
-            "https://docs.microsoft.com/en-us/windows/win32/api/ws2tcpip/nf-ws2tcpip-inet_ntop"
-        );
-    }
     /**
      * @brief 判断字符串是 InterNetwork 活 InterNetworkV6 格式
      * 
@@ -326,22 +274,132 @@ public:
     }
 };
 readonly System::Net::IPAddress System::Net::IPAddress::Any         = System::Net::IPAddress((UInt32)0);
-readonly System::Net::IPAddress System::Net::IPAddress::Broadcast   = System::Net::IPAddress((UInt32)-1);
-readonly System::Net::IPAddress System::Net::IPAddress::Loopback    = System::Net::IPAddress((UInt32)0x0100007f);
-readonly System::Net::IPAddress System::Net::IPAddress::None        = System::Net::IPAddress((UInt32)-1);
+readonly System::Net::IPAddress System::Net::IPAddress::Broadcast   = System::Net::IPAddress((UInt32)-1/*INADDR_BROADCAST*/);
+readonly System::Net::IPAddress System::Net::IPAddress::Loopback    = System::Net::IPAddress((UInt32)0x0100007f/*INADDR_LOOPBACK*/);
+readonly System::Net::IPAddress System::Net::IPAddress::None        = System::Net::IPAddress((UInt32)-1/*INADDR_NONE*/);
 readonly System::Net::IPAddress System::Net::IPAddress::IPv6Any     = System::Net::IPAddress("::");
 readonly System::Net::IPAddress System::Net::IPAddress::IPv6Loopback= System::Net::IPAddress("::1");
 readonly System::Net::IPAddress System::Net::IPAddress::IPv6None    = System::Net::IPAddress("::0");
-
+class System::Net::SocketAddress
+{
+public:
+    /**
+     * @brief 获取 SocketAddress 的基础缓冲区大小
+     * 
+     */
+    int Size;
+    union
+    {
+        sockaddr_in     ipv4Addr;
+        sockaddr_in6    ipv6Addr;
+        /**
+         * @brief SocketAddress 的基础缓冲区大小
+         * 
+         */
+        unsigned char   Item[sizeof(sockaddr_in6)];
+    };
+    SocketAddress() : Size(sizeof(sockaddr_in6)){}
+    SocketAddress(AddressFamily family) : Size(AddressFamily::InterNetworkV6 == family ? sizeof(sockaddr_in6) : sizeof(sockaddr_in))
+    {
+        ipv6Addr.sin6_family = static_cast<ADDRESS_FAMILY>(family);
+    }
+    SocketAddress(const IPAddress &address, UInt16 port) : SocketAddress(address.m_eFamily)
+    {
+        switch (address.m_eFamily)
+        {
+        case AddressFamily::InterNetwork:
+            {
+                ipv4Addr.sin_addr = address.ipv4Addr;
+            }
+            break;
+        case AddressFamily::InterNetworkV6:
+            {
+                ipv6Addr.sin6_addr = address.ipv6Addr;
+            }
+            break;
+        }
+        ipv6Addr.sin6_port = IPAddress::HostToNetworkOrder(port);
+    }
+    inline AddressFamily GetFamily()
+    {
+        return (AddressFamily)ipv6Addr.sin6_family;
+    }
+    inline UInt16 GetNetworkPort()
+    {
+        return ipv6Addr.sin6_port;
+    }
+    /**
+     * @brief 获取 SocketAddress 对象的网络地址的字符串形式, 127.0.0.1:8080
+     * 
+     * @param buffer 
+     */
+    void ToString(char* buffer)
+    {
+        TCPIP_AF_ASSERT(ipv4Addr.sin_family);
+        VOIDRET_ASSERT(NULL != buffer);
+        void* pAddr = NULL;
+        switch (GetFamily())
+        {
+        case AddressFamily::InterNetwork :
+            {
+                pAddr = &ipv4Addr.sin_addr;
+            }
+            break;
+        case  AddressFamily::InterNetworkV6 :
+            {
+                pAddr = &ipv6Addr.sin6_addr;
+            }
+            break;
+        default:
+            return;
+        }
+        char ip[MAX_IP_LENGTH];
+        SOCKETAPI_ASSERT
+        (
+            inet_ntop(ipv4Addr.sin_family, pAddr, ip, MAX_IP_LENGTH), 
+            "ToString failed"
+            "https://docs.microsoft.com/en-us/windows/win32/api/ws2tcpip/nf-ws2tcpip-inet_ntop"
+        );
+        sprintf(buffer, "%s:%d", ip, ntohs(ipv6Addr.sin6_port));
+    }
+};
+/**
+ * @brief 标识网络地址。 这是一个抽象类
+ * 
+ */
+class System::Net::EndPoint
+{
+protected:
+    EndPoint(){}
+public:
+    virtual ~EndPoint(){}
+    /**
+     * @brief 获取终结点所属的地址族
+     * 
+     * @return AddressFamily 
+     */
+    virtual AddressFamily GetAddressFamily() = 0;
+    /**
+     * @brief 通过 SocketAddress 实例创建 EndPoint 实例
+     * 
+     * @param socketAddress 
+     * @return EndPoint* 
+     */
+    virtual EndPoint* Create(const SocketAddress& socketAddress) = 0;
+    /**
+     * @brief 将终结点信息序列化为 SocketAddress 实例
+     * 
+     * @return SocketAddress* 
+     */
+    virtual SocketAddress* Serialize() = 0;
+};
 class System::Net::IPEndPoint final : public EndPoint
 {
 private:
     IPAddress   m_networkIp;
     UInt16      m_nNetworkPort;
-    IPEndPoint(){}
 public:
-    static readonly int MinPort;
-    static readonly int MaxPort;
+    IPEndPoint(){}
     IPEndPoint(const IPAddress& networkAddress, UInt16 networkPort) : m_networkIp(networkAddress), m_nNetworkPort(networkPort){}
     /**
      * @brief
@@ -364,25 +422,24 @@ public:
     }
     EndPoint* Create(const SocketAddress& socketAddress) override
     {
-        IPEndPoint* ip = new IPEndPoint();
-        ip->m_networkIp.m_eFamily   = (AddressFamily)socketAddress.ipv4Addr.sin_family;
-        ip->m_nNetworkPort          = socketAddress.ipv4Addr.sin_port;
+        m_networkIp.m_eFamily   = (AddressFamily)socketAddress.ipv4Addr.sin_family;
+        m_nNetworkPort          = socketAddress.ipv4Addr.sin_port;
         switch (m_networkIp.m_eFamily)
         {
         case AddressFamily::InterNetwork:
             {
-                ip->m_networkIp.ipv4Addr = socketAddress.ipv4Addr.sin_addr;
+                m_networkIp.ipv4Addr = socketAddress.ipv4Addr.sin_addr;
             }
             break;
         case AddressFamily::InterNetworkV6:
             {
-                ip->m_networkIp.ipv6Addr = socketAddress.ipv6Addr.sin6_addr;
+                m_networkIp.ipv6Addr = socketAddress.ipv6Addr.sin6_addr;
             }
             break;
         default:
             break;
         }
-        return ip;
+        return this;
     }
     SocketAddress* Serialize() override
     {
@@ -409,8 +466,13 @@ public:
     {
         return (other.m_nNetworkPort == m_nNetworkPort) && (other.m_networkIp == m_networkIp);
     }
+    static readonly int MinPort;
+    static readonly int MaxPort;
 };
 readonly int System::Net::IPEndPoint::MinPort = 0;
 readonly int System::Net::IPEndPoint::MaxPort = 65535;
 
+#ifdef __WINDOWS
+#   pragma warning(default:4996)
+#endif
 #endif
