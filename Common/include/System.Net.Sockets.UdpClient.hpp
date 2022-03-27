@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-03-25 14:06:23
  * @LastEditors: like
- * @LastEditTime: 2022-03-25 17:07:49
+ * @LastEditTime: 2022-03-27 11:21:56
  */
 #ifndef SYSTEM_NET_SOCKETS_UDPCLIENT_HPP
 #define SYSTEM_NET_SOCKETS_UDPCLIENT_HPP
@@ -79,9 +79,11 @@ public:
      */
     DECLARE_INDEXER(bool, EnableBroadcast, 
     {
+        VALRET_ASSERT(AddressFamily::InterNetwork == GetAddressFamily(), false);
         return Socket::GetEnableBroadcast();
     },
     {
+        ERROR_ASSERT(AddressFamily::InterNetwork == GetAddressFamily(), "Ipv6 not support broadcast");
         Socket::SetEnableBroadcast(SETTER_VALUE);
     })
     /**
@@ -147,8 +149,9 @@ public:
      * @param remoteEP 
      * @param remotePort 
      */
-    void DropMulticastGroup(const IPAddress& remoteEP, UInt16 remotePort)
+    void DropMulticastGroup(const IPAddress& remoteEP, UInt32 port = 0)
     {
+        ERROR_ASSERT(IsMulicastAddress(remoteEP), "ArgumentException");
         /* https://docs.microsoft.com/en-us/windows/win32/api/ws2ipdef/ns-ws2ipdef-ip_mreq */
         /* https://www.cnblogs.com/IntelligencePointer/p/14186663.html */
         switch(GetAddressFamily())
@@ -156,15 +159,17 @@ public:
             case AddressFamily::InterNetwork:
             {
                 ip_mreq mulitcast;
-                mulitcast.imr_multiaddr.S_un.S_addr = INADDR_ANY;
-                mulitcast.imr_interface.S_un.S_addr = 
-                SetSocketOption(SocketOptionLevel::IP, SocketOptionName::DropMembership, (char*)&SETTER_VALUE, sizeof(ip_mreq));
-
+                mulitcast.imr_multiaddr             = remoteEP.ipv4Addr;
+                mulitcast.imr_interface.S_un.S_addr = port;
+                SetSocketOption(SocketOptionLevel::IP, SocketOptionName::DropMembership, (char*)&mulitcast, sizeof(ip_mreq));
             }
             break;
             case AddressFamily::InterNetworkV6:
             {
-
+                ipv6_mreq mulitcast = {0};
+                mulitcast.ipv6mr_multiaddr  = remoteEP.ipv6Addr;
+                mulitcast.ipv6mr_interface  = port;
+                SetSocketOption(SocketOptionLevel::IP, SocketOptionName::DropMembership, (char*)&mulitcast, sizeof(ipv6_mreq));
             }
             break;
         };
@@ -175,9 +180,28 @@ public:
      * @param remoteEP 
      * @param remotePort 
      */
-    void JoinMulticastGroup(const IPAddress& remoteEP, UInt16 remotePort)
+    void JoinMulticastGroup(const IPAddress& remoteEP, UInt32 port = 0)
     {
-        
+        ERROR_ASSERT(IsMulicastAddress(remoteEP), "ArgumentException");
+        switch(GetAddressFamily())
+        {
+            case AddressFamily::InterNetwork:
+            {
+                ip_mreq mulitcast;
+                mulitcast.imr_multiaddr             = remoteEP.ipv4Addr;
+                mulitcast.imr_interface.S_un.S_addr = port;
+                SetSocketOption(SocketOptionLevel::IP, SocketOptionName::AddMembership, (char*)&mulitcast, sizeof(ip_mreq));
+            }
+            break;
+            case AddressFamily::InterNetworkV6:
+            {
+                ipv6_mreq mulitcast = {0};
+                mulitcast.ipv6mr_multiaddr  = remoteEP.ipv6Addr;
+                mulitcast.ipv6mr_interface  = port;
+                SetSocketOption(SocketOptionLevel::IP, SocketOptionName::AddMembership, (char*)&mulitcast, sizeof(ipv6_mreq));
+            }
+            break;
+        };
     }
     /**
      * @brief 返回由远程主机发送的 UDP 数据报
@@ -202,6 +226,30 @@ public:
     int Send(const char* buffer, int size, const SocketAddress &remoteEP)
     {
         return Socket::SendTo(buffer, size, SocketFlags::None, remoteEP);
+    }
+private:
+    /**
+     * @brief 是否是组播地址
+     * 
+     * @param addr 
+     * @return true 
+     * @return false 
+     */
+    bool IsMulicastAddress(const IPAddress& addr)
+    {
+        const UInt32 MulticastMin = 0xE0;
+        const UInt32 MulticastMax = 0xFFFFFFEF;
+        TCPIP_AF_ASSERT(addr.m_eFamily);
+        return AddressFamily::InterNetwork == addr.m_eFamily ? 
+            MulticastMin < addr.ipv4Addr.S_un.S_addr && addr.ipv4Addr.S_un.S_addr < MulticastMax :
+            0xff == addr.ipv6Addr.u.Byte[0] && !(0x01 & addr.ipv6Addr.u.Byte[1]); 
+            /**
+             * @brief IPv6 multicast 
+             * https://cloud.tencent.com/developer/article/1659122
+             * 
+             * | 0xff | flags | scope |
+             * 0      7(0RTP) 11      15
+             */
     }
 };
 

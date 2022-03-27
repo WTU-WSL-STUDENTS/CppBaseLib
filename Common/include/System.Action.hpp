@@ -4,15 +4,26 @@
  * @Autor: like
  * @Date: 2022-02-17 16:25:32
  * @LastEditors: like
- * @LastEditTime: 2022-02-21 16:39:09
+ * @LastEditTime: 2022-03-27 14:00:37
  */
 #ifndef SYSTEM_ACTION_HPP
 #define SYSTEM_ACTION_HPP
+#include <CompliedEntry.h>
+
 namespace System
 {
     /* Action : https://docs.microsoft.com/zh-cn/dotnet/api/system.action-2?view=net-5.0 */
     template<typename _First, typename ..._Rest>
     using Action = void (*)(_First t, _Rest... u);
+    /**
+     * @brief 表示当事件提供数据时将处理该事件的方法
+     * 
+     * @tparam TEventArgs 
+     */
+    template<typename TEventArgs>
+    using EventHandler = void (*)(System::Object sender, TEventArgs e);
+   
+   
     // using Action = void (*)();
     // template<typename T>
     // using Action = void (*)(T& arg);

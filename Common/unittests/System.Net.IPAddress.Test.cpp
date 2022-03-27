@@ -4,13 +4,21 @@
  * @Autor: like
  * @Date: 2022-03-15 11:04:20
  * @LastEditors: like
- * @LastEditTime: 2022-03-16 16:02:18
+ * @LastEditTime: 2022-03-26 00:05:23
  */
 #include <System.Net.IPAddress.hpp>
 
 using namespace System;
 using namespace System::Net;
 
+void PrintBytes(const byte* p, int len)
+{
+    for(int i = 0; i < len; i++)
+    {
+        printf("%x ", p[i]);
+    }
+    printf("\n");
+}
 void IPAddressTest()
 {
     char buf[MAX_IP_LENGTH];
@@ -18,30 +26,37 @@ void IPAddressTest()
         IPAddress any = IPAddress::Any;
         any.ToString(buf);
         printf("Any : %s\n", buf);
+        PrintBytes((byte*)&any.ipv4Addr, 4);
 
         IPAddress broadcast = IPAddress::Broadcast;
         broadcast.ToString(buf);
         printf("Broadcast : %s\n", buf);
+        PrintBytes((byte*)&broadcast.ipv4Addr, 4);
 
         IPAddress loopback = IPAddress::Loopback;
         loopback.ToString(buf);
         printf("Loopback : %s\n", buf);
+        PrintBytes((byte*)&loopback.ipv4Addr, 4);
         
         IPAddress none = IPAddress::None;
         none.ToString(buf);
         printf("None : %s\n", buf);
+        PrintBytes((byte*)&none.ipv4Addr, 4);
         
         IPAddress ipv6any = IPAddress::IPv6Any;
         ipv6any.ToString(buf);
         printf("IPv6Any : %s\n", buf);
+        PrintBytes((byte*)&ipv6any.ipv6Addr, 16);
 
         IPAddress ipv6loopback = IPAddress::IPv6Loopback;
         ipv6loopback.ToString(buf);
         printf("IPv6Loopback : %s\n", buf);
+        PrintBytes((byte*)&ipv6loopback.ipv6Addr, 16);
         
         IPAddress ipv6none = IPAddress::IPv6None;
         ipv6none.ToString(buf);
         printf("IPv6None : %s\n", buf);
+        PrintBytes((byte*)&ipv6none.ipv6Addr, 16);
     }
     /* ipv4 */
     {
@@ -57,6 +72,7 @@ void IPAddressTest()
             p[2],
             p[3]
         );
+        PrintBytes(p, 4);
     }
     /* ipv6 */
     {
@@ -65,13 +81,15 @@ void IPAddressTest()
         UInt32* p = (UInt32*)&ipv6.ipv6Addr;
         printf
         (
-            "Ipv6 : %s \nIpv6 network number : 0x%x%x%x%x \n", 
+            "Ipv6 : %s \nIpv6 network number : 0x%x%x%x%x ,%x \n", 
             buf, 
-            IPAddress::NetworkToHostOrder(p[0]),
-            IPAddress::NetworkToHostOrder(p[1]),
-            IPAddress::NetworkToHostOrder(p[2]),
-            IPAddress::NetworkToHostOrder(p[3])
+            // IPAddress::NetworkToHostOrder(p[0]),
+            // IPAddress::NetworkToHostOrder(p[1]),
+            // IPAddress::NetworkToHostOrder(p[2]),
+            // IPAddress::NetworkToHostOrder(p[3])
+            p[0], p[1], p[2], p[3], ipv6.ipv6Addr.u.Byte[0]
         );
+        PrintBytes((byte*)&ipv6.ipv6Addr, 16);
     }
     /* port */
     {

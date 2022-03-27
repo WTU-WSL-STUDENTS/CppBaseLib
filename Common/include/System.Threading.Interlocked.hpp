@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-02-15 15:49:24
  * @LastEditors: like
- * @LastEditTime: 2022-02-15 15:49:25
+ * @LastEditTime: 2022-03-27 09:39:00
  */
 #ifndef SYSTEM_THREADING_INTERLOCKED_HPP
 #define SYSTEM_THREADING_INTERLOCKED_HPP
@@ -118,17 +118,17 @@ public:
      * 1. 定义变量原子操作 atomic 或 volatile     https://zhuanlan.zhihu.com/p/126284925 
      * 2. mb , rmb, wmb                         http://www.360doc.com/content/21/1022/11/15690396_1000823792.shtml 
      */
-    static inline void MemoryBarrier()
-    {
-#if defined(__linux)
-        __sync_synchronize();
-#elif defined(__APPLE__)
-        OSMemoryBarrier();
-#else
-        /* 常见的x86架构的处理器采用强顺序内存模型 (Strong ordered) */
-        ::MemoryBarrier();
-#endif
-    }
+//     static inline void MemoryBarrier()
+//     {
+// #if defined(__linux)
+//         __sync_synchronize();
+// #elif defined(__APPLE__)
+//         OSMemoryBarrier();
+// #else
+//         /* 常见的x86架构的处理器采用强顺序内存模型 (Strong ordered) */
+//         ::MemoryBarrier();
+// #endif
+//     }
 };
 
 #endif

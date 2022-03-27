@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-03-15 10:12:39
  * @LastEditors: like
- * @LastEditTime: 2022-03-25 14:51:50
+ * @LastEditTime: 2022-03-27 16:47:26
  */
 #ifndef SYSTEM_NET_SOCKETS_TCP_LISTENER_HPP
 #define SYSTEM_NET_SOCKETS_TCP_LISTENER_HPP
@@ -86,7 +86,7 @@ public:
      */
     bool Pending()
     {
-        return Poll(0, SelectRead)/* && Receive buffer empty && 连接未关闭 */;
+        return Poll(0, SelectMode::SelectRead)/* && Receive buffer empty && 连接未关闭 */;
     }
     void Start(int backlog = SOMAXCONN)
     {

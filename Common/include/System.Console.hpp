@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-08-14 12:41:02
  * @LastEditors: like
- * @LastEditTime: 2022-03-18 16:30:59
+ * @LastEditTime: 2022-03-27 13:58:00
  */
 #ifndef SYSTEM_CONSOLE_H
 #define SYSTEM_CONSOLE_H
@@ -47,6 +47,10 @@ public:
     {
         std::cout << t << split;
         WriteLineWidthSplite(split, u...);
+    }
+    static inline int ReadKey()
+    {
+        return getchar();
     }
 };
 #endif
