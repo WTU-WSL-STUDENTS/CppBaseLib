@@ -49,7 +49,7 @@ if(ENABLE_GENRATE_PDB)
     set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /DEBUG /OPT:REF /OPT:ICF")
 endif()
 
-option(BUILD_3RDPART "option for debug" ON)
+# option(BUILD_3RDPART "option for debug" ON)
 if( BUILD_3RDPART )
     add_subdirectory(thirdparty)
 endif()

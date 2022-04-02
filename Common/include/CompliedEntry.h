@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-07-23 10:21:28
  * @LastEditors: like
- * @LastEditTime: 2022-03-25 16:27:17
+ * @LastEditTime: 2022-04-01 15:52:23
  */
 #ifndef COMPLIED_ENTRY_H
 #define COMPLIED_ENTRY_H
@@ -34,14 +34,14 @@ namespace System
     typedef int Int32;
     typedef unsigned short UInt16;
     typedef unsigned int UInt32;
-    #if defined(MSVC_32) 
+#if defined(MSVC_32) 
     typedef long long Int64;
     typedef unsigned long long UInt64;
-    #elif defined(MSVC_64) 
+#elif defined(MSVC_64) 
     typedef long Int64;
     typedef unsigned long UInt64;
-    #elif !defined(__WINDOWS) /* error */
-    #endif
+#elif !defined(__WINDOWS) /* error */
+#endif
 }
 
 #if defined(COMPLIER_MSVC)
@@ -78,6 +78,7 @@ namespace System
                 assert(cond);                                       \
             }                                                       \
         }while(0)
+/* error code : https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes */
 #   define WINAPI_ASSERT(condition, errorMsg)               \
         do                                                  \
         {                                                   \
@@ -97,15 +98,25 @@ namespace System
 #   define VOIDRET_ASSERT(condition)
 #   define VALRET_ASSERT(condition, retVal)
 #endif
-/* flag 枚举值 */
+/**
+ * @brief 定义枚举的值可按位组合
+ * 
+ */
 #define DECLARE_ENUM_FLAG(n) (1 << n)
-/* 禁用拷贝构造函数和赋值构造 */
+/**
+ * @brief 禁用拷贝构造函数和赋值构造
+ * 
+ */
 #define DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(TypeName) TypeName(const TypeName&) = delete; TypeName& operator=(const TypeName&) = delete;
-/* readonly */
+/**
+ * @brief readonly
+ * 
+ */
 #define readonly const
 /**
  * @brief 标记当前指针非资源拥有者
  * 
  */
 #define WEAK_PTR(type) type*
+#define SAVE_DELETE_PTR(p) if((p)){delete (p); (p) = NULL;}
 #endif

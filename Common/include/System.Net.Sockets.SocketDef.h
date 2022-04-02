@@ -15,38 +15,38 @@ namespace System::Net::Sockets
     using LingerOption   = linger;
     using ProtocolType  = IPPROTO;
     using SocketError   = int;
-    enum IOControlCode;
-    enum SelectMode;
+    enum class IOControlCode : long;
+    enum class SelectMode;
     enum class SocketAsyncOperation : long;
-    enum SocketFlags; 
+    enum class SocketFlags;
     enum class SocketOptionLevel;
-    enum SocketOptionName;
-    enum SocketShutdown;
-    enum SocketType;
+    enum class SocketOptionName;
+    enum class SocketShutdown;
+    enum class SocketType;
 };
-enum System::Net::Sockets::IOControlCode /* https://docs.microsoft.com/zh-cn/dotnet/api/system.net.sockets.iocontrolcode?view=net-5.0 */
+enum class System::Net::Sockets::IOControlCode : long /* https://docs.microsoft.com/zh-cn/dotnet/api/system.net.sockets.iocontrolcode?view=net-5.0 */
 {
     /**
      * @brief 当等待接收数据时启用通知
      * 
      */
-    AsyncIO         =  FIOASYNC,
+    AsyncIO         =  (long)FIOASYNC,
     /**
      * @brief 控制套接字的阻塞( blocking mode )行为。 如果使用此控制代码指定的参数为 0，套接字置于阻塞模式下。 如果参数不为零，套接字置于非阻塞模式下
      * 
      */
-    NonBlockingIO   = FIONBIO,
+    NonBlockingIO   = (long)FIONBIO,
     /**
      * @brief 返回可读取的字节数
      * 
      */
-    DataToRead      = FIONREAD,
+    DataToRead      = (long)FIONREAD,
 };
 /**
  * @brief 为 Poll(Int32, SelectMode) 方法定义轮询模式
  * 
  */
-enum System::Net::Sockets::SelectMode
+enum class System::Net::Sockets::SelectMode
 {
     /**
      * @brief 读状态模式
@@ -125,7 +125,7 @@ enum class System::Net::Sockets::SocketAsyncOperation : long
  * @brief 指定套接字发送和接收行为。此枚举支持其成员值的按位组合
  * 
  */
-enum System::Net::Sockets::SocketFlags
+enum class System::Net::Sockets::SocketFlags
 {
     /**
      * @brief 不对此调用使用任何标志
@@ -214,7 +214,7 @@ enum class System::Net::Sockets::SocketOptionLevel
  * @brief 定义配置选项名称
  * 
  */
-enum System::Net::Sockets::SocketOptionName
+enum class System::Net::Sockets::SocketOptionName
 {
     /**
      * @brief 使套接字能够为独占访问进行绑定 
@@ -382,7 +382,7 @@ enum System::Net::Sockets::SocketOptionName
  * @brief 定义 Shutdown 方法使用的常量
  * 
  */
-enum System::Net::Sockets::SocketShutdown
+enum class System::Net::Sockets::SocketShutdown
 {
     Receive = 0,
     Send,
@@ -392,7 +392,7 @@ enum System::Net::Sockets::SocketShutdown
  * @brief 指定 Socket 类的实例表示的套接字类型
  * 
  */
-enum System::Net::Sockets::SocketType
+enum class System::Net::Sockets::SocketType
 {
     Unknown = -1,
     /**

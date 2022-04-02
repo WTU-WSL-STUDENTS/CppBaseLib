@@ -33,8 +33,8 @@ public:
     DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(CriticalSection)
     CriticalSection(DWORD spinCount = 0)
     {
-        if(spinCount)
-            InitializeCriticalSectionAndSpinCount(&sec, spinCount);
+        if (spinCount)
+            WINAPI_ASSERT(InitializeCriticalSectionAndSpinCount(&sec, spinCount), "CriticalSection construct failed");
         else
             InitializeCriticalSection(&sec);
     }
@@ -62,12 +62,12 @@ class System::Threading::ReaderWriterLockSlim
 {
     friend class ConditionVariable;
 private:
-    SRWLOCK rwl;
+    PSRWLOCK rwl;
 public:
     DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(ReaderWriterLockSlim)
     ReaderWriterLockSlim()
     {
-        InitializeSRWLock(&rwl);
+        InitializeSRWLock(rwl);
     }
     ~ReaderWriterLockSlim(){}
     /**
@@ -76,7 +76,7 @@ public:
      */
     inline void EnterReadLock()
     {
-        AcquireSRWLockShared(&rwl);
+        AcquireSRWLockShared(rwl);
     }
     /**
      * @brief 尝试进入写入模式锁定状态, 存在 ReadLock 时会阻塞当前线程
@@ -84,7 +84,7 @@ public:
      */
     inline void EnterWriteLock()
     {
-        AcquireSRWLockExclusive(&rwl);
+        AcquireSRWLockExclusive(rwl);
     }
     /**
      * @brief 减少读取模式的递归计数，并在生成的计数为 0（零）时退出读取模式
@@ -92,7 +92,7 @@ public:
      */
     inline void ExitReadLock()
     {
-        ReleaseSRWLockShared(&rwl);
+        ReleaseSRWLockShared(rwl);
     }
     /**
      * @brief 减少写入模式的递归计数，并在生成的计数为 0（零）时退出写入模式
@@ -100,7 +100,7 @@ public:
      */
     inline void ExitWriteLock()
     {
-        ReleaseSRWLockExclusive(&rwl);
+        ReleaseSRWLockExclusive(rwl);
     }
     /**
      * @brief 尝试进入读取模式锁定状态
@@ -110,7 +110,7 @@ public:
      */
     inline bool TryEnterReadLock()
     {
-        return TryAcquireSRWLockShared(&rwl);
+        return TryAcquireSRWLockShared(rwl);
     }
     /**
      * @brief 尝试进入写入模式锁定状态
@@ -120,7 +120,7 @@ public:
      */
     inline bool TryEnterWriteLock()
     {
-        return TryAcquireSRWLockExclusive(&rwl);
+        return TryAcquireSRWLockExclusive(rwl);
     }
 };
 /**
@@ -281,11 +281,11 @@ public:
      */
     inline bool SleepForRWLSReadLock(ReaderWriterLockSlim& rwl, DWORD milliseconds = INFINITE)
     {
-        return SleepConditionVariableSRW(&cv, &(rwl.rwl), milliseconds, CONDITION_VARIABLE_LOCKMODE_SHARED);
+        return SleepConditionVariableSRW(&cv, rwl.rwl, milliseconds, CONDITION_VARIABLE_LOCKMODE_SHARED);
     }
     inline bool SleepForRWLSReadLock(ReaderWriterLock& rwl, DWORD milliseconds = INFINITE)
     {
-        return SleepConditionVariableSRW(&cv, &(rwl.rwl), milliseconds, CONDITION_VARIABLE_LOCKMODE_SHARED);
+        return SleepConditionVariableSRW(&cv, rwl.rwl, milliseconds, CONDITION_VARIABLE_LOCKMODE_SHARED);
     }
     /**
      * @brief 进入 ReaderWriterLockSlim 写入锁后, 主动挂起当前线程, 直到被 ConditionVariable 唤起或超时
@@ -297,11 +297,11 @@ public:
      */
     inline bool SleepForRWLSWriteLock(ReaderWriterLockSlim& rwl, DWORD milliseconds = INFINITE)
     {
-        return SleepConditionVariableSRW(&cv, &(rwl.rwl), milliseconds, 0);
+        return SleepConditionVariableSRW(&cv, rwl.rwl, milliseconds, 0);
     }
     inline bool SleepForRWLSWriteLock(ReaderWriterLock& rwl, DWORD milliseconds = INFINITE)
     {
-        return SleepConditionVariableSRW(&cv, &(rwl.rwl), milliseconds, 0);
+        return SleepConditionVariableSRW(&cv, rwl.rwl, milliseconds, 0);
     }
     /**
      * @brief Waking one thread is similar to setting an auto-reset event

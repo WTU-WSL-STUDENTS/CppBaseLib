@@ -305,7 +305,8 @@
 #include <windows.h>
 #include <tchar.h>
 #include <stdio.h>
-
+#include <CompliedEntry.h>
+#include <CompliedIndexer.h>
 //
 // Thread pool wait callback function template
 //
@@ -327,7 +328,8 @@ MyWaitCallback(
     //
     // Do something when the wait is over.
     //
-    _tprintf(_T("MyWaitCallback: wait is over.\n"));
+    Sleep(1000);
+	printf(" %d MyWaitCallback: wait is over.\n", GetCurrentThreadId());
 }
 
 
@@ -350,7 +352,7 @@ MyTimerCallback(
     //
     // Do something when the timer fires.
     //
-    _tprintf(_T("MyTimerCallback: timer has fired.\n"));
+	printf(" %d MyTimerCallback: timer has fired.\n", GetCurrentThreadId());
 
 }
 
@@ -377,22 +379,90 @@ MyWorkCallback(
     // Do something when the work callback is invoked.
     //
      {
-         _tprintf(_T("MyWorkCallback: Task performed.\n"));
+		printf(" %d MyWorkCallback: Task performed.\n", GetCurrentThreadId());
      }
 
     return;
 }
 
+TP_CALLBACK_ENVIRON CallBackEnviron;
+
+#define TASK_SELF_PTR p
+#define DECLARE_TASK_LAMDA(codeblock)[]     \
+    (PTP_CALLBACK_INSTANCE Instance,PVOID args,PTP_WORK Work)->void\
+    {                                       \
+        UNREFERENCED_PARAMETER(Instance);   \
+        UNREFERENCED_PARAMETER(Work);       \
+        Task* TASK_SELF_PTR =               \
+        static_cast<Task*>(args);           \
+        codeblock                           \
+    }
+class CancellationTokenSource;
+class CancelToken
+{
+	friend class CancellationTokenSource;
+private:
+	bool* pCancel;
+public:
+
+};
+class CancellationTokenSource
+{
+private:
+    bool m_bCancel;
+    CancelToken* p;
+public:
+    CancellationTokenSource() : m_bCancel(false), p(new CancelToken()){}
+    ~CancellationTokenSource()
+    {
+        p->pCancel = NULL;
+        delete p;
+        p = NULL;
+    }
+    DECLARE_CONST_GETTER(bool, CancellationRequested, { return m_bCancel; })
+    DECLARE_CONST_GETTER(WEAK_PTR(CancelToken), Token, { return p; })
+    void Cancel() 
+    {
+        m_bCancel = true;
+    }
+};
+class Task
+{
+public:
+	PTP_WORK work{};
+	void* context{}; 
+    WEAK_PTR(CancelToken) pCancelToken = NULL;
+public:
+	Task(PTP_WORK_CALLBACK action)
+	{
+
+		WINAPI_ASSERT(work = CreateThreadpoolWork((PTP_WORK_CALLBACK)action, this, &CallBackEnviron), "Task construct failed");
+	}
+	~Task()
+	{
+		VOIDRET_ASSERT(work);
+		CloseThreadpoolWork(work);
+	}
+	void Start(WEAK_PTR(CancelToken)cancel = NULL, void* c = NULL)
+	{
+		pCancelToken = cancel;
+		context = c;
+		SubmitThreadpoolWork(work);
+	}
+	void WaitOne()
+	{
+		WaitForThreadpoolWorkCallbacks(work, NULL == pCancelToken ? false : pCancelToken->);
+	}
+
+};
 VOID
 DemoCleanupPersistentWorkTimer()
 {
     BOOL bRet = FALSE;
-    PTP_WORK work = NULL;
     PTP_TIMER timer = NULL;
     PTP_POOL pool = NULL;
     PTP_WORK_CALLBACK workcallback = MyWorkCallback;
     PTP_TIMER_CALLBACK timercallback = MyTimerCallback;
-    TP_CALLBACK_ENVIRON CallBackEnviron;
     PTP_CLEANUP_GROUP cleanupgroup = NULL;
     FILETIME FileDueTime;
     ULARGE_INTEGER ulDueTime;
@@ -405,40 +475,24 @@ DemoCleanupPersistentWorkTimer()
     //
     pool = CreateThreadpool(NULL);
 
-    if (NULL == pool) {
-        _tprintf(_T("CreateThreadpool failed. LastError: %u\n"),
-                     GetLastError());
-        goto main_cleanup;
-    }
 
-    rollback = 1; // pool creation succeeded
 
     //
     // The thread pool is made persistent simply by setting
     // both the minimum and maximum threads to 1.
     //
-    SetThreadpoolThreadMaximum(pool, 1);
+    SetThreadpoolThreadMaximum(pool, 4);
 
-    bRet = SetThreadpoolThreadMinimum(pool, 1);
+    bRet = SetThreadpoolThreadMinimum(pool, 4);
 
-    if (FALSE == bRet) {
-        _tprintf(_T("SetThreadpoolThreadMinimum failed. LastError: %u\n"),
-                     GetLastError());
-        goto main_cleanup;
-    }
 
     //
     // Create a cleanup group for this thread pool.
     //
     cleanupgroup = CreateThreadpoolCleanupGroup();
 
-    if (NULL == cleanupgroup) {
-        _tprintf(_T("CreateThreadpoolCleanupGroup failed. LastError: %u\n"), 
-                     GetLastError());
-        goto main_cleanup; 
-    }
+ 
 
-    rollback = 2;  // Cleanup group creation succeeded
 
     //
     // Associate the callback environment with our thread pool.
@@ -454,108 +508,36 @@ DemoCleanupPersistentWorkTimer()
                                       cleanupgroup,
                                       NULL);
 
-    //
-    // Create work with the callback environment.
-    //
-    work = CreateThreadpoolWork(workcallback,
-                                NULL, 
-                                &CallBackEnviron);
 
-    if (NULL == work) {
-        _tprintf(_T("CreateThreadpoolWork failed. LastError: %u\n"),
-                     GetLastError());
-        goto main_cleanup;
-    }
-
-    rollback = 3;  // Creation of work succeeded
 
     //
     // Submit the work to the pool. Because this was a pre-allocated
     // work item (using CreateThreadpoolWork), it is guaranteed to execute.
     //
+    Task t(DECLARE_TASK_LAMDA
+    (
+        {
+            VOIDRET_ASSERT(TASK_SELF_PTR);
+			printf(" %d Begin MyWorkCallback: Task performed.\n", GetCurrentThreadId());
+			Sleep(1000);
+			if (NULL != TASK_SELF_PTR->pCancelToken && *TASK_SELF_PTR->pCancelToken)
+			{
+				return;
+			}
+			printf(" %d End MyWorkCallback: Task performed.\n", GetCurrentThreadId());
+		}
+    ));
+    bool bCancelToken;
     for(int i = 0; i < 10; i++)
     {
-        SubmitThreadpoolWork(work);
+        printf("begin work in main\n");
+		bCancelToken = false;
+        t.Start(&bCancelToken);
+        Sleep(100);
+        bCancelToken = true;
+        t.WaitOne();
+		printf("wait work finished in main\n");
     }
-
-
-    //
-    // Create a timer with the same callback environment.
-    //
-    timer = CreateThreadpoolTimer(timercallback,
-                                  NULL,
-                                  &CallBackEnviron);
-
-
-    if (NULL == timer) {
-        _tprintf(_T("CreateThreadpoolTimer failed. LastError: %u\n"),
-                     GetLastError());
-        goto main_cleanup;
-    }
-
-    rollback = 4;  // Timer creation succeeded
-
-    //
-    // Set the timer to fire in one second.
-    //
-    ulDueTime.QuadPart = (ULONGLONG) -(1 * 10 * 1000 * 1000);
-    FileDueTime.dwHighDateTime = ulDueTime.HighPart;
-    FileDueTime.dwLowDateTime  = ulDueTime.LowPart;
-
-    SetThreadpoolTimer(timer,
-                       &FileDueTime,
-                       0,
-                       0);
-
-    //
-    // Delay for the timer to be fired
-    //
-    Sleep(1500);
-
-    //
-    // Wait for all callbacks to finish.
-    // CloseThreadpoolCleanupGroupMembers also releases objects
-    // that are members of the cleanup group, so it is not necessary 
-    // to call close functions on individual objects 
-    // after calling CloseThreadpoolCleanupGroupMembers.
-    //
-    CloseThreadpoolCleanupGroupMembers(cleanupgroup,
-                                       FALSE,
-                                       NULL);
-
-    //
-    // Already cleaned up the work item with the
-    // CloseThreadpoolCleanupGroupMembers, so set rollback to 2.
-    //
-    rollback = 2;
-    goto main_cleanup;
-
-main_cleanup:
-    //
-    // Clean up any individual pieces manually
-    // Notice the fall-through structure of the switch.
-    // Clean up in reverse order.
-    //
-
-    switch (rollback) {
-        case 4:
-        case 3:
-            // Clean up the cleanup group members.
-            CloseThreadpoolCleanupGroupMembers(cleanupgroup,
-                FALSE, NULL);
-        case 2:
-            // Clean up the cleanup group.
-            CloseThreadpoolCleanupGroup(cleanupgroup);
-
-        case 1:
-            // Clean up the pool.
-            CloseThreadpool(pool);
-
-        default:
-            break;
-    }
-
-    return;
 }
 
 VOID
@@ -599,7 +581,7 @@ DemoNewRegisterWait()
         SetThreadpoolWait(Wait,
                           hEvent,
                           NULL);
-
+        printf("...\n");
         SetEvent(hEvent);
 
         //
@@ -633,9 +615,10 @@ new_wait_cleanup:
     return;
 }
 
+
 int main( void)
 {
-    DemoNewRegisterWait();
-    DemoCleanupPersistentWorkTimer();
+	DemoCleanupPersistentWorkTimer();
+	//DemoNewRegisterWait();
     return 0;
 }

@@ -12,11 +12,11 @@
 #include <System.Threading.Barrier.hpp>
 
 #define POST_PARALLEL_TASK(arg)                     \
-ThreadPool::Ref().TrySubmitThreadpoolCallback       \
+ThreadPoolSingleton::Ref().TrySubmitThreadpoolCallback     \
 (                                                   \
     [](PTP_CALLBACK_INSTANCE instance, Object args) \
     {                                               \
-        (*static_assert<_First*>(args))()           \
+        (*static_cast<_First*>(args))();            \
         if(barrier.SignalAndWait())                 \
         {                                           \
             are.Set();                              \

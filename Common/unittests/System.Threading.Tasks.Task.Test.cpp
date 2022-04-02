@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-02-21 16:37:08
  * @LastEditors: like
- * @LastEditTime: 2022-02-23 21:34:43
+ * @LastEditTime: 2022-03-31 10:30:08
  */
 #include <System.Threading.Tasks.Task.hpp>
 
@@ -13,7 +13,7 @@
 
 using namespace System::Threading::Tasks;
 
-int main()
+void TaskLiveStatusTest()
 {
     int i;
     Task t([](AsyncState args)->void
@@ -43,6 +43,32 @@ int main()
         PRINTF_TEST_BOOL(t.IsCompleted());
         
     }
+}
+
+void ReuseTaskObjectTest()
+{
+    Task t([](AsyncState args)->void
+    {
+        int begin   = (int)args[0];
+        int end     = (int)args[1];
+        int sum     = 0;
+        for(int i = begin; i <= end; i++)
+        {
+            sum += i;
+        }
+        (*static_cast<int*>(args[2])) += sum;
+        MemoryBarrier();
+        printf("from %d to %d sum = %d, accumulation %d\n", begin, end, sum, *static_cast<int*>(args[2]));
+    });
+    int accumulate = 0;
+    t.Start(CreateAsyncState((System::Object)1, (System::Object)10, &accumulate));
+    t.Wait();
+    t.Start(CreateAsyncState((System::Object)11, (System::Object)20, &accumulate));
+    t.Wait();
+}
+int main()
+{
+    ReuseTaskObjectTest();
     printf("Sucess exit\n");
     return 0;
 }

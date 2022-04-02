@@ -14,7 +14,7 @@
 
 namespace System::Threading
 {
-    enum EventResetMode;
+    enum class EventResetMode;
     class EventWaitHandle;  /* https://docs.microsoft.com/zh-cn/dotnet/api/system.threading.eventwaithandle?view=net-5.0  */
     class AutoResetEvent;   /* https://docs.microsoft.com/zh-cn/dotnet/api/system.threading.autoresetevent?view=net-5.0 */
     class ManualResetEvent; /* https://docs.microsoft.com/zh-cn/dotnet/api/system.threading.manualresetevent?view=net-5.0 */
@@ -23,7 +23,7 @@ namespace System::Threading
  * @brief 指示在接收信号后是自动重置 EventWaitHandle 还是手动重置
  * 
  */
-enum System::Threading::EventResetMode
+enum class System::Threading::EventResetMode
 {
     AutoReset = 0,
     ManualReset
@@ -38,16 +38,13 @@ class System::Threading::EventWaitHandle : public WaitHandle
 {
 protected:
     const char* m_strName;  /* 如果要与其他进程共享同步对象，则为名称；否则为 null 或空字符串。 该名称区分大小写 */
-    EventWaitHandle(const char* strName) : m_strName(strName){}
+    EventWaitHandle(const char* strName) : WaitHandle(), m_strName(strName){}
 public:
     DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(EventWaitHandle)
     EventWaitHandle(bool initialState/* is signaled */, EventResetMode mode, const char* strName = NULL) : m_strName(strName), 
         WaitHandle(CreateEvent(NULL, EventResetMode::AutoReset != mode, initialState, strName))
     {
-        if(m_bDisposed)
-        {
-            printf("Create EventWaitHandle Failed , Error Code : %d", GetLastError());
-        }
+        WINAPI_ASSERT(!m_bDisposed, "Create EventWaitHandle Failed");
     }
     /**
      * @brief 打开指定名称为同步事件（如果已经存在)

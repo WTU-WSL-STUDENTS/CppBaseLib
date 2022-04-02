@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-03-23 15:49:09
  * @LastEditors: like
- * @LastEditTime: 2022-03-25 15:24:40
+ * @LastEditTime: 2022-03-28 11:18:16
  */
 #ifndef SYSTEM_NET_SOCKETS_TCPCLIENT_HPP
 #define SYSTEM_NET_SOCKETS_TCPCLIENT_HPP
@@ -19,8 +19,6 @@ namespace System::Net::Sockets
 class System::Net::Sockets::TcpClient : protected Socket
 {
 friend class TcpListener;
-protected:
-    TcpClient(const Socket& client) : Socket(client){}
 public:
     /**
      * @brief 初始化 Ipv4 的新实例

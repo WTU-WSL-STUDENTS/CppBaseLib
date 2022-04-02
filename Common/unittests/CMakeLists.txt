@@ -31,6 +31,7 @@ include_directories(../include)
 # target_link_libraries(System.Net.FtpWebRequest.Test ${Lib_Path}/ftplib)
 add_executable(System.Net.IPAddress.Test System.Net.IPAddress.Test.cpp)
 add_executable(System.Net.Sockets.Socket.Test System.Net.Sockets.Socket.Test.cpp)
+add_executable(System.Net.Sockets.SocketAsync.Test System.Net.Sockets.SocketAsync.Test.cpp)
 add_executable(System.Net.Sockets.Tcp.Test System.Net.Sockets.Tcp.Test.cpp)
 add_executable(System.Net.Sockets.Udp.Test System.Net.Sockets.Udp.Test.cpp)
 

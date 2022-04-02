@@ -72,18 +72,12 @@ private:
      */
     inline void MemoryGrowth(int nMemoryGrouthRate = LIST_MEMORY_GROUTH_RATE)
     {   
-        LIST_DEBUG(LIST_COUNT_MAX == m_nCapacity);
+        ERROR_ASSERT(LIST_COUNT_MAX != m_nCapacity, "Out of memory");
         /* 确保 sizeof(T) * capacity 不溢出 */
         size_t nCapacity = (LIST_COUNT_MAX >> nMemoryGrouthRate) < m_nCapacity ? LIST_COUNT_MAX : m_nCapacity << nMemoryGrouthRate;
-        
-        T* p = (T*)malloc(sizeof(T) *  nCapacity);
-        if(NULL == p)
-        {
-            throw "Out of memory\n";
-        }
-        memcpy(p, m_pScan0, m_nCapacity * sizeof(T));
-        free(m_pScan0);
-        m_pScan0 = p;
+        Object p = realloc(m_pScan0, sizeof(T) * nCapacity);
+        ERROR_ASSERT(p, "MemoryGrowth failed");
+        m_pScan0 = (T*)p;
         m_nCapacity = nCapacity;
     }
 public:
@@ -108,7 +102,7 @@ public:
         T**  m_pScan0;
         int m_nPosition;
         int m_nCount;
-        Enumerator(T** begin, size_t len):m_pScan0(begin), m_nPosition(-1), m_nCount(len){}
+        Enumerator(T** begin, size_t len) :m_pScan0(begin), m_nPosition(-1), m_nCount((int)len) { ERROR_ASSERT(len == m_nCount, "size_t to int failed"); }
     public:
         ~Enumerator(){}
         inline T* Current() override 
@@ -123,7 +117,14 @@ public:
         {
             m_nPosition = -1;
         }
-        inline void Dispose() override{}
+        inline void Dispose() override
+        {
+            if (*m_pScan0)
+            {
+                free(*m_pScan0);
+                *m_pScan0 = NULL;
+            }
+        }
     };
 
     /**
@@ -152,7 +153,11 @@ public:
     ~List()
     {
         this->Clear();
-        free(m_pScan0);
+        if (m_pScan0)
+        {
+			free(m_pScan0);
+			m_pScan0 = NULL;
+        }
     }
     T& operator[](int index)
     {
@@ -165,7 +170,7 @@ public:
      */
     virtual void Add(const T& item) override
     {
-        LIST_DEBUG(!IsReadOnly());
+       ERROR_ASSERT(!IsReadOnly(), "list is readonly");
         if(m_nCount == m_nCapacity)
         {
             MemoryGrowth();
@@ -180,7 +185,7 @@ public:
      */
     void AddRange(IEnumerable<T> ie)
     {
-        LIST_DEBUG(!IsReadOnly());
+       ERROR_ASSERT(!IsReadOnly(), "list is readonly");
         ICollection<T>* ic = (ICollection<T>*)&ie;
         size_t c = ic->Count();
         if(c + m_nCount <= m_nCapacity)
@@ -191,7 +196,7 @@ public:
         {
             size_t nLackCount = m_nCapacity - c;
             LIST_DEBUG(LIST_COUNT_MAX == m_nCapacity || nLackCount + m_nCapacity < m_nCapacity/* 确保不溢出 */);
-            capacity += nLackCount;
+            m_nCapacity += nLackCount;
             m_pScan0 = (T*)realloc(m_pScan0, sizeof(T) * m_nCapacity);
             ic->CopyTo(m_pScan0 , m_nCount);
         }
@@ -205,9 +210,10 @@ public:
     virtual void Clear() override
     {
         VOIDRET_ASSERT(!IsReadOnly());
-        while(m_nCount)
+        while(0 < m_nCount)
         {
-            ListItemMemoryDisposePolicy<T>::Free(m_pScan0 + --m_nCount);
+            --m_nCount;
+            ListItemMemoryDisposePolicy<T>::Free(m_pScan0 + m_nCount);
         }
     }
     /**
@@ -357,7 +363,7 @@ public:
     void ForEach(std::function<void(const T&)> action)
     {
         for(size_t i = 0; i < m_nCount; i++)
-        {
+		{		
             action(m_pScan0[i]);
         }
     }
@@ -420,22 +426,23 @@ public:
      */
     virtual void Insert(size_t index, const T& item) override
     {
-        LIST_DEBUG(!IsReadOnly());
-        LIST_DEBUG(index < m_nCount);
+        ERROR_ASSERT(!IsReadOnly(), "list is readonly");
+        ERROR_ASSERT(index <= m_nCount, "Out of range");
         if(m_nCount < m_nCapacity)
         {
             /*1. 整体后移; 2. 插入*/
-            for(size_t i = m_nCount; i > index;)
+            for(size_t i = m_nCount; i > index;i--)
             {
-                memcpy(m_pScan0 + i--, m_pScan0 + i, sizeof(T));
+                memcpy(m_pScan0 + i, m_pScan0 + i - 1, sizeof(T));
             }
             memcpy(m_pScan0 + index, &item, sizeof(T));
 
         }
         else/* 尾插 */
         {
-            MemoryGrowth();
-            memcpy(m_pScan0 + m_nCount, &item, sizeof(T));
+            Add(item);
+           /* MemoryGrowth();
+            memcpy(m_pScan0 + m_nCount, &item, sizeof(T));*/
         }
         m_nCount++;
     }
@@ -447,7 +454,7 @@ public:
      */
     void InsertRange(int index, IEnumerable<T> ie)
     {
-        LIST_DEBUG(!IsReadOnly());
+       ERROR_ASSERT(!IsReadOnly(), "list is readonly");
         LIST_DEBUG(index < m_nCount);
         ICollection<T>* ic = (ICollection<T>*)&ie;
         size_t c = ic->Count();
@@ -538,7 +545,7 @@ public:
      */
     void RemoveAll(IPredicate match)
     {
-        LIST_DEBUG(!IsReadOnly());
+        ERROR_ASSERT(!IsReadOnly(), "list is readonly");
         for(size_t i = m_nCount; i > 0;)
         {
             if(match(m_pScan0[--i]))
@@ -554,12 +561,12 @@ public:
      */
     virtual bool RemoveAt(size_t index) override
     {
-        LIST_DEBUG(!IsReadOnly());
+        ERROR_ASSERT(!IsReadOnly(), "list is readonly");
         VALRET_ASSERT(index < m_nCount, false);
         ListItemMemoryDisposePolicy<T>::Free(m_pScan0 + index);
-        for(size_t i = index; i < m_nCount;)
+        for(size_t i = index; i < m_nCount; i++)
         {
-            memcpy(m_pScan0 + i++, m_pScan0 + i, sizeof(T));
+            memcpy(m_pScan0 + i, m_pScan0 + i + 1, sizeof(T));
         }
         m_nCount--;
         return true;
@@ -572,7 +579,7 @@ public:
      */
     void RemoveRange(size_t index, size_t count)
     {
-        LIST_DEBUG(!IsReadOnly());
+       ERROR_ASSERT(!IsReadOnly(), "list is readonly");
         LIST_DEBUG(index + count <= m_nCount);
         for(size_t i = 0; i < count; i++)
         {
@@ -691,11 +698,7 @@ public:
      */
     inline void Free(T* src)
     {
-        if(*src)
-        {
-            delete *src;
-            *src = NULL;
-        }
+        SAVE_DELETE_PTR(*src);
     }
     
 };

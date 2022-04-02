@@ -4,13 +4,34 @@
  * @Autor: like
  * @Date: 2022-01-19 11:09:49
  * @LastEditors: like
- * @LastEditTime: 2022-03-11 16:45:54
+ * @LastEditTime: 2022-04-02 11:47:28
  */
 #ifndef SYSTEM_THREADING_THREADPOOL_HPP
 #define SYSTEM_THREADING_THREADPOOL_HPP
-
 #include <System.Threading.EventWaitHandle.hpp>
+#include <System.Singleton.hpp>
 #include <functional>
+
+#define TPLAMDA_CONTEXT context
+#define DECLARE_TPLAMDA_WORK(codeblock)[](PTP_CALLBACK_INSTANCE Instance,PVOID TPLAMDA_CONTEXT, PTP_WORK Work)->void\
+    {                                       \
+        UNREFERENCED_PARAMETER(Instance);   \
+        UNREFERENCED_PARAMETER(Work);       \
+        codeblock                           \
+    }
+#define DECLARE_TPLAMDA_TIMER(codeblock)[](PTP_CALLBACK_INSTANCE Instance,PVOID TPLAMDA_CONTEXT, PTP_TIMER Timer)->void\
+    {                                       \
+        UNREFERENCED_PARAMETER(Instance);   \
+        UNREFERENCED_PARAMETER(Timer);      \
+        codeblock                           \
+    }
+#define TPLAMDA_WAIT_RESULT waitResult
+#define DECLARE_TPLAMDA_WAIT(codeblock)[](PTP_CALLBACK_INSTANCE Instance,PVOID TPLAMDA_CONTEXT, PTP_WAIT Wait, TP_WAIT_RESULT TPLAMDA_WAIT_RESULT)->void\
+    {                                       \
+        UNREFERENCED_PARAMETER(Instance);   \
+        UNREFERENCED_PARAMETER(Wait);       \
+        codeblock                           \
+    }
 
 namespace System::Threading
 {
@@ -19,9 +40,14 @@ namespace System::Threading
     class ThreadPool;           /* https://docs.microsoft.com/zh-cn/dotnet/api/system.threading.threadpool?view=net-5.0 */
     class RegisteredWaitHandle; /* https://docs.microsoft.com/zh-cn/dotnet/api/system.threading.registeredwaithandle?view=net-5.0 */ 
 };
-namespace System::Threading::Tasks
+/* class which relay on ThreadPool */
+namespace System::Threading
 {
-    class Task;
+    class Timer;
+    namespace Tasks
+    {
+        class Task;
+    };
 };
 /**
  * @brief 表示在调用 RegisterWaitForSingleObject 时已注册的句柄。 此类不能被继承。
@@ -31,7 +57,7 @@ class System::Threading::RegisteredWaitHandle
 friend class ThreadPool;
 private:
     HANDLE m_hWait;
-    RegisteredWaitHandle(){}
+    RegisteredWaitHandle() : m_hWait(NULL){}
 public:
     /**
      * @brief 取消由 RegisterWaitForSingleObject(WaitHandle, WaitOrTimerCallback, Object, UInt32, Boolean) 方法发出的已注册等待操作。
@@ -62,27 +88,29 @@ public:
 class System::Threading::ThreadPool final : public IDisposable
 {
     friend class System::Threading::Tasks::Task;
+    friend class System::Threading::Timer;
+    friend class SingletonHasDefultConstructPolicy<ThreadPool>;
 private:
-    static ThreadPool* m_pThreadPool;
     TP_CALLBACK_ENVIRON environment;
     PTP_POOL pool;
-    PTP_CLEANUP_GROUP group;
-    ThreadPool() 
-    {
-        InitializeThreadpoolEnvironment(&environment);
-        if(NULL == (pool = CreateThreadpool(NULL)))
-        {
-            printf("CreateThreadpool Failed, Error Code %d\n", GetLastError());
-            return;
-        }
-        if(NULL == (group =CreateThreadpoolCleanupGroup()))
-        {
-            printf("CreateThreadpoolCleanupGroup Failed, Error Code %d\n", GetLastError());
-            return;
-        }
-        SetThreadpoolCallbackPool(&environment, pool);
-        SetThreadpoolCallbackCleanupGroup(&environment, group, NULL);
-    }
+	PTP_CLEANUP_GROUP group;
+	ThreadPool()
+	{
+		InitializeThreadpoolEnvironment(&environment);
+		if (NULL == (pool = CreateThreadpool(NULL)))
+		{
+			printf("CreateThreadpool Failed, Error Code %d\n", GetLastError());
+			return;
+		}
+		if (NULL == (group = CreateThreadpoolCleanupGroup()))
+		{
+			printf("CreateThreadpoolCleanupGroup Failed, Error Code %d\n", GetLastError());
+			return;
+		}
+		SetThreadpoolCallbackPool(&environment, pool);
+		SetThreadpoolCallbackCleanupGroup(&environment, group, NULL);
+	}
+public:
 protected:
     virtual void Dispose(bool disposing)
     {
@@ -96,16 +124,11 @@ protected:
             if(pool)
                 CloseThreadpool(pool);
         }
-    }
-public:
+	}
+    DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(ThreadPool)
     ~ThreadPool()
     {
         Dispose();
-    }
-    DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(ThreadPool)
-    static ThreadPool& Ref()
-    {
-        return m_pThreadPool ? *m_pThreadPool : *(m_pThreadPool = new ThreadPool());
     }
     /**
      * @brief 该接口一般不用调用 , 线程池释放权交给操作系统 
@@ -204,6 +227,6 @@ public:
         }
         return rwh;
     }
-};
-System::Threading::ThreadPool* System::Threading::ThreadPool::m_pThreadPool = NULL;
+}; 
+using ThreadPoolSingleton = Singleton<System::Threading::ThreadPool>;
 #endif

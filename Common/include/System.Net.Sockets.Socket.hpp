@@ -4,14 +4,12 @@
  * @Autor: like
  * @Date: 2021-08-06 19:31:39
  * @LastEditors: like
- * @LastEditTime: 2022-03-27 20:48:53
+ * @LastEditTime: 2022-03-31 09:54:28
  */
 #ifndef SYSTEM_NET_SOCKETS_SOCKET_HPP
 #define SYSTEM_NET_SOCKETS_SOCKET_HPP
 #include <System.Net.Sockets.SocketDef.h>
-#include <System.Threading.Interlocked.hpp>
 #include <CompliedIndexer.h>
-#include <System.Action.hpp>
 /**
  * @brief 默认情况下 Socket 库的生命周期与进程绑定。
  * 如果要禁用该功能, 采用手动初始化 & 释放指定版本的 Socket 库, 请在此之前定义 #define BIND_SOCKET_LIB_LIFETIME_WITH_PROCESS 0
@@ -24,11 +22,13 @@
 namespace System::Net::Sockets
 {
     class Socket;
-    class SocketAsyncEventArgs;
+    class SocketAsyncExtension;
 };
 class System::Net::Sockets::Socket
 {
+friend class SocketAsyncExtension;
 #if BIND_SOCKET_LIB_LIFETIME_WITH_PROCESS
+private:
     class SocketlibraryInitlializer
     {
     public:
@@ -56,15 +56,16 @@ protected:
     bool            m_bIsBlocking;
 
     SOCKET          m_socket;
-    Socket(){}
+    Socket() : m_addressFamily(AddressFamily::InterNetwork), m_sockType(SocketType::Stream), m_protoType(ProtocolType::IPPROTO_IPV4), m_bIsBlocking(true), m_socket(INVALID_SOCKET){}
 public:
+    DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(Socket);
     Socket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType) : 
         m_addressFamily(addressFamily), m_sockType(socketType), m_protoType(protocolType), 
         m_bIsBlocking(true) /* 默认为阻塞模式 */ 
     {
         SOCKETAPI_ASSERT
         (
-            INVALID_SOCKET != (m_socket = socket((int)addressFamily, socketType, protocolType)), 
+            INVALID_SOCKET != (m_socket = socket((int)addressFamily, (int)socketType, (int)protocolType)),
             "https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-socket"
         );
     }
@@ -137,14 +138,27 @@ public:
         ERROR_ASSERT(ProtocolType::IPPROTO_TCP == m_protoType, "NotSupportedException");
         if(!m_bIsBlocking)
         {                
-            return SOCKET_ERROR != send(m_socket, "", 0, SocketFlags::None) || WSAEWOULDBLOCK == WSAGetLastError();
+            return SOCKET_ERROR != send(m_socket, "", 0, (int)SocketFlags::None) || WSAEWOULDBLOCK == WSAGetLastError();
         }
         DWORD nBlockMode = 1;
         ERROR_ASSERT(0 == IOControl(IOControlCode::NonBlockingIO, nBlockMode), "GetConnected set nonblockmode failed");
-        bool bIsConnect = SOCKET_ERROR != send(m_socket, "", 0, SocketFlags::None) || WSAEWOULDBLOCK == WSAGetLastError();
+        bool bIsConnect = SOCKET_ERROR != send(m_socket, "", 0, (int)SocketFlags::None) || WSAEWOULDBLOCK == WSAGetLastError();
         nBlockMode = 0;
         ERROR_ASSERT(0 == IOControl(IOControlCode::NonBlockingIO, nBlockMode), "GetConnected recover blockmode failed");
         return bIsConnect;
+    })
+    /**
+     * @brief 该值指定套接字能否在断开操作之后重用
+     * 
+     */
+    DECLARE_INDEXER(bool, DisconnectReuseSocket, 
+    {
+        bool bEnable = false;
+        GetSocketOption(SocketOptionLevel::Socket, SocketOptionName::ReuseAddress, bEnable);
+        return bEnable;
+    },
+    {
+        SetSocketOption(SocketOptionLevel::Socket, SocketOptionName::ReuseAddress, SETTER_VALUE);
     })
     /**
      * @brief UDP 是否禁用分包
@@ -353,40 +367,40 @@ public:
         );
         return s;
     }
-    bool AcceptAnsyc(SocketAsyncEventArgs  &e)
-    {
-        Socket* s = new Socket();
-        // e.SetAccecptSocket(s);
-        SocketAddress addr;
-
-        SOCKETAPI_ASSERT
-        (
-            INVALID_SOCKET  != (s->m_socket = accept(m_socket, (SOCKADDR *)addr.Item, &addr.Size)),/* WSAEWOULDBLOCK */
-            "https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-accept"
-        );
-        // s->m_socket = WSAAccept(m_socket, (SOCKADDR *)addr.Item, &addr.Size,
-        // [](
-        //     LPWSABUF lpCallerId,
-        //     LPWSABUF lpCallerData,
-        //     LPQOS pQos,
-        //     LPQOS lpGQOS,
-        //     LPWSABUF lpCalleeId,
-        //     LPWSABUF lpCalleeData,
-        //     GROUP FAR * g,
-        //     DWORD_PTR dwCallbackData
-        // )->int
-        // {
-        //     SocketAsyncEventArgs* args = (SocketAsyncEventArgs*)dwCallbackData;
-        //     return 0;
-        // },(DWORD_PTR) &e);
-        // if(INVALID_SOCKET != s->m_socket)
-        // {
-        //     return false;
-        // }
-        // printf("%d'n", WSAGetLastError());
-        return true;
-        /* "https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsaaccept" */
-    }
+    // bool AcceptAsync(SocketAsyncEventArgs  &e)
+    // {
+    //     Socket* s = new Socket();
+    //     // e.SetAccecptSocket(s);
+    //     SocketAddress addr;
+    //     epoll
+    //     SOCKETAPI_ASSERT
+    //     (
+    //         INVALID_SOCKET  != (s->m_socket = accept(m_socket, (SOCKADDR *)addr.Item, &addr.Size)),/* WSAEWOULDBLOCK */
+    //         "https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-accept"
+    //     );
+    //     // s->m_socket = WSAAccept(m_socket, (SOCKADDR *)addr.Item, &addr.Size,
+    //     // [](
+    //     //     LPWSABUF lpCallerId,
+    //     //     LPWSABUF lpCallerData,
+    //     //     LPQOS pQos,
+    //     //     LPQOS lpGQOS,
+    //     //     LPWSABUF lpCalleeId,
+    //     //     LPWSABUF lpCalleeData,
+    //     //     GROUP FAR * g,
+    //     //     DWORD_PTR dwCallbackData
+    //     // )->int
+    //     // {
+    //     //     SocketAsyncEventArgs* args = (SocketAsyncEventArgs*)dwCallbackData;
+    //     //     return 0;
+    //     // },(DWORD_PTR) &e);
+    //     // if(INVALID_SOCKET != s->m_socket)
+    //     // {
+    //     //     return false;
+    //     // }
+    //     // printf("%d'n", WSAGetLastError());
+    //     return true;
+    //     /* "https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsaaccept" */
+    // }
     /**
      * @brief 使 Socket 与一个本地端口相关联
      * 
@@ -467,9 +481,9 @@ public:
         fd_set fds;
         FD_ZERO(&fds);
         FD_SET(m_socket, &fds);
-        fd_set* pfds[SelectMode::SelectError + 1] = {NULL};
-        pfds[mode] = &fds;
-        return Select(pfds[SelectMode::SelectRead], pfds[SelectMode::SelectWrite], pfds[SelectMode::SelectError], microSeconds);
+        fd_set* pfds[(int)SelectMode::SelectError + 1] = {NULL};
+        pfds[(int)mode] = &fds;
+        return Select(pfds[(int)SelectMode::SelectRead], pfds[(int)SelectMode::SelectWrite], pfds[(int)SelectMode::SelectError], microSeconds);
     }
     /**
      * @brief 接收来自绑定的 Socket 的数据
@@ -484,7 +498,7 @@ public:
     {
         int nRet;
         /* https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-recv */
-        if(SOCKET_ERROR == (nRet = recv(m_socket, buffer, size, socketFlags)))
+        if(SOCKET_ERROR == (nRet = recv(m_socket, buffer, size, (int)socketFlags)))
         {
             errorcode = WSAGetLastError();
         }
@@ -504,7 +518,7 @@ public:
         int nRet;
         SOCKETAPI_ASSERT
         (
-            SOCKET_ERROR != (nRet = recvfrom(m_socket, buffer, size, socketFlags, (SOCKADDR *)remoteEP.Item, &remoteEP.Size)), 
+            SOCKET_ERROR != (nRet = recvfrom(m_socket, buffer, size, (int)socketFlags, (SOCKADDR *)remoteEP.Item, &remoteEP.Size)),
             "ReceiveMessageFrom failed"
             "https://docs.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-recvfrom"
         );
@@ -523,7 +537,7 @@ public:
     {
         int nRet;
         /* https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-send */
-        if(SOCKET_ERROR == (nRet = send(m_socket, buffer, size, socketFlags)))
+        if(SOCKET_ERROR == (nRet = send(m_socket, buffer, size, (int)socketFlags)))
         {
             errorcode = WSAGetLastError();
         }
@@ -542,7 +556,7 @@ public:
     {
         int nRet;
         /* https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-sendto */
-        SOCKETAPI_ASSERT(SOCKET_ERROR != (nRet = sendto(m_socket, buffer, size, socketFlags, (SOCKADDR *)remoteEP.Item, remoteEP.Size)), "SendTo failed");
+        SOCKETAPI_ASSERT(SOCKET_ERROR != (nRet = sendto(m_socket, buffer, size, (int)socketFlags, (SOCKADDR *)remoteEP.Item, remoteEP.Size)), "SendTo failed");
         return nRet;
     }
     /**
@@ -574,7 +588,7 @@ public:
     {
         SOCKETAPI_ASSERT
         (
-            SOCKET_ERROR != getsockopt(m_socket, (int)optionLevel, optionName, buffer, &optlen), 
+            SOCKET_ERROR != getsockopt(m_socket, (int)optionLevel, (int)optionName, buffer, &optlen),
             "SetSocketOption failed"
             "https://docs.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-getsockopt"
         );
@@ -602,7 +616,7 @@ public:
     {
         SOCKETAPI_ASSERT
         (
-            SOCKET_ERROR != setsockopt(m_socket, (int)optionLevel, optionName, optionValue, optlen), 
+            SOCKET_ERROR != setsockopt(m_socket, (int)optionLevel, (int)optionName, optionValue, optlen),
             "SetSocketOption failed"
             "https://docs.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-setsockopt"
         );
@@ -622,7 +636,7 @@ public:
      */
     inline void Shutdown(SocketShutdown how)
     {
-        SOCKETAPI_ASSERT(SOCKET_ERROR != shutdown(m_socket, how), "SocketShutdown failed");
+        SOCKETAPI_ASSERT(SOCKET_ERROR != shutdown(m_socket, (int)how), "SocketShutdown failed");
     }
     /**
      * @brief 确定一个或多个套接字的状态, readfds / writefds / errorexceptfds 套接字集合的指针只能有一个非空
@@ -672,47 +686,4 @@ public:
 #if BIND_SOCKET_LIB_LIFETIME_WITH_PROCESS
     readonly System::Net::Sockets::Socket::SocketlibraryInitlializer System::Net::Sockets::Socket::m_socketlibraryInitlializer;
 #endif
-class System::Net::Sockets::SocketAsyncEventArgs
-{
-private:
-    Socket* m_Socket;
-    long m_nLastOperation; 
-public:
-    EventHandler<SocketAsyncEventArgs&> Completed;
-
-    SocketAsyncEventArgs() : Completed(NULL){}
-    DECLARE_INDEXER(Socket*, AccecptSocket,
-    {
-        return m_Socket;
-    },
-    {
-        m_Socket = const_cast<Socket*>(SETTER_VALUE);
-        MemoryBarrier();
-    })
-    /**
-     * @brief 该值指定套接字能否在断开操作之后重用
-     * 
-     */
-    DECLARE_INDEXER(bool, DisconnectReuseSocket, 
-    {
-        ERROR_ASSERT(m_Socket, "Socket* is NULL");
-        bool bEnable = false;
-        m_Socket->GetSocketOption(SocketOptionLevel::Socket, SocketOptionName::ReuseAddress, bEnable);
-        return bEnable;
-    },
-    {
-        ERROR_ASSERT(m_Socket, "Socket* is NULL");
-        m_Socket->SetSocketOption(SocketOptionLevel::Socket, SocketOptionName::ReuseAddress, SETTER_VALUE);
-    })
-    DECLARE_INDEXER(SocketAsyncOperation, LastOperation,
-    {
-        return (SocketAsyncOperation)m_nLastOperation;
-    },
-    {
-        long val = (long)SETTER_VALUE;
-        System::Threading::Interlocked<long>::Exchange(m_nLastOperation, val);
-    })
-    // DECLARE_INDEXER()
-};    
-
 #endif

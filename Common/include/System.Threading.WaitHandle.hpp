@@ -34,7 +34,7 @@ class System::Threading::WaitHandle : public IDisposable
 protected:
     HANDLE  m_hWaitHandle;
     bool    m_bDisposed;
-    WaitHandle() : m_bDisposed(false){}
+    WaitHandle() : m_hWaitHandle(NULL),m_bDisposed(true){}
     WaitHandle(HANDLE h) : m_hWaitHandle(h), m_bDisposed(NULL == m_hWaitHandle){}
     /**
      * @brief 提供派生类一个完整的 WaitHandle 释放过程

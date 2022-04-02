@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-01-17 21:47:52
  * @LastEditors: like
- * @LastEditTime: 2022-03-11 17:16:36
+ * @LastEditTime: 2022-03-31 15:58:15
  */
 #ifndef SYSTEM_THREADING_SEMAPHORE_HPP
 #define SYSTEM_THREADING_SEMAPHORE_HPP
@@ -26,10 +26,7 @@ public:
     Semaphore(int initialCount, int maximumCount, const char* strName = NULL) : m_strName(strName),
         WaitHandle(CreateSemaphore(NULL, initialCount, maximumCount, strName))
     {
-        if(m_bDisposed)
-        {
-            printf("Create Semaphore Failed , Error Code : %d", GetLastError());
-        }
+        WINAPI_ASSERT(NULL != m_hWaitHandle, "Create Semaphore Failed");
     }
     /**
      * @brief 打开指定名称信号量（如果已经存在）

@@ -33,13 +33,13 @@ namespace System
 {
     typedef tm DTime;
     class DateTime;
-    enum DateTimeKind
+    enum class DateTimeKind
     {
         None = 0,   /* 未指定类型 */
         Utc,        /* UTC */
         Local       /* 本地时间 */
     };
-    enum DayOfWeek
+    enum class DayOfWeek
     {
         Sunday = 0,
         Monday,
@@ -49,7 +49,7 @@ namespace System
         Friday,
         Saturday
     };
-    enum TimeFormatType
+    enum class TimeFormatType
 	{
 		STAMP,         /* %04d-%02d-%02d %02d:%02d:%02d.%03d */
 		STANDARD,      /* %04d-%02d-%02d %02d:%02d:%02d */
@@ -61,7 +61,7 @@ namespace System
 		LONG,		   /* %04d%02d%02d%02d%02d%02d%03d */
 		FORMATMAX
 	};
-    const char* TimeFormat[FORMATMAX] =
+    const char* TimeFormat[TimeFormatType::FORMATMAX] =
     {
         "%04d-%02d-%02d %02d:%02d:%02d.%03d",
         "%04d-%02d-%02d %02d:%02d:%02d",
@@ -113,7 +113,7 @@ public:
         gettimeofday(&tv, NULL);
         dt.t = *localtime(&time);
         dt.milliseconds = tv.tv_usec / 1000;
-        dt.kind = Local;
+        dt.kind = DateTimeKind::Local;
     }
     /**
      * @brief 1970年1月1日以来持续时间的秒数转成 Utc 时间
@@ -127,7 +127,7 @@ public:
         gettimeofday(&tv, NULL);
         dt.t = *gmtime(&time);
         dt.milliseconds = tv.tv_usec / 1000;
-        dt.kind = Utc;
+        dt.kind = DateTimeKind::Utc;
     }
     /**
      * @brief 时间转成自1970年1月1日以来持续时间的秒数
@@ -146,10 +146,10 @@ protected:
     TimeFormatType formatType;
     DateTimeKind kind;
 public:
-    DateTime() : milliseconds(0), formatType(STANDARD), kind(DateTimeKind::None){}
+    DateTime() : t({0}), milliseconds(0), formatType(TimeFormatType::STANDARD), kind(DateTimeKind::None) {}
     DateTime(int year /* [1900, now]*/, int month /* [1, 12]*/, int day/* [1, 31]*/, int hour, int minute, int second, int millisecond = 0)
         : t({second, minute, hour, day, month - 1, year - 1900, 0, 0, -1}), 
-        milliseconds(millisecond), formatType(STANDARD), kind(DateTimeKind::None){}
+        milliseconds(millisecond), formatType(TimeFormatType::STANDARD), kind(DateTimeKind::None){}
     inline int Year()
     {
         return 1900 + t.tm_year;
@@ -193,7 +193,7 @@ public:
      */
     inline void ToString(char* buff)
     {
-	    sprintf(buff, TimeFormat[formatType], Year(), Month(), Day(), Hour(), Minute(), Second(), Milliseconds());
+	    sprintf(buff, TimeFormat[(UInt32)formatType], Year(), Month(), Day(), Hour(), Minute(), Second(), Milliseconds());
     }
     /**
      * @brief 时间比较早晚

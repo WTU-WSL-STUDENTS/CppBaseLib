@@ -4,61 +4,49 @@
  * @Autor: like
  * @Date: 2022-01-19 16:19:50
  * @LastEditors: like
- * @LastEditTime: 2022-03-11 16:20:07
+ * @LastEditTime: 2022-04-02 11:47:34
  */
 #ifndef SYSTEM_THREADING_TIMER_HPP
 #define SYSTEM_THREADING_TIMER_HPP
 
+#include <System.Action.hpp>
 #include <System.Threading.ThreadPool.hpp>
-#include <functional>
 
 namespace System::Threading
 {
-    typedef void (*TimerCallback)(Object);
+    using TimerCallback = Action<Object>;
     class Timer;
 };
 class System::Threading::Timer final : public IDisposable//, public IAsyncDisposable
 {
 private:
-    struct _TimerCallbackArgs
-    {
-        TimerCallback cb;
-        Object args;
-    };
-    static void __stdcall _TimerCallback(PTP_CALLBACK_INSTANCE Instance,PVOID args, PTP_TIMER sender)
-    {
-        UNREFERENCED_PARAMETER(Instance);
-        UNREFERENCED_PARAMETER(sender);
-        _TimerCallbackArgs* pArgs = (_TimerCallbackArgs*)args; 
-        (*pArgs->cb)(pArgs->args);
-    }
-
     PTP_TIMER m_pTimer;
+    TimerCallback m_tcb;
+    Object m_args;
 public:
     DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(Timer)
-    Timer(TimerCallback cb) : Timer(cb, NULL, -1, -1){}
-    Timer(TimerCallback cb, Object args, DWORD dueTime, DWORD period)
+    Timer(TimerCallback cb) : Timer(cb, NULL, -1, 0){}
+    Timer(TimerCallback cb, Object args, DWORD dueTime, DWORD period) : m_pTimer(NULL), m_tcb(cb), m_args(args)
     {
-        _TimerCallbackArgs tArgs = {cb, args};
-        if(NULL == (m_pTimer = ::CreateThreadpoolTimer(_TimerCallback, &tArgs, NULL/* the callback executes in the default callback environment */)))
-        {
-            printf("System::Threading::Timer CreateThreadpoolTimer Failed , Error Code : %d", GetLastError());
-            return;
-        }
+        WINAPI_ASSERT
+        (
+            m_pTimer = ::CreateThreadpoolTimer
+            (
+                DECLARE_TPLAMDA_TIMER
+                ({
+                    Timer* pArgs = static_cast<Timer*>(TPLAMDA_CONTEXT); 
+                    // (*pArgs->cb)(pArgs->args);
+                }),
+                this, 
+                &ThreadPoolSingleton::Ref().environment
+            ), 
+            "Construct Timer failed"
+        );
         Change(dueTime, period);
     }
     ~Timer()
     {
         Dispose();
-    }
-    /**
-     * @brief 当前系统线程池中定时器的个数
-     * 
-     * @return long 
-     */
-    static inline long ActiveCount()
-    {
-        throw "Not Support";
     }
     /**
      * @brief 更改计时器的启动时间和方法调用之间的间隔

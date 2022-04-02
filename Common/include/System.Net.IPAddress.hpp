@@ -98,7 +98,7 @@ public:
         IN6_ADDR ipv6Addr;
     };
     AddressFamily m_eFamily;
-    IPAddress(){}
+    IPAddress() : ipv6Addr({0}), m_eFamily(AddressFamily::InterNetwork){}
     /**
      * @brief Construct a new IPAddress object
      * 
@@ -240,7 +240,7 @@ public:
      */
     static inline UInt64 HostToNetworkOrder(UInt64 host)
     {
-        return htonll(host);
+        return (UInt64)htonll(host);
     }	
     /**
      * @brief 将值由网络字节顺序转换为主机字节顺序
@@ -270,7 +270,7 @@ public:
      */
     static inline UInt64 NetworkToHostOrder(UInt64 network)
     {
-        return ntohll(network);
+        return (UInt64)ntohll(network);
     }
 };
 readonly System::Net::IPAddress System::Net::IPAddress::Any         = System::Net::IPAddress((UInt32)0);
@@ -298,7 +298,7 @@ public:
          */
         unsigned char   Item[sizeof(sockaddr_in6)];
     };
-    SocketAddress() : Size(sizeof(sockaddr_in6)){}
+    SocketAddress() : ipv6Addr({0}), Size(sizeof(sockaddr_in6)) {}
     SocketAddress(AddressFamily family) : Size(AddressFamily::InterNetworkV6 == family ? sizeof(sockaddr_in6) : sizeof(sockaddr_in))
     {
         ipv6Addr.sin6_family = static_cast<ADDRESS_FAMILY>(family);
@@ -399,7 +399,7 @@ private:
     IPAddress   m_networkIp;
     UInt16      m_nNetworkPort;
 public:
-    IPEndPoint(){}
+    //IPEndPoint() {}
     IPEndPoint(const IPAddress& networkAddress, UInt16 networkPort) : m_networkIp(networkAddress), m_nNetworkPort(networkPort){}
     /**
      * @brief

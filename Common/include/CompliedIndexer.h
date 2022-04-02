@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-10-03 21:01:51
  * @LastEditors: like
- * @LastEditTime: 2022-03-24 15:32:26
+ * @LastEditTime: 2022-03-28 16:11:51
  */
 #ifndef COMPLIED_INDEXER_H
 #define COMPLIED_INDEXER_H
@@ -43,5 +43,15 @@
 #define DECLARE_INDEXER(type, name, getterCodeblock, setterCodeblock)   \
     DECLARE_CONST_GETTER(type, name, getterCodeblock)                   \
     DECLARE_SETTER(type, name, setterCodeblock)
+
+/**
+ * @brief 定义私有对象 m_##name, 并声明其索引器 
+ * 
+ */
+#define DECLARE_DATAWRAPPER_INDEXER(type, name) \
+private:                                        \
+    type m_##name{};                            \
+public:                                         \
+    DECLARE_INDEXER(type, name, {return m_##name;}, {m_##name = SETTER_VALUE;})
 
 #endif
