@@ -24,11 +24,11 @@ ThreadPoolSingleton::Ref().TrySubmitThreadpoolCallback     \
     }, &arg                                         \
 )
 
-namespace System::Threading::Task
+namespace System::Threading::Tasks
 {
     class Parallel;
 };
-class System::Threading::Task::Parallel
+class System::Threading::Tasks::Parallel
 {
 private:
     Barrier barrier;

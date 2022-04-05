@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-07-23 10:21:28
  * @LastEditors: like
- * @LastEditTime: 2022-04-01 15:52:23
+ * @LastEditTime: 2022-04-03 09:12:28
  */
 #ifndef COMPLIED_ENTRY_H
 #define COMPLIED_ENTRY_H
@@ -78,6 +78,7 @@ namespace System
                 assert(cond);                                       \
             }                                                       \
         }while(0)
+#   define CANARY_ASSERT(condition) ERROR_ASSERT(condition, "canary detect failed")
 /* error code : https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes */
 #   define WINAPI_ASSERT(condition, errorMsg)               \
         do                                                  \
@@ -119,4 +120,9 @@ namespace System
  */
 #define WEAK_PTR(type) type*
 #define SAVE_DELETE_PTR(p) if((p)){delete (p); (p) = NULL;}
+/**
+ * @brief 处理器个数
+ * 
+ */
+#define PROCESSER_COUNT 4
 #endif

@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-01-19 16:19:50
  * @LastEditors: like
- * @LastEditTime: 2022-04-02 11:47:34
+ * @LastEditTime: 2022-04-04 08:45:44
  */
 #ifndef SYSTEM_THREADING_TIMER_HPP
 #define SYSTEM_THREADING_TIMER_HPP
@@ -20,13 +20,17 @@ namespace System::Threading
 class System::Threading::Timer final : public IDisposable//, public IAsyncDisposable
 {
 private:
+    struct TimerContext
+    {
+        TimerCallback m_tcb;
+        Object m_args;
+    };
     PTP_TIMER m_pTimer;
-    TimerCallback m_tcb;
-    Object m_args;
+    TimerContext m_context;
 public:
     DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(Timer)
     Timer(TimerCallback cb) : Timer(cb, NULL, -1, 0){}
-    Timer(TimerCallback cb, Object args, DWORD dueTime, DWORD period) : m_pTimer(NULL), m_tcb(cb), m_args(args)
+    Timer(TimerCallback cb, Object args, DWORD dueTime, DWORD period) : m_pTimer(NULL), m_context(TimerContext{ cb, args })
     {
         WINAPI_ASSERT
         (
@@ -34,10 +38,10 @@ public:
             (
                 DECLARE_TPLAMDA_TIMER
                 ({
-                    Timer* pArgs = static_cast<Timer*>(TPLAMDA_CONTEXT); 
-                    // (*pArgs->cb)(pArgs->args);
+                    TimerContext* t = static_cast<TimerContext*>(TPLAMDA_CONTEXT);
+                    t->m_tcb(t->m_args);
                 }),
-                this, 
+                &m_context,
                 &ThreadPoolSingleton::Ref().environment
             ), 
             "Construct Timer failed"
@@ -72,18 +76,11 @@ public:
      */
     void Dispose() override
     {
-        CloseThreadpoolTimer(m_pTimer);
-    }
-    /**
-     * @brief 释放 Timer 的当前实例使用的所有资源并在释放完计时器时发出信号
-     * 
-     * @param waitHandle 
-     */
-    void Dispose(WaitHandle waitHandle) 
-    {
-        CloseThreadpoolTimer(m_pTimer);
-        PTP_CALLBACK_INSTANCE instance;
-        SetEventWhenCallbackReturns(instance, waitHandle.Handle());
+        if (m_pTimer)
+        {
+            CloseThreadpoolTimer(m_pTimer);
+            m_pTimer = NULL;
+        }
     }
 };
 

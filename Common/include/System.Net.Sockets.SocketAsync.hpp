@@ -55,13 +55,13 @@ public:
      * @brief AcceptAsync 接口返回的 Socket 对象
      * 
      */
-    DECLARE_INDEXER(SocketAsyncExtension*, AcceptSocket,
-    {
-        return m_Socket;
-    },
+    DECLARE_INDEXER(SocketAsyncExtension*, AcceptSocket, 
+    { 
+        return m_Socket; 
+    }, 
     {
         m_Socket = const_cast<SocketAsyncExtension*>(SETTER_VALUE);
-        MemoryBarrier();
+        MemoryBarrier(); 
     })
     /**
      * @brief 异步套接字方法的数据缓冲区, （TODO: 需要在合适的时候初始化）
@@ -105,15 +105,11 @@ public:
      * @brief 获取或设置异步套接字操作的结果
      * 
      */
-    DECLARE_INDEXER(int, SocketError,
-    {
-        return WSAGetLastError();
-    },
-    {
-        WSASetLastError(SETTER_VALUE);
-    }) 
+    DECLARE_GETTER(int, SocketError, { return WSAGetLastError(); })
+    DECLARE_SETTER_RIGHT_VAL_ENABLE(int, SocketError, { return WSASetLastError(SETTER_VALUE); })
+
     DECLARE_DATAWRAPPER_INDEXER(SocketFlags, SocketFlags)
-    DECLARE_DATAWRAPPER_INDEXER(Object, UserToken)
+    DECLARE_DATAWRAPPER_INDEXER_RIGHT_VAL_ENABLE(Object, UserToken)
 
     void SetBuffer(WEAK_PTR(char) buffer, int size)
     {
@@ -178,7 +174,7 @@ private:
  * @brief 基于完成端口的异步 Socket 扩展
  * 
  */
-class System::Net::Sockets::SocketAsyncExtension : public Socket
+class System::Net::Sockets::SocketAsyncExtension final : public Socket
 {
 private:
     /**
@@ -196,7 +192,23 @@ private:
 #   define WSAPoll              m_socketAsynclibraryInitlializer->WSAPoll
 private:
     HANDLE m_hCompPort;
-    System::Threading::Tasks::Task* m_CompPortFinishedTask;
+    System::Threading::Tasks::Task* m_CompPortFinishedTask = new System::Threading::Tasks::Task([](AsyncState c)->void
+    {
+        /* 通过调用 m_CompPortFinishedTask.Start(args) 复用 Task */
+        SocketAsyncExtension* p = static_cast<SocketAsyncExtension*>(c[0]);
+        SocketAsyncEventArgs* e = static_cast<SocketAsyncEventArgs*>(c[1]);
+        SOCKET                s = (SOCKET)c[2];
+        if (!p->WaitOne(*e))
+        {
+            closesocket(s);
+            throw std::exception("Accept task canceled");
+        }
+
+        SocketAsyncExtension* sae = new SocketAsyncExtension(p->GetAddressFamily(), p->GetSocketType(), p->GetProtocolType(), s);
+        CANARY_ASSERT(NULL == e->GetAcceptSocket());
+        e->SetAcceptSocket(sae);
+        e->Completed(e->GetUserToken(), *e);
+    });
 public:
     IOCPExtensionInitlializer* m_socketAsynclibraryInitlializer;
     DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(SocketAsyncExtension);
@@ -206,48 +218,56 @@ public:
         WINAPI_ASSERT(NULL != (m_hCompPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, (u_long) 0, 0)), "SocketAsyncExtension construction failed");
         // Associate the listening socket with the completion port
         WINAPI_ASSERT(NULL != (m_hCompPort = CreateIoCompletionPort((HANDLE)m_socket, m_hCompPort, (u_long) 0, 0)), "SocketAsyncExtension construction failed");
-        m_CompPortFinishedTask = new System::Threading::Tasks::Task([](AsyncState c)->void
-        {
-            /* 通过调用 m_CompPortFinishedTask.Start(args) 复用 Task */
-            SocketAsyncExtension* p = static_cast<SocketAsyncExtension*>(c[0]);
-            SocketAsyncEventArgs* e = static_cast<SocketAsyncEventArgs*>(c[1]);
-            p->WaitOne(*e);
-            e->Completed(e->GetUserToken(), *e);
-        });
+    }
+    SocketAsyncExtension(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, SOCKET s) : Socket(addressFamily, socketType, protocolType, s), m_socketAsynclibraryInitlializer(NULL)
+    {
+        // Create a handle for the completion port
+        WINAPI_ASSERT(NULL != (m_hCompPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, (u_long)0, 0)), "SocketAsyncExtension construction failed");
+        // Associate the listening socket with the completion port
+        WINAPI_ASSERT(NULL != (m_hCompPort = CreateIoCompletionPort((HANDLE)s, m_hCompPort, (u_long)0, 0)), "SocketAsyncExtension construction failed");
     }
     ~SocketAsyncExtension()
     {
-		SAVE_DELETE_PTR(m_CompPortFinishedTask);
         SAVE_DELETE_PTR(m_socketAsynclibraryInitlializer);
+        SAVE_DELETE_PTR(m_CompPortFinishedTask);
+        if (m_hCompPort)
+        {
+            CloseHandle(m_hCompPort);
+            m_hCompPort = NULL;
+        }
     }
     bool AcceptAsync(SocketAsyncEventArgs &e)
     {
-        const SocketAsyncExtension *p = new SocketAsyncExtension(m_addressFamily, m_sockType, m_protoType);
-        e.SetAcceptSocket(p);
+        SOCKET s = socket((int)m_addressFamily, (int)m_sockType, (int)m_protoType);
         memset(&e.m_olOverlap, 0, sizeof (e.m_olOverlap));
-        if( 
-            AcceptEX
-            (
-                m_socket,
-                e.m_Socket->m_socket, 
-                e.GetBuffer(),
-                e.GetCount(),
-                IOCP_SOCKET_ADDR_BUF_SIZE, 
-                IOCP_SOCKET_ADDR_BUF_SIZE, 
-                &e.m_dwBytesTransferred, 
-                &e.m_olOverlap
-            )
-        )
+        if(AcceptEX(
+            m_socket,
+            s,
+            e.GetBuffer(),
+            e.GetCount(),
+            IOCP_SOCKET_ADDR_BUF_SIZE, 
+            IOCP_SOCKET_ADDR_BUF_SIZE, 
+            &e.m_dwBytesTransferred, 
+            &e.m_olOverlap
+         ))
         {
+            SocketAsyncExtension *p = new SocketAsyncExtension(m_addressFamily, m_sockType, m_protoType);
+            e.SetAcceptSocket(p);
             return false;
         }
         SOCKETAPI_ASSERT(WSA_IO_PENDING == WSAGetLastError(), "https://docs.microsoft.com/en-us/windows/win32/api/mswsock/nf-mswsock-acceptex");
-        m_CompPortFinishedTask->Start(CreateAsyncState(this, &e));
+        m_CompPortFinishedTask->Start(CreateAsyncState(this, &e, (Object)s));
         //return !m_CompPortFinishedTask->Wait();
         return true;
     }
+    bool ReceiveAsync(SocketAsyncEventArgs& e)
+    {
+        /* https://docs.microsoft.com/en-us/previous-versions/windows/desktop/legacy/ms741687(v=vs.85) */
+        //WSARecvMsg(e.GetAcceptSocket()->GetHandle(),);
+        return false;
+    }
 private:
-    void WaitOne(SocketAsyncEventArgs &e, DWORD milliseconds =  INFINITE)
+    bool WaitOne(SocketAsyncEventArgs &e, DWORD milliseconds =  INFINITE)
     {
         ULONG_PTR completionKey         = 0;
         LPOVERLAPPED pOverlapped        = 0;
@@ -255,10 +275,15 @@ private:
         if (GetQueuedCompletionStatus(m_hCompPort, &e.m_dwBytesTransferred, &completionKey, &pOverlapped, milliseconds))
         {
             e.SetSocketError(0);
-            return;
+            return true;
+        }
+        else if (ERROR_OPERATION_ABORTED == GetLastError())
+        {
+            return false;
         }
         /* 完成端口绑定的 socket 被释放 */
         WINAPI_ASSERT(ERROR_OPERATION_ABORTED == GetLastError(), "Wait completetion port failed");
+        return false;
     }
 };
 #endif

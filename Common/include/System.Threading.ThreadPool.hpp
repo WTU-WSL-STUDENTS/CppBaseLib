@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-01-19 11:09:49
  * @LastEditors: like
- * @LastEditTime: 2022-04-02 11:47:28
+ * @LastEditTime: 2022-04-04 08:07:51
  */
 #ifndef SYSTEM_THREADING_THREADPOOL_HPP
 #define SYSTEM_THREADING_THREADPOOL_HPP
@@ -44,10 +44,10 @@ namespace System::Threading
 namespace System::Threading
 {
     class Timer;
-    namespace Tasks
-    {
-        class Task;
-    };
+};
+namespace System::Threading::Tasks
+{
+    class Task;
 };
 /**
  * @brief 表示在调用 RegisterWaitForSingleObject 时已注册的句柄。 此类不能被继承。

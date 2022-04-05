@@ -1,11 +1,11 @@
-// /*
-//  * @Description: 
-//  * @Version: 1.0
-//  * @Autor: like
-//  * @Date: 2022-01-17 15:12:58
-//  * @LastEditors: like
-//  * @LastEditTime: 2022-01-19 16:26:44
-//  */
+ /*
+  * @Description: 
+  * @Version: 1.0
+  * @Autor: like
+  * @Date: 2022-01-17 15:12:58
+ * @LastEditors: like
+ * @LastEditTime: 2022-04-04 08:09:46
+  */
 #ifndef SYSTEM_THREADING_TASKS_TASK_HPP
 #define SYSTEM_THREADING_TASKS_TASK_HPP
 #include <System.Threading.ThreadPool.hpp>
@@ -13,12 +13,18 @@
 #include <System.List.hpp>
 #include <System.Threading.EventWaitHandle.hpp>
 #include <System.Threading.Interlocked.hpp>
+#include <System.Threading.CancellationToken.hpp>
 #include <System.Threading.Task.Parallel.hpp>
 #include <exception>
 
-// #include <functional>
-// #include <future>
-#include <vector>
+#define TASK_LAMDA_CONTEXT TPLAMDA_CONTEXT
+#define DECLARE_TASKLAMDA(codeblock)[](PTP_CALLBACK_INSTANCE Instance,PVOID TASK_LAMDA_CONTEXT, PTP_WORK Work)->void\
+    {                                       \
+        UNREFERENCED_PARAMETER(Instance);   \
+        UNREFERENCED_PARAMETER(Work);       \
+        codeblock                           \
+    }
+using PTP_TASK_CALLBACK = PTP_WORK_CALLBACK;
 
 namespace System
 {
@@ -38,8 +44,6 @@ namespace System::Threading::Tasks
 	using TaskContinuationOptions = TaskContinuation::Options;
     enum class TaskStatus : long;
     class Task;
-    // template<typename T>
-    // class Task;
     struct ValueTask{};   /* https://docs.microsoft.com/zh-cn/dotnet/api/system.threading.tasks.valuetask?view=net-5.0 */
 };
 /**
@@ -59,7 +63,7 @@ enum System::Threading::Tasks::TaskCreation::Options
      */
     PreferFairness = DECLARE_ENUM_FLAG(0),  
     /**
-     * @brief 指定任务将是长时间运行的、粗粒度的操作，涉及比细化的系统更少、更大的组件
+     * @brief 指定任务将是长时间运行的、粗粒度的操作，涉及比细化的系统更少、更大的组件 CallbackMayRunLong
      * 
      */
     LongRunning = DECLARE_ENUM_FLAG(1),
@@ -122,6 +126,46 @@ enum class System::Threading::Tasks::TaskStatus : long
      * 
      */
     Faulted 
+};
+using System::Threading::Tasks::TaskStatus;
+template<>
+class System::Threading::Interlocked<TaskStatus>
+{
+public:
+    static inline TaskStatus Add(TaskStatus& location, const TaskStatus& value)
+    {
+        long v = (long)value;
+        return (TaskStatus)::InterlockedAdd((long*)&location, v);
+    }
+    static inline TaskStatus And(TaskStatus& location, const TaskStatus& value)
+    {
+        long v = (long)value;
+        return (TaskStatus)::InterlockedAnd((long*)&location, v);
+    }
+    static inline TaskStatus CompareExchange(TaskStatus& location, const TaskStatus& value)
+    {
+        DWORD v = (DWORD)value;
+        return (TaskStatus)InterlockedCompareExchange((long*)&location, v, v);
+    }
+    static inline TaskStatus Decrement(TaskStatus& location)
+    {
+        return (TaskStatus)::InterlockedDecrement((long*)&location);
+    }
+    static inline TaskStatus Exchange(TaskStatus& location, const TaskStatus& value)
+    {
+        long v = (long)value;
+        ::InterlockedExchange((long*)&location, v);
+        return location;
+    }
+    static inline TaskStatus Increment(TaskStatus& location)
+    {
+        return (TaskStatus)::InterlockedIncrement((long*)&location);
+    }
+    static inline TaskStatus Or(TaskStatus& location, const TaskStatus& value)
+    {
+        long v = (long)value;
+        return (TaskStatus)::InterlockedOr((long*)&location, v);
+    }
 };
 /**
  * @brief 为 ContinueWith 方法创建的任务指定行为
@@ -213,7 +257,7 @@ public:
      * 
      * @return WaitHandle 
      */
-    virtual System::Threading::WaitHandle GetAsyncWaitHandle() = 0;
+    virtual System::Threading::WaitHandle& GetAsyncWaitHandle() = 0;
     /**
      * @brief 获取一个值，该值指示异步操作是否已完成
      * 
@@ -223,50 +267,121 @@ public:
     virtual bool IsCompleted() = 0;
 };
 
-typedef int CreationOptions;
-typedef long TaskCurrentStatus;
+#define await(pTask) ((pTask)->GetAsyncWaitHandle().WaitOne())
 typedef StackList<WEAK_PTR(System::Threading::Tasks::Task)> AttachedTasks;
 class System::Threading::Tasks::Task final : public IAsyncResult//, public IDisposable
 {
+    class IOCP final : public WaitHandle
+    {
+    public:
+        DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(IOCP)
+        IOCP(DWORD numberOfConcurrentThreads = PROCESSER_COUNT) : WaitHandle(CreateIoCompletionPort((HANDLE)INVALID_HANDLE_VALUE, NULL, (u_long)NULL, numberOfConcurrentThreads))
+        {
+            WINAPI_ASSERT(false == m_bDisposed, "https://docs.microsoft.com/en-us/windows/win32/api/ioapiset/nf-ioapiset-createiocompletionport");
+        }
+        ~IOCP()
+        {
+            Dispose();
+        }
+
+        /**
+         * @brief 如果当前实例收到信号，则为 true；否则为 false。
+         *
+         * @param millisecond 等待的毫秒数, -1 表示无限期等待
+         * @return true
+         * @return false
+         */
+        bool WaitOne(DWORD millisecond = INFINITE) override
+        {
+            DWORD byteTransferred;
+            ULONG_PTR completionKey = 0;
+            LPOVERLAPPED pOverlapped = 0;
+            if (GetQueuedCompletionStatus(m_hWaitHandle, &byteTransferred, &completionKey, &pOverlapped, millisecond))
+            {
+                return true;
+            }
+            DWORD nErrorCode = GetLastError();
+            WINAPI_ASSERT(ERROR_ABANDONED_WAIT_0 == nErrorCode/* IOCP disposed */ || WAIT_TIMEOUT == nErrorCode/* IOCP timeout*/, "Wait IOCP failed");
+            return false;        
+        }
+        void Release()
+        {
+            WINAPI_ASSERT(PostQueuedCompletionStatus(m_hWaitHandle, 0, 0, 0), "Publish work finish failed");                                                                  
+        }
+    };
 private:
-    PTP_WORK work;
-    static void MyWorkCallback(PTP_CALLBACK_INSTANCE Instance, PVOID Parameter, PTP_WORK Work)
-    {
-        UNREFERENCED_PARAMETER(Instance);
-        UNREFERENCED_PARAMETER(Work);
-        Task* t = static_cast<Task*>(Parameter);
-        long val = (long)TaskStatus::WaitingToRun;
-        Interlocked<long>::Exchange(t->m_nStatus, val);
-        t->m_nId = GetCurrentThreadId();
-        t->RunSynchronously();
-        return;
-    }
-
-    //AttachedTasks attachedTasks;
-    CreationOptions m_nCreationOptions;
-    TaskCurrentStatus m_nStatus;
-    int m_nId;
-    System::Threading::AutoResetEvent m_are;
-    /* Task 作为独立 Task 的入口 */
-    System::Action<AsyncState> m_action;
-    /* Task 作为 Continue task 的入口 */
-    System::Action<Task&, AsyncState> m_childAct;
-    AsyncState m_pAsyncState;
-    WEAK_PTR(Task) parrent;
-
+    WEAK_PTR(Task) m_pParentTask;
+    PTP_WORK m_pWork;
     /**
-     * @brief Continue task 构造函数
-     * 
-     * @param action 
-     * @param parrent 
-     * @param args 
+     * @brief Awaiter, 通过 IOCP 控制并发, 默认为 PROCESSER_COUNT
      */
-    Task(Action<Task&, AsyncState> action, Task* parrent, AsyncState args) : 
-        m_nCreationOptions(TaskCreationOptions::AttachedToParent), m_nStatus((long)TaskStatus::Created), m_nId(-1), m_are(AutoResetEvent(false)), 
-        m_action(NULL), m_childAct(action),
-        m_pAsyncState(args), parrent(parrent)
+    IOCP m_hTaskCompletionPort;
+    OVERLAPPED_ENTRY m_olEntry;
+    StackList<WEAK_PTR(Task)> m_childTasks;
+    /**
+     * @brief Wait handle
+     */
+    ManualResetEvent m_mre;
+    /**
+     * @brief Task work processing
+     */
+    System::Action<AsyncState> m_action;
+    AsyncState m_pAsyncState;
+    TaskCreationOptions m_eCreationOptions;
+    TaskStatus m_eStatus;
+    WEAK_PTR(CancellationToken) m_pToken;
+
+    Task(Task* pParentTask = NULL) : m_pParentTask(pParentTask), m_pWork(NULL), 
+        m_hTaskCompletionPort(IOCP()), m_olEntry({0}), m_childTasks(StackList<WEAK_PTR(Task)>(PROCESSER_COUNT)),
+        m_mre(ManualResetEvent(false)),
+        m_action(NULL), m_pAsyncState(NULL), m_pToken(NULL),
+        m_eCreationOptions(TaskCreationOptions::None), m_eStatus(TaskStatus::Created)
     {
-        work = CreateThreadpoolWork((PTP_WORK_CALLBACK)MyWorkCallback, this, &(ThreadPoolSingleton::Ref().environment));
+    }
+    void TaskWorkProcessing()
+    {              
+        Interlocked<TaskStatus>::Exchange(m_eStatus, TaskStatus::Running);   
+        try                                                                     
+        {                                                                       
+            RunSynchronously();                                              
+            Interlocked<TaskStatus>::Exchange                                   
+            (                                                                   
+                m_eStatus,                                                   
+                m_pToken && m_pToken->GetCancellationRequested() ?        
+                TaskStatus::Canceled : TaskStatus::RanToCompletion              
+            );                                                                  
+        }                                                                       
+        catch (const std::exception& e)                                         
+        {  
+            Interlocked<TaskStatus>::Exchange(m_eStatus, TaskStatus::Faulted);
+        }           
+        /* 当前任务执行完毕后, 执行所有异步等待的任务( ContinueWith / Await ) 并将结果投递到 IOCP */
+        for(int i = 0; i <(int) m_childTasks.Count(); i++)                     
+        {                                                                       
+            m_childTasks[i]->Start();                                        
+            m_hTaskCompletionPort.Release();                                 
+        }                 
+        /* 如有附加到当前线程的子任务, 当前线程同步等待子线程完成后再退出 */
+        if (0 < m_childTasks.Count() && TaskCreationOptions::DenyChildAttach == (m_eCreationOptions & TaskCreationOptions::DenyChildAttach))
+        {
+            return;
+        }
+        WaitHandle** handles = new WaitHandle*[m_childTasks.Count()];
+        int count = 0;
+        for(int i = 0,idx = 0; i < (int)m_childTasks.Count(); i++)
+        {                                                                       
+            if (0 == (m_childTasks[i]->m_eCreationOptions & TaskCreationOptions::AttachedToParent))
+            {
+                continue;
+            }
+            handles[count] = &m_childTasks[i]->m_mre;
+            count++;
+        }         
+        if (count)
+        {
+            WaitHandle::WaitAll(handles, count);
+        }
+        delete[] handles;
     }
 public:
     DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(Task)
@@ -276,38 +391,35 @@ public:
      * @param action 
      * @param args 由 malloc 活 calloc 创建的指针集合
      */
-    Task(Action<AsyncState> action, AsyncState args = NULL) : 
-        m_nCreationOptions(TaskCreationOptions::None), m_nStatus((long)TaskStatus::Created), m_nId(-1), m_are(AutoResetEvent(false)), 
-        m_action(action), m_childAct(NULL),
-        m_pAsyncState(args), parrent(NULL)
-    
+    Task(Action<AsyncState> action, AsyncState args = NULL, WEAK_PTR(CancellationToken) token = NULL) : Task()
     {
-        WINAPI_ASSERT(work = CreateThreadpoolWork((PTP_WORK_CALLBACK)MyWorkCallback, this, &(ThreadPoolSingleton::Ref().environment)), "Task construct failed");
+        m_action        = action;
+        m_pAsyncState   = args;
+        m_pToken        = token;
+        PTP_TASK_CALLBACK callback = DECLARE_TASKLAMDA
+        ({
+            WEAK_PTR(Task) t = static_cast<WEAK_PTR(Task)>(TASK_LAMDA_CONTEXT);
+            SetEventWhenCallbackReturns(Instance, t->m_mre.Handle());
+            t->TaskWorkProcessing();
+        });
+        WINAPI_ASSERT
+        (
+            m_pWork = CreateThreadpoolWork(callback, this, &(ThreadPoolSingleton::Ref().environment)), 
+            "Task construct failed"
+        );
     }
     ~Task()
     {
-        if (!IsCompleted())
-        {
-            Wait();
-        }
-        CloseThreadpoolWork(work);
-        work = NULL;
         DisposeAsyncState(m_pAsyncState);
-    }
-    /**
-     * @brief 取消任务, 在非 Task 执行线程调用, 可取消处于列队中但未执行的任务. 调用该接口， 会递归将 Canceled 标志位传导至所有父任务
-     * 
-     */
-    void Cancel()
-    {
-        if((long)TaskStatus::WaitingToRun > m_nStatus)
+        if(m_pWork)
         {
-            WaitForThreadpoolWorkCallbacks(work, true);/* true : 撤销在排队中的工作项 */
-        }
-        Interlocked<long>::Exchange(m_nStatus, (long)TaskStatus::Canceled);
-        if(parrent)
-        {
-            parrent->Cancel();
+            if (TaskStatus::Created < m_eStatus && !IsCompleted())
+            {
+                WaitForThreadpoolWorkCallbacks(m_pWork, true);;/* 撤销排队中的 work */
+                Interlocked<TaskStatus>::Exchange(m_eStatus, TaskStatus::Canceled);
+            }
+            CloseThreadpoolWork(m_pWork);
+            m_pWork = NULL;
         }
     }
     /**
@@ -315,46 +427,31 @@ public:
      * 
      * @return AsyncState 
      */
-    inline AsyncState GetAsyncState() override
-    {
-        return m_pAsyncState;
-    }
+    DECLARE_GETTER(AsyncState, AsyncState, { return m_pAsyncState; })
     /**
-     * @brief 获取可用于等待任务完成的 WaitHandle
+     * @brief 获取可用于等待任务完成的 WaitHandle 基于完成端口
      * 
      * @return System::Threading::WaitHandle 
      */
-    System::Threading::WaitHandle GetAsyncWaitHandle() override
-    {
-        return m_are;
-    }
+    DECLARE_GETTER(System::Threading::WaitHandle&, AsyncWaitHandle, { return m_hTaskCompletionPort; })
     /**
      * @brief 获取用于创建此任务的 TaskCreationOptions
      * 
      * @return CreationOptions 
      */
-    inline CreationOptions GetCreationOptions()
-    {
-        return m_nCreationOptions;
-    } 
+    DECLARE_INDEXER(TaskCreationOptions, CreationOptions, { return m_eCreationOptions; }, { m_eCreationOptions = SETTER_VALUE; MemoryBarrier(); })
     /**
      * @brief 获取此 Task 实例的 ID
      * 
      * @return int 
      */
-    inline int GetId()
-    {
-        return m_nId;
-    }
+    DECLARE_GETTER(int, DWORD, { return (DWORD)m_pWork; })
     /**
      * @brief 获取此任务的 TaskStatus
      * 
      * @return TaskStatus 
      */
-    TaskStatus GetStatus()
-    {
-        return (TaskStatus)m_nStatus;
-    }
+    DECLARE_INDEXER(TaskStatus, Status, { return m_eStatus; }, { m_eStatus = SETTER_VALUE; MemoryBarrier(); })
     /**
      * @brief 获取此 Task 实例是否由于被取消的原因而完成（停止）执行
      * 
@@ -363,7 +460,7 @@ public:
      */
     inline bool IsCanceled()
     {
-        return (long)TaskStatus::Canceled == m_nStatus;
+        return TaskStatus::Canceled == m_eStatus;
     }
     /**
      * @brief 获取一个值，它表示是否已完成任务
@@ -383,7 +480,7 @@ public:
      */
     inline bool IsCompletedSuccessfully()
     {
-        return (long)TaskStatus::RanToCompletion == m_nStatus;
+        return TaskStatus::RanToCompletion == m_eStatus;
     }
     /**
      * @brief 获取 Task 是否由于未经处理异常的原因而完成
@@ -393,7 +490,7 @@ public:
      */
     inline bool IsFaulted()
     {
-        return (long)TaskStatus::Faulted == m_nStatus;
+        return TaskStatus::Faulted == m_eStatus;
     }
     /**
      * @brief 创建一个在目标 Task 完成时异步执行的延续任务
@@ -401,64 +498,37 @@ public:
      * @param continuationAction 
      * @return Task 
      */
-    Task* ContinueWith(Action<Task&/* Parrent task */, AsyncState/* NULL */> continuationAction)
+    Task* ContinueWith(Action<AsyncState> continuationAction, AsyncState args = NULL, WEAK_PTR(CancellationToken) token = NULL)
     {
-        bool canAttachToParrent = TaskCreationOptions::DenyChildAttach & m_nCreationOptions;
-        Task* task;
-        if(TaskCreationOptions::DenyChildAttach & m_nCreationOptions)
-        {
-            task = new Task(continuationAction, NULL, NULL);
-            return task;
-        }
-        task = new Task(continuationAction, this, NULL);
-        //attachedTasks.Add(task);
+        ERROR_ASSERT(NULL == m_pToken || m_pToken == token, "Child task cancellation token need same as parent task");
+        Task* task = new Task(this);
+        task->m_action = continuationAction;
+        task->m_pAsyncState = args;
+        task->m_pToken = token;
+        PTP_TASK_CALLBACK callback = DECLARE_TASKLAMDA
+        ({
+            WEAK_PTR(Task) t = static_cast<WEAK_PTR(Task)>(TASK_LAMDA_CONTEXT);
+            t->m_pParentTask->m_hTaskCompletionPort.WaitOne();
+
+            SetEventWhenCallbackReturns(Instance, t->m_mre.Handle());
+            t->TaskWorkProcessing();
+        });
+        WINAPI_ASSERT
+        (
+            task->m_pWork = CreateThreadpoolWork(callback, task, &(ThreadPoolSingleton::Ref().environment)),
+            "Task construct failed"
+        );
+
+        m_childTasks.Add(task);
         return task;
     }
     /**
      * @brief 对当前的 Task 同步运行 TaskScheduler
      * 
      */
-    void RunSynchronously()
+    inline void RunSynchronously()
     {
-        long status = (long)TaskStatus::Running;
-        Interlocked<long>::Exchange(m_nStatus, status);
-        try
-        {
-            if(NULL == parrent)
-            {
-                m_action(m_pAsyncState);
-            }
-            else
-            {
-                m_childAct(*parrent, m_pAsyncState);
-			}
-			VOIDRET_ASSERT
-            (
-                (long)TaskStatus::Canceled != m_nStatus && 
-                (long)TaskStatus::Running == m_nStatus/* 如果主线程先退出， 线程池还在执行， 那么此时 Task 堆栈就被破坏，此时需要立刻退出 Task */
-            );
-     
-			long status = (long)TaskStatus::WaitingForChildrenToComplete;
-            Interlocked<long>::Exchange(m_nStatus, status);
-            /* TODO : wait children finished */
-           /* for(int i = 0; i < (int)attachedTasks.Count(); i++)
-            {
-                attachedTasks[i]->Start();
-            }
-            for(int i = 0; i < (int)attachedTasks.Count(); i++)
-            {
-                attachedTasks[i]->Wait(-1);
-            }*/
-            status = (long)TaskStatus::RanToCompletion;
-            Interlocked<long>::Exchange(m_nStatus, status);
-        }
-        catch(const std::exception& e)
-        {
-			printf("Task catched exception : %s\n", e.what());
-			status = (long)TaskStatus::Faulted;
-            Interlocked<long>::Exchange(m_nStatus, status);
-        }
-        m_are.Set();
+        m_action(m_pAsyncState);
     }
     /**
      * @brief 启动 Task
@@ -466,9 +536,9 @@ public:
      */
     void Start()
     {
-        SubmitThreadpoolWork(work);
-        long status = (long)TaskStatus::WaitingForActivation;
-        Interlocked<long>::Exchange(m_nStatus, status);
+        m_mre.Reset();
+        SubmitThreadpoolWork(m_pWork);
+        Interlocked<TaskStatus>::Exchange(m_eStatus, TaskStatus::WaitingForActivation);
     }
     void Start(AsyncState args)
     {
@@ -477,23 +547,79 @@ public:
         Start();
     }
     /**
-     * @brief 等待 Task 完成执行过程
+     * @brief 同步等待 Task 完成执行过程
      * 
      * @param millisecondsTimeout 
      * @return true 
      * @return false 
      */
-    inline bool Wait(DWORD millisecondsTimeout)
+    inline bool WaitOne(DWORD millisecondsTimeout = INFINITE)
     {
-        return m_are.WaitOne(millisecondsTimeout);
+        return m_mre.WaitOne(millisecondsTimeout);
     }
-    inline bool Wait()
+    static Task* Delay(int millsecond, WEAK_PTR(CancellationToken) token = NULL)
     {
-        WaitForThreadpoolWorkCallbacks(work, (int)TaskStatus::WaitingForActivation > (int)m_nStatus/* true : 撤销在排队中的工作项 */);
-        return true;
+        ERROR_ASSERT(-2 < millsecond, "millsecond error");
+        Task* task = new Task
+        (
+            [](AsyncState args)->void 
+            {
+                int millsecond = (int)args[0];
+                WEAK_PTR(Task) delayTask = static_cast<WEAK_PTR(Task)>(args[1]);
+                WEAK_PTR(CancellationToken) token = static_cast<WEAK_PTR(CancellationToken)>(args[2]);
+                Timer t
+                (
+                    [](Object tArgs)->void
+                    {
+                        AsyncState args = static_cast<AsyncState>(tArgs);
+                        WEAK_PTR(Task) delayTask = static_cast<WEAK_PTR(Task)>(args[1]);
+                        WEAK_PTR(CancellationToken) token = static_cast<WEAK_PTR(CancellationToken)>(args[2]);
+                        if (token)
+                        {
+                            VOIDRET_ASSERT(!token->GetCancellationRequested());
+                        }
+                        static_cast<WEAK_PTR(IOCP)>(&delayTask->GetAsyncWaitHandle())->Release();/* Delay task normal finished */
+                    }, 
+                    args,
+                    millsecond, 
+                    0
+                );
+                if (token)
+                {
+                    while (!token->GetCancellationRequested())
+                    {
+                        delayTask->GetAsyncWaitHandle().WaitOne(0);
+                    }
+                    t.Change(0, 0);/* exit timer immediately */
+                    t.Dispose();
+                }
+                else
+                {
+                    delayTask->GetAsyncWaitHandle().WaitOne();
+                }
+            },
+            NULL,
+            token
+        );
+        task->Start(CreateAsyncState((Object)millsecond, task, token));
+        /*task->m_action = continuationAction;
+        task->m_pAsyncState = args;
+        task->m_pToken = token;*/
+        PTP_TASK_CALLBACK callback = DECLARE_TASKLAMDA
+        ({
+            WEAK_PTR(Task) t = static_cast<WEAK_PTR(Task)>(TASK_LAMDA_CONTEXT);
+            SetEventWhenCallbackReturns(Instance, t->m_mre.Handle());
+            t->TaskWorkProcessing();
+        });
+        WINAPI_ASSERT
+        (
+            task->m_pWork = CreateThreadpoolWork(callback, task, &(ThreadPoolSingleton::Ref().environment)),
+            "Task construct failed"
+        );
+        return task;
     }
     /**
-     * @brief 等待提供的所有 Task 对象完成执行过程
+     * @brief 同步等待提供的所有 Task 对象完成执行过程
      * 
      * @param tasks 
      * @param count 
@@ -501,31 +627,34 @@ public:
      * @return true 
      * @return false 
      */
-    static bool WaitAll(Task** tasks, int count, DWORD millisecondsTimeout = -1)
+    static bool WaitAll(Task** tasks, int count, DWORD millisecondsTimeout = INFINITE)
     {
-        WaitHandle** h = (WaitHandle**)malloc(sizeof(WaitHandle*) * count);
-        for(int i = 0 ; i < count ; i++)
+        ERROR_ASSERT(tasks, "tasks is nullptr");
+        WaitHandle** handles = new WaitHandle * [count];
+        for (int i = 0; i < count; i++)
         {
-            h[i] = &tasks[i]->m_are;
+            ERROR_ASSERT(tasks[i], "task is nullptr");
+            handles[i] = &tasks[i]->m_mre;
         }
-        bool bRet = WaitHandle::WaitAll(h, count, millisecondsTimeout);
-        free(h);
+        bool bRet = WaitHandle::WaitAll(handles, count, millisecondsTimeout);
+        delete[] handles;
         return bRet;
     }
-    static bool WaitAll(const std::initializer_list<Task*>& il, DWORD millisecondsTimeout = -1)
+    static bool WaitAll(const std::initializer_list<Task*>& il, DWORD millisecondsTimeout = INFINITE)
     {
-        WaitHandle** h = (WaitHandle**)malloc(sizeof(WaitHandle*) * il.size());
+        WaitHandle** handles = new WaitHandle * [il.size()];
         auto ptr = il.begin();
-        for(size_t i = 0; i < il.size(); i++, ptr++)
+        for (size_t i = 0; i < il.size(); i++, ptr++)
         {
-            h[i] = &((*ptr)->m_are);
+            ERROR_ASSERT(*ptr, "task is nullptr");
+            handles[i] = &((*ptr)->m_mre);
         }
-        bool bRet = WaitHandle::WaitAll(h, (DWORD)il.size(), millisecondsTimeout);
-        free(h);
+        bool bRet = WaitHandle::WaitAny(handles, (DWORD)il.size(), millisecondsTimeout);
+        delete[] handles;
         return bRet;
     }
     /**
-     * @brief 等待提供的任一 Task 对象完成执行过程
+     * @brief同步 等待提供的任一 Task 对象完成执行过程
      * 
      * @param tasks 
      * @param count 
@@ -533,73 +662,36 @@ public:
      * @return true 
      * @return false 
      */
-    static int WaitAny(Task** tasks, int count, DWORD millisecondsTimeout = -1)
+    static int WaitAny(Task** tasks, int count, DWORD millisecondsTimeout = INFINITE)
     {
-        WaitHandle** h = (WaitHandle**)malloc(sizeof(WaitHandle*) * count);
+        ERROR_ASSERT(tasks, "tasks is nullptr");
+        WaitHandle** handles = new WaitHandle*[count];
         for(int i = 0 ; i < count ; i++)
         {
-            h[i] = &tasks[i]->m_are;
+            ERROR_ASSERT(tasks[i], "task is nullptr");
+            handles[i] = &tasks[i]->m_mre;
         }
-        int n = WaitHandle::WaitAny(h, count, millisecondsTimeout);
-        free(h);
+        int n = WaitHandle::WaitAny(handles, count, millisecondsTimeout);
+        delete[] handles;
         return n;
     }
-    static int WaitAny(const std::initializer_list<Task*>& il, DWORD millisecondsTimeout = -1)
+    static int WaitAny(const std::initializer_list<Task*>& il, DWORD millisecondsTimeout = INFINITE)
     {
-        WaitHandle** h = (WaitHandle**)malloc(sizeof(WaitHandle*) * il.size());
+        WaitHandle** handles = new WaitHandle * [il.size()];
         auto ptr = il.begin();
         for(size_t i = 0; i < il.size(); i++, ptr++)
         {
-            h[i] = &((*ptr)->m_are);
+            ERROR_ASSERT(*ptr, "task is nullptr");
+            handles[i] = &((*ptr)->m_mre);
         }
-        int n = WaitHandle::WaitAny(h, (DWORD)il.size(), millisecondsTimeout);
-        free(h);
+        int n = WaitHandle::WaitAny(handles, (DWORD)il.size(), millisecondsTimeout);
+        delete[] handles;
         return n;
     }
-// protected:
-//     Action* m_pAct;
-//     Action* m_pAct1;
-//     void*   m_pArgsOfAction1;
-//     CancellationToken m_token;
-//     TaskCreationOptions m_eOption;
-//     /* ansy 异步策略 */
-//     int AsyncLunchPolicy[2] = 
-//     {
-//         std::launch::async | std::launch::deferred,
-//         std::launch::async
-//     };
-//     std::future<void> result;
-// public:
-//     Task(const Action& action) : 
-//         m_pAct(new Action(action)), m_pAct1(NULL), m_pArgsOfAction1(NULL),m_token(CancellationToken(false)), m_eOption(TaskCreationOptions::None){}
-//     Task(const Action& action, const CancellationToken& token, TaskCreationOptions option = TaskCreationOptions::None) : 
-//         m_pAct(action), m_pAct1(NULL),  m_pArgsOfAction1(NULL), m_token(token), m_eOption(option){}
-//     Task(const Action1& action, void* args) : 
-//         m_pAct(NULL), m_pAct1(new Action1(action)), m_pArgsOfAction1(args), m_token(CancellationToken(false)), m_eOption(TaskCreationOptions::None){}
-//     Task(const Action1& action, const CancellationToken& token, TaskCreationOptions option = TaskCreationOptions::None) : 
-//         m_pAct(NULL), m_pAct1(new Action1(action)), m_pArgsOfAction1(args), m_token(token), m_eOption(option){}
+};
+class TaskAwaiter
+{
 
-//     /**
-//      * @brief 启动 Task
-//      * 
-//      */
-//     void Start()
-//     {
-//         std::launch::async | std::launch::deferred
-//         if(m_pAct)
-//         {
-//             result = std::async(AsyncLunchPolicy[m_eOption], *m_pAct);
-//         }
-//         else
-//         {
-//             result = std::async(AsyncLunchPolicy[m_eOption], *m_pAct1, m_pArgsOfAction1);
-//         }
-//     }
-// };
-
-// struct System::Threading::Tasks::ValueTask
-// {
-//     std::async(std::launch::async, fetchDataFromDB, "Data");
 };
 // namespace System::Threading
 // {

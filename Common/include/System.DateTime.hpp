@@ -4,9 +4,9 @@
 #include "CompliedEntry.h"
 #include <stdio.h>
 
-#ifdef __LINUX
+#if defined(__LINUX)
 #include <sys/time.h>
-#elif __WINDOWS
+#elif defined(__WINDOWS)
 #pragma warning(disable:4996)
 #include <time.h>
 int gettimeofday(struct timeval *tp, void *tzp)
@@ -61,7 +61,7 @@ namespace System
 		LONG,		   /* %04d%02d%02d%02d%02d%02d%03d */
 		FORMATMAX
 	};
-    const char* TimeFormat[TimeFormatType::FORMATMAX] =
+    const char* TimeFormat[(int)TimeFormatType::FORMATMAX] =
     {
         "%04d-%02d-%02d %02d:%02d:%02d.%03d",
         "%04d-%02d-%02d %02d:%02d:%02d",
@@ -194,6 +194,10 @@ public:
     inline void ToString(char* buff)
     {
 	    sprintf(buff, TimeFormat[(UInt32)formatType], Year(), Month(), Day(), Hour(), Minute(), Second(), Milliseconds());
+    }
+    inline void ToString(char* buff, TimeFormatType format)
+    {
+        sprintf(buff, TimeFormat[(UInt32)format], Year(), Month(), Day(), Hour(), Minute(), Second(), Milliseconds());
     }
     /**
      * @brief 时间比较早晚

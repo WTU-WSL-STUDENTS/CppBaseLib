@@ -38,7 +38,9 @@ int main()
     printf("Changing period to .5 seconds.\n");
     t.Change(0, 500);
     are.WaitOne();
-
+    printf("Change frequence\n");
+    t.Change(0, 0);
+    Sleep(1000);
     t.Dispose();
     are.Dispose();
     printf("Destroying timer.\n");

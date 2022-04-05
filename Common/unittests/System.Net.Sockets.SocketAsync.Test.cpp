@@ -32,9 +32,8 @@ class Server
 	SocketAsync* listenSocket;
     long m_totalBytesRead;           // counter of the total # bytes received by the server
     long m_numConnectedSockets;      // the total number of clients connected to the server
+    CancellationTokenSource cts;
     Semaphore m_maxNumberAcceptedClients;
-    // System::EventHandler<SocketAsyncEventArgs&> IO_Completed;
-    // System::EventHandler<SocketAsyncEventArgs&> AcceptEventArg_Completed;
 public:
     Server(int numConnections = 4, int receiveBufferSize = 0x2000) :
         m_readWritePool(HeapList<SocketAsyncEventArgs*>(numConnections)),
@@ -55,6 +54,7 @@ public:
     }
     ~Server()
 	{
+        cts.Cancel();
 		for (int i = 0; i < m_numConnectedSockets; i++)
 		{
 			delete m_readWritePool[i]->GetAcceptSocket();
@@ -112,7 +112,14 @@ public:
 private:
     void StartAccept(SocketAsyncEventArgs &acceptEventArg)
     {
-        m_maxNumberAcceptedClients.WaitOne();
+        while (true)
+        {
+            cts.GetToken()->ThrowIfCancellationRequested();
+            if (m_maxNumberAcceptedClients.WaitOne(500))
+            {
+                break;
+            }
+        }
         bool willRaiseEvent = listenSocket->AcceptAsync(acceptEventArg);
         if (!willRaiseEvent)
         {
@@ -124,19 +131,19 @@ private:
     {
         VOIDRET_ASSERT(0 == e.GetSocketError());
         SocketAsyncEventArgs* readEventArgs = m_readWritePool[m_numConnectedSockets];
-        const SocketAsync* p = e.GetAcceptSocket();
-        readEventArgs->SetAcceptSocket(p);/* 转移 socket 资源所有权*/
+        SocketAsync* p = e.GetAcceptSocket();
+        // Get the socket for the accepted client connection and put it into the ReadEventArg object user token
+        readEventArgs->SetAcceptSocket(p);
+        e.SetAcceptSocket(NULL);
         Interlocked<long>::Increment(m_numConnectedSockets);
         Console.WriteLine("Client connection accepted. There are ", m_numConnectedSockets, " clients connected to the server");
 
-        // Get the socket for the accepted client connection and put it into the
-        //ReadEventArg object user token
 
         // As soon as the client is connected, post a receive to the connection
-        // bool willRaiseEvent = e.GetAcceptSocket()->ReceiveAsync(readEventArgs);
-        // if(!willRaiseEvent){
-        //     ProcessReceive(*readEventArgs);
-        // }
+         bool willRaiseEvent = e.GetAcceptSocket()->ReceiveAsync(*readEventArgs);
+         if(!willRaiseEvent){
+             ProcessReceive(*readEventArgs);
+         }
 
         // Accept the next connection request
          StartAccept(e);

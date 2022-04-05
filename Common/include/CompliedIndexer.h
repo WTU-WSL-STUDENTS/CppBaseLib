@@ -35,15 +35,15 @@
 #   define INLINE_SETTER
 #endif
 #define SETTER_VALUE Value
-#define DECLARE_SETTER(type, name, codeblock) INLINE_SETTER void Set##name(const type& SETTER_VALUE)         codeblock
+#define DECLARE_SETTER(type, name, codeblock) INLINE_SETTER void Set##name(type& SETTER_VALUE)              codeblock
+#define DECLARE_SETTER_RIGHT_VAL_ENABLE(type, name, codeblock) INLINE_SETTER void Set##name(type SETTER_VALUE)  codeblock
 /**
  * @brief 索引器定义 get & set
  * 
  */
 #define DECLARE_INDEXER(type, name, getterCodeblock, setterCodeblock)   \
     DECLARE_CONST_GETTER(type, name, getterCodeblock)                   \
-    DECLARE_SETTER(type, name, setterCodeblock)
-
+    DECLARE_SETTER_RIGHT_VAL_ENABLE(type, name, setterCodeblock)
 /**
  * @brief 定义私有对象 m_##name, 并声明其索引器 
  * 
@@ -53,5 +53,11 @@ private:                                        \
     type m_##name{};                            \
 public:                                         \
     DECLARE_INDEXER(type, name, {return m_##name;}, {m_##name = SETTER_VALUE;})
+#define DECLARE_DATAWRAPPER_INDEXER_RIGHT_VAL_ENABLE(type, name) \
+private:                                                    \
+    type m_##name{};                                        \
+public:                                                     \
+    DECLARE_CONST_GETTER(type, name, { return m_##name; })  \
+    DECLARE_SETTER_RIGHT_VAL_ENABLE(type, name, {m_##name = SETTER_VALUE;})
 
 #endif

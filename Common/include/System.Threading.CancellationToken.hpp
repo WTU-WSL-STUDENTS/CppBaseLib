@@ -25,7 +25,18 @@ private:
     WEAK_PTR(readonly bool) m_pCancel;
 public:
     CancellationToken(const bool &canceled) : m_pCancel(&canceled){}
+    ~CancellationToken() 
+    {
+        m_pCancel = NULL;
+    }
     DECLARE_CONST_GETTER(bool, CancellationRequested, { return *m_pCancel; })
+    void ThrowIfCancellationRequested()
+    {
+        if (GetCancellationRequested())
+        {
+            throw std::exception("Receive cancel request");
+        }
+    }
 };
 class System::Threading::CancellationTokenSource
 {
@@ -37,7 +48,6 @@ public:
     ~CancellationTokenSource()
     {
         ERROR_ASSERT(m_token, "Token has disposed unexpected");
-        m_token->m_pCancel = NULL;
         delete m_token;
         m_token = NULL;
     }

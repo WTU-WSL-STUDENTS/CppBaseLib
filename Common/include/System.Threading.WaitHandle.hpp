@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-01-17 15:23:58
  * @LastEditors: like
- * @LastEditTime: 2022-03-11 17:08:17
+ * @LastEditTime: 2022-04-03 23:23:14
  */
 #ifndef SYSTEM_THREADING_WAITHANDLE_HPP
 #define SYSTEM_THREADING_WAITHANDLE_HPP
@@ -86,35 +86,20 @@ public:
         Dispose(true);
     } 
     /**
-     * @brief 如果当前实例收到信号，则为 true。 如果当前实例永不发出信号，则 WaitOne() 永不返回
-     * 
-     * @return true 
-     * @return false 
-     */
-    virtual bool WaitOne()
-    {
-        return WaitOne(INFINITE);
-    }
-    /**
      * @brief 如果当前实例收到信号，则为 true；否则为 false。
      * 
      * @param millisecond 等待的毫秒数, -1 表示无限期等待
      * @return true 
      * @return false 
      */
-    virtual bool WaitOne(DWORD millisecond)
+    virtual bool WaitOne(DWORD millisecond = INFINITE)
     {
         int status;
         if(WAIT_OBJECT_0 == (status = WaitForSingleObject(m_hWaitHandle, millisecond)))
         {
             return true;
         }
-        else if(WAIT_TIMEOUT == status)
-        {
-            printf("WaitOne WaitForSingleObject Timeout\n");
-            return false;
-        }
-        printf("WaitOne WaitForSingleObject Failed , Error Code : %d\n", GetLastError());
+        WINAPI_ASSERT(WAIT_TIMEOUT == status, "WaitOne WaitForSingleObject Failed");
         return false;
     }
     /**
@@ -155,21 +140,22 @@ public:
         {
             return true;
         }
-        else if(WAIT_TIMEOUT == status)
-        {
-            printf("WaitAll WaitForMultipleObjects Timeout\n");
-            return false;
-        }
-        else if(WAIT_FAILED == status)
-        {
-            printf("WaitAll WaitForMultipleObjects Failed, Error Code : %d\n", GetLastError());
-            return false;
-        }
-        else if (WAIT_ABANDONED_0 >= status && status <= (status - WAIT_ABANDONED_0))/* 虽然没有通过等待, 但所在线程已经被释放 */
-        {
-            waitHandles[status - WAIT_ABANDONED_0]->Dispose(); 
-        }
-        return true;
+        //else if(WAIT_TIMEOUT == status)
+        //{
+        //    printf("WaitAll WaitForMultipleObjects Timeout\n");
+        //    return false;
+        //}
+        //else if(WAIT_FAILED == status)
+        //{
+        //    printf("WaitAll WaitForMultipleObjects Failed, Error Code : %d\n", GetLastError());
+        //    return false;
+        //}
+        //else if (WAIT_ABANDONED_0 >= status && status <= (status - WAIT_ABANDONED_0))/* 虽然没有通过等待, 但所在线程已经被释放 */
+        //{
+        //    waitHandles[status - WAIT_ABANDONED_0]->Dispose(); 
+        //}
+        WINAPI_ASSERT(WAIT_TIMEOUT == status, "WaitAll WaitForSingleObject Failed");
+        return false;
     }
     /**
      * @brief 等待指定数组中的任一元素收到信号
@@ -192,9 +178,10 @@ public:
      */
     static int WaitAny(WaitHandle** waitHandles, DWORD count, DWORD millisecond)
     {
-        if(count > WAIT_ABANDONED_0)
+        if(count > MAXIMUM_WAIT_OBJECTS)
         {
-            throw "WaitAny Support Max Handle Count : 128";
+            printf("WaitAny  Support Max Handle Count : 64");
+            return false;
         }
         HANDLE* handles = (HANDLE*)malloc(sizeof(HANDLE) * count);
         for(DWORD i = 0; i < count; i++)
@@ -207,21 +194,23 @@ public:
         {
             return status;
         }
-        else if(WAIT_TIMEOUT == status)
-        {
-            printf("WaitAny WaitForMultipleObjects Timeout\n");
-            return millisecond;
-        }
-        else if(WAIT_FAILED == status)
-        {
-            printf("WaitAny WaitForMultipleObjects Failed, Error Code : %d\n", GetLastError());
-            return -1;
-        }
-        else if (WAIT_ABANDONED_0 >= status && status <= (status - WAIT_ABANDONED_0))/* 虽然没有通过等待, 但所在线程已经被释放 */
-        {
-            printf("WaitHandle has abandoned\n");
-            return status - WAIT_ABANDONED_0;/* abandoned handle index */
-        }
+        WINAPI_ASSERT(WAIT_TIMEOUT == status, "WaitAll WaitForSingleObject Failed");
+        return -1;
+        //else if(WAIT_TIMEOUT == status)
+        //{
+        //    printf("WaitAny WaitForMultipleObjects Timeout\n");
+        //    return millisecond;
+        //}
+        //else if(WAIT_FAILED == status)
+        //{
+        //    printf("WaitAny WaitForMultipleObjects Failed, Error Code : %d\n", GetLastError());
+        //    return -1;
+        //}
+        //else if (WAIT_ABANDONED_0 >= status && status <= (status - WAIT_ABANDONED_0))/* 虽然没有通过等待, 但所在线程已经被释放 */
+        //{
+        //    printf("WaitHandle has abandoned\n");
+        //    return status - WAIT_ABANDONED_0;/* abandoned handle index */
+        //}
     }
     /**
      * @brief 如果信号和等待都成功完成，则为 true；如果等待没有完成，则此方法一直阻塞不返回

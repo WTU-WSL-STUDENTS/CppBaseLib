@@ -11,8 +11,13 @@ add_definitions(-D__WINDOWS)
 add_definitions(-DMSVC_64) 
 
 include_directories(../../include)
+include_directories(../)
 
 add_executable(System.List.Test ../System.List.Test.cpp)
+add_executable (System.Net.Sockets.Socket.Test ../System.Net.Sockets.Socket.Test.cpp)
 add_executable (System.Net.Sockets.SocketAsync.Test ../System.Net.Sockets.SocketAsync.Test.cpp)
 add_executable (System.Threading.ThreadPool.Test ../System.Threading.ThreadPool.Test.cpp)
+add_executable (System.Threading.Thread.Test ../System.Threading.Thread.Test.cpp)
+add_executable (System.Threading.Timer.Test ../System.Threading.Timer.Test.cpp)
+add_executable (System.Threading.Tasks.Task.Test ../System.Threading.Tasks.Task.Test.cpp)
 

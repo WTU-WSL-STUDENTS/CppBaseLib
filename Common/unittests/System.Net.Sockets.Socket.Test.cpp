@@ -65,13 +65,13 @@ void SocketInfoTest()
 void AnsycSocket()
 {
     System::Net::Sockets::Socket tcpSocket(AddressFamily::InterNetwork, SocketType::Stream, ProtocolType::IPPROTO_TCP);
-    System::Net::Sockets::Socket* client;
     SocketAddress addr(IPAddress::Loopback, 9999);
     tcpSocket.Bind(addr);
     tcpSocket.Listen(1);
-    tcpSocket.SetBlocking(false);
-    tcpSocket.Accept(addr);
-    
+    //tcpSocket.SetBlocking(false);
+    System::Net::Sockets::Socket* client = tcpSocket.Accept(addr);
+    delete client;
+    client = NULL;
     // tcpSocket.AcceptAnsyc(addr);
     // while (1)
     // {
@@ -194,6 +194,9 @@ void AnsycSocket()
 // }
 int main()
 {
+#ifdef _DEBUG
+    MEMORYLEAK_ASSERT;
+#endif
     SocketInfoTest();
     AnsycSocket();
     return 0;

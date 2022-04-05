@@ -138,13 +138,13 @@ public:
     {
         int nRet;
         WINAPI_ASSERT(THREAD_PRIORITY_ERROR_RETURN != (nRet = GetThreadPriority(m_hWaitHandle)), "https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getthreadpriority");
-        if(Lowest > nRet)
+        if(ThreadPriority::Lowest > nRet)
         {
-            return Lowest;
+            return ThreadPriority::Lowest;
         }
-        else if(Highest < nRet)
+        else if(ThreadPriority::Highest < nRet)
         {
-            return Highest;
+            return ThreadPriority::Highest;
         }
         return (ThreadPriority)nRet;
     }
@@ -202,7 +202,12 @@ public:
      * @return true 
      * @return false 
      */
-    bool TryGetExecutionContext(CONTEXT &context)
+    bool TryGetExecutionContext(
+#if defined(MSVC_64)
+        WOW64_CONTEXT&context)
+#elif defined(MSVC_32) 
+        CONTEXT& context)
+#endif
     {
         VALRET_ASSERT(m_hWaitHandle != GetCurrentThread() && !(Running & m_nStatus), false);
         bool bRet = false;

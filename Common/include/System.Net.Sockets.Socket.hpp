@@ -69,6 +69,11 @@ public:
             "https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-socket"
         );
     }
+    Socket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, SOCKET socket) :
+        m_addressFamily(addressFamily), m_sockType(socketType), m_protoType(protocolType), m_socket(socket),
+        m_bIsBlocking(true) /* 默认为阻塞模式 */
+    {
+    }
     /**
      * @brief m_socket 调用 Close() 进行资源释放, 通过 Accept 创建的 Socket 对象不需要调用 Close()
      * 
@@ -98,6 +103,15 @@ public:
     {
         return m_sockType;
     })
+    /**
+     * @brief 获取 Socket 的协议类型
+     *
+     */
+    DECLARE_CONST_GETTER(ProtocolType, ProtocolType,
+    {
+        return m_protoType;
+    })
+
     /**
      * @brief 获取已经从网络接收且可供读取的数据量
      * 
