@@ -29,6 +29,7 @@ using PTP_TASK_CALLBACK = PTP_WORK_CALLBACK;
 namespace System
 {
     class IAsyncResult;/* https://docs.microsoft.com/zh-cn/dotnet/api/system.iasyncresult.asyncwaithandle?view=net-5.0 */
+	using AsyncCallback = Action<WEAK_PTR(IAsyncResult)>;
 };
 namespace System::Threading::Tasks
 {
@@ -536,7 +537,7 @@ public:
      */
     void Start()
     {
-        m_mre.Reset();
+		m_mre.Reset();
         SubmitThreadpoolWork(m_pWork);
         Interlocked<TaskStatus>::Exchange(m_eStatus, TaskStatus::WaitingForActivation);
     }

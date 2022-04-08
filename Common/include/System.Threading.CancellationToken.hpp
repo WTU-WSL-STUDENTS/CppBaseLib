@@ -24,7 +24,9 @@ class System::Threading::CancellationToken
 private:
     WEAK_PTR(readonly bool) m_pCancel;
 public:
-    CancellationToken(const bool &canceled) : m_pCancel(&canceled){}
+    CancellationToken(const bool &canceled) : m_pCancel(&canceled)
+    {
+    }
     ~CancellationToken() 
     {
         m_pCancel = NULL;
@@ -44,7 +46,10 @@ private:
     bool m_bCancel;
     CancellationToken* m_token;
 public:
-    CancellationTokenSource() : m_bCancel(false), m_token(new CancellationToken(m_bCancel)){}
+    CancellationTokenSource() : m_bCancel(false), m_token(new CancellationToken(m_bCancel))
+    {
+        ERROR_ASSERT(m_token, "new CancellationToken failed");
+    }
     ~CancellationTokenSource()
     {
         ERROR_ASSERT(m_token, "Token has disposed unexpected");
@@ -74,6 +79,13 @@ public:
         // timer = CreateThreadpoolTimer(timercallback,
         //                           NULL,
         //                           &CallBackEnviron);
-    }
+	}
+	void ThrowIfCancellationRequested()
+	{
+		if (GetCancellationRequested())
+		{
+			throw std::exception("Receive cancel request");
+		}
+	}
 };
 #endif

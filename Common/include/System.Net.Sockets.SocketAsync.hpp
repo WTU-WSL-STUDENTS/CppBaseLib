@@ -20,7 +20,7 @@
  * This value must be at least 16 bytes more than the maximum address length for the transport protocol in use
  * 
  */
-#define IOCP_SOCKET_ADDR_BUF_SIZE (sizeof(sockaddr_in6) + 16)
+#define IOCP_SOCKET_ADDR_BUF_SIZE (sizeof(sockaddr_in) + 16)
 /**
  * @brief 依据客户定义的 bufferSize 计算完成端口实际的 BufferSize 
  * 
@@ -41,16 +41,24 @@ class System::Net::Sockets::SocketAsyncEventArgs
 {
 friend class SocketAsyncExtension;
 private:
-    WEAK_PTR(char)                  m_pBuffer;
     WEAK_PTR(SocketAsyncExtension)  m_Socket;
-
-    long    m_nLastOperation; 
-	DWORD   m_dwBytesTransferred;
-	WSAOVERLAPPED m_olOverlap;
+	WSAOVERLAPPED           m_olOverlap;
+    WSABUF                  m_buffer;
+    int                     m_nbyteTransfered;
 public:
     EventHandler<SocketAsyncEventArgs&> Completed;
 
-    SocketAsyncEventArgs() : m_Socket(NULL), m_nLastOperation((long)SocketAsyncOperation::None), Completed(NULL), m_olOverlap({0}) {}
+    //DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(SocketAsyncEventArgs)
+    SocketAsyncEventArgs() : m_Socket(NULL), m_olOverlap({ 0 }), m_buffer({0}), m_nbyteTransfered(0),
+        Completed(NULL), m_LastOperation(SocketAsyncOperation::None),
+        m_SocketError(0), m_SocketFlags(SocketFlags::None), m_UserToken(NULL)
+    {
+        //SOCKETAPI_ASSERT(m_olOverlap.hEvent = WSACreateEvent(), "Create overlap failed");
+    }
+    ~SocketAsyncEventArgs()
+    {
+        //WSACloseEvent(m_olOverlap.hEvent);
+    }
     /**
      * @brief AcceptAsync 接口返回的 Socket 对象
      * 
@@ -64,26 +72,30 @@ public:
         MemoryBarrier(); 
     })
     /**
-     * @brief 异步套接字方法的数据缓冲区, （TODO: 需要在合适的时候初始化）
+     * @brief 异步套接字方法的用户缓冲区
+     * system owns these buffers and the application may not access them
      * 
      */
     DECLARE_GETTER(WEAK_PTR(char), Buffer, 
     {
-        return m_pBuffer;
+        return m_buffer.buf;
     })
     /**
-     * @brief 获取在完成端口中传输的字节数
+     * @brief 获取在完成端口中传输的字节数, -1 代表 IOCP 出错
      * 
      */
-    DECLARE_GETTER(DWORD, BytesTransferred,
-    {
-        return m_dwBytesTransferred;
-    })
+	DECLARE_GETTER(DWORD, BytesTransferred,
+	{
+		return m_nbyteTransfered;
+	})
     /**
-     * @brief 
+     * @brief 用户缓冲区的长度
      * 
      */
-    DECLARE_DATAWRAPPER_INDEXER(int, Count)
+	DECLARE_GETTER(int, Count,
+	{
+		return m_buffer.len;
+	})
     /**
      * @brief ConnectAsync 接口返回的 Socket 对象
      * 
@@ -92,30 +104,32 @@ public:
     {
         return m_Socket;
     })
-    DECLARE_INDEXER(SocketAsyncOperation, LastOperation,
-    {
-        return (SocketAsyncOperation)m_nLastOperation;
-    },
-    {
-        long val = (long)SETTER_VALUE;
-        System::Threading::Interlocked<long>::Exchange(m_nLastOperation, val);
-    })
-    DECLARE_DATAWRAPPER_INDEXER(int, Offset)
+    /**
+	 * @brief 获取 IO 操作的类型
+	 *
+	 */
+    DECLARE_DATAWRAPPER_INDEXER(SocketAsyncOperation, LastOperation)
     /**
      * @brief 获取或设置异步套接字操作的结果
+     * 1. IOCP 无数据， 返回异步等待结果
+     * 2. IOCP 有数据， 返回同步 IO 操作结果
      * 
      */
-    DECLARE_GETTER(int, SocketError, { return WSAGetLastError(); })
-    DECLARE_SETTER_RIGHT_VAL_ENABLE(int, SocketError, { return WSASetLastError(SETTER_VALUE); })
-
+    DECLARE_DATAWRAPPER_INDEXER(DWORD, SocketError)
+    
     DECLARE_DATAWRAPPER_INDEXER(SocketFlags, SocketFlags)
-    DECLARE_DATAWRAPPER_INDEXER_RIGHT_VAL_ENABLE(Object, UserToken)
+    DECLARE_DATAWRAPPER_INDEXER(Object, UserToken)
 
-    void SetBuffer(WEAK_PTR(char) buffer, int size)
+    void SetBuffer(WEAK_PTR(char) buffer, int count)
     {
-        m_pBuffer   = buffer;
-        m_Count     = size;
-        m_Offset    = 0;
+        m_buffer.buf = buffer;
+        m_buffer.len = count;
+    }
+    void SetBuffer(int offset, int count)
+    {
+		ERROR_ASSERT(m_buffer.buf, "need SetBuffer first");
+        m_buffer.buf += offset;
+		m_buffer.len = count;
     }
 };  
 /**
@@ -124,34 +138,30 @@ public:
  */
 class IOCPExtensionInitlializer
 {
-#define INIT_SOCKET_IOCP_FUNC(capitalFuncName) (GetSocketAsyncFunctionFromGuid<LPFN_##capitalFuncName>(GUID(WSAID_##capitalFuncName)))
-private:
-	SOCKET m_socket;
+#define INIT_SOCKET_IOCP_FUNC(capitalFuncName) (GetSocketAsyncFunctionFromGuid<LPFN_##capitalFuncName>(socket, GUID(WSAID_##capitalFuncName)))
 public:
     LPFN_ACCEPTEX               AcceptEX;      
-    LPFN_CONNECTEX              ConnectEX;    
-    LPFN_DISCONNECTEX           DisconnectEX; 
-    LPFN_GETACCEPTEXSOCKADDRS   GetAcceptExSockAddrs;
-    LPFN_TRANSMITFILE           TransmitFile;
-    LPFN_TRANSMITPACKETS        TransmitPackets;
-    LPFN_WSARECVMSG             WSARecvMsg;
-    LPFN_WSASENDMSG             WSASendMsg;
-    // LPFN_WSAPOLL                WSAPoll;
-    IOCPExtensionInitlializer(SOCKET socket) : m_socket(socket)
+	/*LPFN_CONNECTEX              ConnectEX;
+	LPFN_DISCONNECTEX           DisconnectEX;
+	LPFN_GETACCEPTEXSOCKADDRS   GetAcceptExSockAddrs;
+	LPFN_TRANSMITFILE           TransmitFile;
+	LPFN_TRANSMITPACKETS        TransmitPackets;
+	LPFN_WSARECVMSG             WSARecvMsg;
+	LPFN_WSASENDMSG             WSASendMsg;*/
+    IOCPExtensionInitlializer(SOCKET socket)
     {  
         AcceptEX            = INIT_SOCKET_IOCP_FUNC(ACCEPTEX);
-        ConnectEX           = INIT_SOCKET_IOCP_FUNC(CONNECTEX);
+        /*ConnectEX           = INIT_SOCKET_IOCP_FUNC(CONNECTEX);
         DisconnectEX        = INIT_SOCKET_IOCP_FUNC(DISCONNECTEX);
         GetAcceptExSockAddrs= INIT_SOCKET_IOCP_FUNC(GETACCEPTEXSOCKADDRS);
         TransmitFile        = INIT_SOCKET_IOCP_FUNC(TRANSMITFILE);
         TransmitPackets     = INIT_SOCKET_IOCP_FUNC(TRANSMITPACKETS);
         WSARecvMsg          = INIT_SOCKET_IOCP_FUNC(WSARECVMSG);
-        WSASendMsg          = INIT_SOCKET_IOCP_FUNC(WSASENDMSG);
-        // WSAPoll             = INIT_SOCKET_IOCP_FUNC(WSAPOLL);
-    }
+        WSASendMsg          = INIT_SOCKET_IOCP_FUNC(WSASENDMSG);*/
+	}
 private:
     template<typename TFuncPtr>
-    TFuncPtr GetSocketAsyncFunctionFromGuid(const GUID& guid)
+    TFuncPtr GetSocketAsyncFunctionFromGuid(SOCKET socket, const GUID& guid)
     {
         TFuncPtr lpfn = NULL;
         DWORD dwBytes;
@@ -159,7 +169,7 @@ private:
         (
             SOCKET_ERROR != WSAIoctl
             (
-                m_socket,
+                socket,
                 SIO_GET_EXTENSION_FUNCTION_POINTER,
                 const_cast<GUID*>(&guid), sizeof (guid), 
                 &lpfn, sizeof (lpfn), 
@@ -169,7 +179,8 @@ private:
         );
         return lpfn;
     }
-};  
+}; 
+#define ASYNC_POLL_INTERVEL (1000 * 100/* 100 ms */)
 /**
  * @brief 基于完成端口的异步 Socket 扩展
  * 
@@ -177,113 +188,187 @@ private:
 class System::Net::Sockets::SocketAsyncExtension final : public Socket
 {
 private:
-    /**
-     * @brief Socket IOCP 库资源初始化对象
-     * 
-     */
-#   define AcceptEX             m_socketAsynclibraryInitlializer->AcceptEX
-#   define ConnectEX            m_socketAsynclibraryInitlializer->ConnectEX
-#   define DisconnectEX         m_socketAsynclibraryInitlializer->DisconnectEX
-#   define GetAcceptExSockAddrs m_socketAsynclibraryInitlializer->GetAcceptExSockAddrs
-#   define TransmitFile         m_socketAsynclibraryInitlializer->TransmitFile
-#   define TransmitPackets      m_socketAsynclibraryInitlializer->TransmitPackets
-#   define WSARecvMsg           m_socketAsynclibraryInitlializer->WSARecvMsg
-#   define WSASendMsg           m_socketAsynclibraryInitlializer->WSASendMsg
-#   define WSAPoll              m_socketAsynclibraryInitlializer->WSAPoll
+#define AcceptEX             m_socketAsynclibraryInitlializer->AcceptEX
+#define ConnectEX            m_socketAsynclibraryInitlializer->ConnectEX
+#define DisconnectEX         m_socketAsynclibraryInitlializer->DisconnectEX
+#define GetAcceptExSockAddrs m_socketAsynclibraryInitlializer->GetAcceptExSockAddrs
+#define TransmitFile         m_socketAsynclibraryInitlializer->TransmitFile
+#define TransmitPackets      m_socketAsynclibraryInitlializer->TransmitPackets
+#define WSARecvMsg           m_socketAsynclibraryInitlializer->WSARecvMsg
+#define WSASendMsg           m_socketAsynclibraryInitlializer->WSASendMsg
+#define WSAPoll              m_socketAsynclibraryInitlializer->WSAPoll
+
 private:
     HANDLE m_hCompPort;
-    System::Threading::Tasks::Task* m_CompPortFinishedTask = new System::Threading::Tasks::Task([](AsyncState c)->void
+    bool m_bOwnerIOCP;
+    System::Threading::Tasks::Task* m_AcceptAsyncTask = new System::Threading::Tasks::Task([](AsyncState c)->void
     {
-        /* 通过调用 m_CompPortFinishedTask.Start(args) 复用 Task */
+        /* 通过调用 m_AcceptAsyncTask.Start(args) 复用 Task */
+		CANARY_ASSERT(c);
         SocketAsyncExtension* p = static_cast<SocketAsyncExtension*>(c[0]);
         SocketAsyncEventArgs* e = static_cast<SocketAsyncEventArgs*>(c[1]);
-        SOCKET                s = (SOCKET)c[2];
-        if (!p->WaitOne(*e))
-        {
-            closesocket(s);
-            throw std::exception("Accept task canceled");
-        }
+		SocketAsyncExtension* client = static_cast<SocketAsyncExtension*>(c[2]);
+		CANARY_ASSERT(NULL == e->GetAcceptSocket());
 
-        SocketAsyncExtension* sae = new SocketAsyncExtension(p->GetAddressFamily(), p->GetSocketType(), p->GetProtocolType(), s);
-        CANARY_ASSERT(NULL == e->GetAcceptSocket());
-        e->SetAcceptSocket(sae);
+        /* ERROR_NETNAME_DELETED : AcceptAsync 启用接收第一个包， 即使客户端 connect 成功但是没有发消息, AcceptAsync 此时不会完成。 如果此时客户端终止, 会出现该错误 */
+        e->m_nbyteTransfered = p->WaitOne(*e);
+        if (SOCKET_ERROR == e->m_nbyteTransfered)
+		{
+			delete client;
+			client = NULL;
+			throw std::exception("Accept task canceled");
+		}
+		e->m_SocketError = 0;/* ERROR_INVALID_PARAMETER */
+        e->SetAcceptSocket(client);/* MemoryBarrier */
+
         e->Completed(e->GetUserToken(), *e);
-    });
+    },
+	CreateAsyncState(this, (Object)NULL/*SocketAsyncEventArgs*/, (Object)NULL/*SOCKET*/));
+
+    System::Threading::Tasks::Task* m_IOAsyncTask = new System::Threading::Tasks::Task([](AsyncState c)->void
+    {
+        /* 通过调用 m_AcceptAsyncTask.Start(args) 复用 Task */
+        CANARY_ASSERT(c);
+        SocketAsyncExtension* p = static_cast<SocketAsyncExtension*>(c[0]);
+        SocketAsyncEventArgs* e = static_cast<SocketAsyncEventArgs*>(c[1]);
+        SocketAsyncOperation op = (SocketAsyncOperation)(long)c[2];
+
+		e->m_nbyteTransfered = p->WaitOne(*e);
+		/*if (SOCKET_ERROR == e->m_nbyteTransfered)
+		{
+			throw std::exception("Async IO task canceled");
+		}*/
+        ERROR_ASSERT(0 == GetLastError() || -1 == e->m_nbyteTransfered, "Catched rare bug !");
+		e->m_SocketError = 0;
+		e->SetLastOperation(op);
+        MemoryBarrier();
+            
+		e->Completed(e->GetUserToken(), *e);
+	},
+	CreateAsyncState(this, (Object)NULL/*SocketAsyncEventArgs*/, (Object)SocketAsyncOperation::None));
+
+	SocketAsyncExtension(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, HANDLE serverIOCP/* 是否将 Accept 和 IO 共用一个完成端口，默认禁用 */) : 
+        Socket(addressFamily, socketType, protocolType), m_socketAsynclibraryInitlializer(NULL), m_bOwnerIOCP(false)
+	{
+#   ifdef SHARE_ASYNC_ACCEPT_IOCP_WITH_ASYNC_IO
+		WINAPI_ASSERT(NULL != (m_hCompPort = CreateIoCompletionPort((HANDLE)m_socket, serverIOCP, (u_long)0, 0)), "SocketAsyncExtension construction failed");
+#   else
+	    WINAPI_ASSERT(NULL != (m_hCompPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, (u_long)0, 0)), "SocketAsyncExtension construction failed");
+	    WINAPI_ASSERT(NULL != (m_hCompPort = CreateIoCompletionPort((HANDLE)m_socket, m_hCompPort, (u_long)0, 0)), "SocketAsyncExtension construction failed");
+        m_bOwnerIOCP = true;
+#   endif
+	}
 public:
     IOCPExtensionInitlializer* m_socketAsynclibraryInitlializer;
     DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(SocketAsyncExtension);
-    SocketAsyncExtension(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType) : Socket(addressFamily, socketType, protocolType), m_socketAsynclibraryInitlializer(NULL)
+    SocketAsyncExtension(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType) :
+        Socket(addressFamily, socketType, protocolType), m_socketAsynclibraryInitlializer(NULL), m_bOwnerIOCP(true)
     { 
-        // Create a handle for the completion port
         WINAPI_ASSERT(NULL != (m_hCompPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, (u_long) 0, 0)), "SocketAsyncExtension construction failed");
-        // Associate the listening socket with the completion port
         WINAPI_ASSERT(NULL != (m_hCompPort = CreateIoCompletionPort((HANDLE)m_socket, m_hCompPort, (u_long) 0, 0)), "SocketAsyncExtension construction failed");
-    }
-    SocketAsyncExtension(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, SOCKET s) : Socket(addressFamily, socketType, protocolType, s), m_socketAsynclibraryInitlializer(NULL)
-    {
-        // Create a handle for the completion port
-        WINAPI_ASSERT(NULL != (m_hCompPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, (u_long)0, 0)), "SocketAsyncExtension construction failed");
-        // Associate the listening socket with the completion port
-        WINAPI_ASSERT(NULL != (m_hCompPort = CreateIoCompletionPort((HANDLE)s, m_hCompPort, (u_long)0, 0)), "SocketAsyncExtension construction failed");
+        m_socketAsynclibraryInitlializer = new IOCPExtensionInitlializer(m_socket);
     }
     ~SocketAsyncExtension()
-    {
+	{
+		if (m_hCompPort && m_bOwnerIOCP)
+		{
+			CloseHandle(m_hCompPort);
+			m_hCompPort = NULL;
+		}
         SAVE_DELETE_PTR(m_socketAsynclibraryInitlializer);
-        SAVE_DELETE_PTR(m_CompPortFinishedTask);
-        if (m_hCompPort)
-        {
-            CloseHandle(m_hCompPort);
-            m_hCompPort = NULL;
-        }
+		SAVE_DELETE_PTR(m_AcceptAsyncTask);
+		SAVE_DELETE_PTR(m_IOAsyncTask);
     }
     bool AcceptAsync(SocketAsyncEventArgs &e)
-    {
-        SOCKET s = socket((int)m_addressFamily, (int)m_sockType, (int)m_protoType);
-        memset(&e.m_olOverlap, 0, sizeof (e.m_olOverlap));
-        if(AcceptEX(
+	{
+		ZeroMemory(&e.m_olOverlap, sizeof(OVERLAPPED));
+        SocketAsyncExtension* p = new SocketAsyncExtension(m_addressFamily, m_sockType, m_protoType);//, m_hCompPort);
+        DWORD dwbyteTransfered;
+        if (AcceptEX(
             m_socket,
-            s,
+            p->m_socket,
             e.GetBuffer(),
-            e.GetCount(),
+            //e.GetCount(),
+            0,/* AcceptAsync 禁用连接后立刻读数据*/
             IOCP_SOCKET_ADDR_BUF_SIZE, 
             IOCP_SOCKET_ADDR_BUF_SIZE, 
-            &e.m_dwBytesTransferred, 
+            &dwbyteTransfered,
             &e.m_olOverlap
          ))
         {
-            SocketAsyncExtension *p = new SocketAsyncExtension(m_addressFamily, m_sockType, m_protoType);
             e.SetAcceptSocket(p);
             return false;
         }
         SOCKETAPI_ASSERT(WSA_IO_PENDING == WSAGetLastError(), "https://docs.microsoft.com/en-us/windows/win32/api/mswsock/nf-mswsock-acceptex");
-        m_CompPortFinishedTask->Start(CreateAsyncState(this, &e, (Object)s));
-        //return !m_CompPortFinishedTask->Wait();
+        /* 避开重复启动任务 Start(AsyncState) CreateAsyncState / DisposeAsyncState 开销 */
+        AsyncState context = m_AcceptAsyncTask->GetAsyncState();
+        context[1] = &e;
+        context[2] = p;
+        m_AcceptAsyncTask->Start();
         return true;
     }
     bool ReceiveAsync(SocketAsyncEventArgs& e)
-    {
-        /* https://docs.microsoft.com/en-us/previous-versions/windows/desktop/legacy/ms741687(v=vs.85) */
-        //WSARecvMsg(e.GetAcceptSocket()->GetHandle(),);
-        return false;
+	{
+        DWORD byteTransfered;
+        int nRet = WSARecv
+		(
+			m_socket, &e.m_buffer, 1, &byteTransfered,// NULL,
+            (DWORD*)&e.m_SocketFlags, &e.m_olOverlap, NULL /* 这里不知道为什么只能为 NULL 太坑了*/
+		);
+		if (0 == nRet)
+		{
+            e.m_nbyteTransfered = WaitOne(e, 0);/* 将完成端口的包取走 */
+            return false;
+		}
+		SOCKETAPI_ASSERT(WSA_IO_PENDING == WSAGetLastError(), "ReceiveAsync failed");
+		AsyncState context = m_IOAsyncTask->GetAsyncState();
+		context[1] = &e;
+        context[2] = (Object)SocketAsyncOperation::Receive;
+        m_IOAsyncTask->Start();
+		return true;
+    }
+    bool SendAsync(SocketAsyncEventArgs& e)
+	{
+		DWORD byteTransfered;
+		int nRet = WSASend
+		(
+			m_socket, &e.m_buffer, 1, &byteTransfered,// NULL,
+			(DWORD)e.m_SocketFlags, &e.m_olOverlap, NULL
+		);
+		if (0 == nRet)
+		{
+			e.m_nbyteTransfered = WaitOne(e, 0);/* 将完成端口的包取走 */
+			return false;
+		}
+		SOCKETAPI_ASSERT(WSA_IO_PENDING == WSAGetLastError(), "SendAsync failed");
+		AsyncState context = m_IOAsyncTask->GetAsyncState();
+		context[1] = &e;
+		context[2] = (Object)SocketAsyncOperation::Send;
+		m_IOAsyncTask->Start();
+		return true;
     }
 private:
-    bool WaitOne(SocketAsyncEventArgs &e, DWORD milliseconds =  INFINITE)
+    int WaitOne(SocketAsyncEventArgs &e, DWORD milliseconds =  INFINITE)
     {
-        ULONG_PTR completionKey         = 0;
-        LPOVERLAPPED pOverlapped        = 0;
-
-        if (GetQueuedCompletionStatus(m_hCompPort, &e.m_dwBytesTransferred, &completionKey, &pOverlapped, milliseconds))
-        {
-            e.SetSocketError(0);
-            return true;
+        ULONG_PTR completionKey = 0;
+        LPOVERLAPPED pOverlapped= 0;
+        DWORD byteTransfered    = 0;
+        if (GetQueuedCompletionStatus(m_hCompPort, &byteTransfered, &completionKey, &pOverlapped, milliseconds))
+		{
+            return byteTransfered;
         }
-        else if (ERROR_OPERATION_ABORTED == GetLastError())
-        {
-            return false;
-        }
+        //NULL == pOverlapped  WAIT_TIMEOUT
+        int nErrorCode = GetLastError();
         /* 完成端口绑定的 socket 被释放 */
-        WINAPI_ASSERT(ERROR_OPERATION_ABORTED == GetLastError(), "Wait completetion port failed");
-        return false;
+        WINAPI_ASSERT
+        (
+            ERROR_OPERATION_ABORTED == nErrorCode ||/* 完成端口拥有者已经释放资源 */
+            ERROR_ABANDONED_WAIT_0  == nErrorCode ||/* 完成端口拥有者已经释放资源 */
+            ERROR_NETNAME_DELETED   == nErrorCode   /* remote closed */,
+            "Wait completion port failed"
+        );
+        //printf("Wait IOCP-%p failed , error code %d\n", m_hCompPort, nErrorCode);
+        return SOCKET_ERROR;
     }
 };
 #endif

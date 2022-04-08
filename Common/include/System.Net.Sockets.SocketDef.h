@@ -127,6 +127,9 @@ enum class System::Net::Sockets::SocketAsyncOperation : long
  */
 enum class System::Net::Sockets::SocketFlags
 {
+#ifdef __WINDOWS
+	Overlapped = WSA_FLAG_OVERLAPPED,
+#endif
     /**
      * @brief 不对此调用使用任何标志
      * 

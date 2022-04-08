@@ -65,7 +65,8 @@ public:
     {
         SOCKETAPI_ASSERT
         (
-            INVALID_SOCKET != (m_socket = socket((int)addressFamily, (int)socketType, (int)protocolType)),
+            //INVALID_SOCKET != (m_socket = socket((int)addressFamily, (int)socketType, (int)protocolType)),
+            INVALID_SOCKET != (m_socket = WSASocket((int)m_addressFamily, (int)m_sockType, (int)m_protoType, NULL, NULL, WSA_FLAG_OVERLAPPED)),
             "https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-socket"
         );
     }
@@ -381,40 +382,6 @@ public:
         );
         return s;
     }
-    // bool AcceptAsync(SocketAsyncEventArgs  &e)
-    // {
-    //     Socket* s = new Socket();
-    //     // e.SetAccecptSocket(s);
-    //     SocketAddress addr;
-    //     epoll
-    //     SOCKETAPI_ASSERT
-    //     (
-    //         INVALID_SOCKET  != (s->m_socket = accept(m_socket, (SOCKADDR *)addr.Item, &addr.Size)),/* WSAEWOULDBLOCK */
-    //         "https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-accept"
-    //     );
-    //     // s->m_socket = WSAAccept(m_socket, (SOCKADDR *)addr.Item, &addr.Size,
-    //     // [](
-    //     //     LPWSABUF lpCallerId,
-    //     //     LPWSABUF lpCallerData,
-    //     //     LPQOS pQos,
-    //     //     LPQOS lpGQOS,
-    //     //     LPWSABUF lpCalleeId,
-    //     //     LPWSABUF lpCalleeData,
-    //     //     GROUP FAR * g,
-    //     //     DWORD_PTR dwCallbackData
-    //     // )->int
-    //     // {
-    //     //     SocketAsyncEventArgs* args = (SocketAsyncEventArgs*)dwCallbackData;
-    //     //     return 0;
-    //     // },(DWORD_PTR) &e);
-    //     // if(INVALID_SOCKET != s->m_socket)
-    //     // {
-    //     //     return false;
-    //     // }
-    //     // printf("%d'n", WSAGetLastError());
-    //     return true;
-    //     /* "https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsaaccept" */
-    // }
     /**
      * @brief 使 Socket 与一个本地端口相关联
      * 
@@ -510,7 +477,8 @@ public:
      */
     int Receive(char* buffer, int size, SocketFlags socketFlags, SocketError &errorcode) 
     {
-        int nRet;
+		int nRet;
+		errorcode = 0;
         /* https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-recv */
         if(SOCKET_ERROR == (nRet = recv(m_socket, buffer, size, (int)socketFlags)))
         {
@@ -549,7 +517,8 @@ public:
      */
     int Send( char* buffer, int size, SocketFlags socketFlags, SocketError &errorcode) 
     {
-        int nRet;
+		int nRet;
+		errorcode = 0;
         /* https://docs.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-send */
         if(SOCKET_ERROR == (nRet = send(m_socket, buffer, size, (int)socketFlags)))
         {
