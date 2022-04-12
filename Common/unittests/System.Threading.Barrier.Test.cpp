@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-02-17 09:23:56
  * @LastEditors: like
- * @LastEditTime: 2022-02-25 10:39:52
+ * @LastEditTime: 2022-04-12 13:53:29
  */
 #include <System.Threading.ThreadPool.hpp>
 #include <System.Threading.Barrier.hpp>
@@ -37,7 +37,7 @@ int main()
 {
     for(int i = 0 ; i < WORKCOUNT; i++)
     {
-        ThreadPool::Ref().TrySubmitThreadpoolCallback
+        ThreadPoolSingleton::Ref().TrySubmitThreadpoolCallback
         (
             [](PTP_CALLBACK_INSTANCE instance, Object args)
             {

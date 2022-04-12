@@ -4,7 +4,7 @@
   * @Autor: like
   * @Date: 2022-01-17 15:12:58
  * @LastEditors: like
- * @LastEditTime: 2022-04-04 08:09:46
+ * @LastEditTime: 2022-04-12 13:56:56
   */
 #ifndef SYSTEM_THREADING_TASKS_TASK_HPP
 #define SYSTEM_THREADING_TASKS_TASK_HPP
@@ -354,6 +354,7 @@ private:
         }                                                                       
         catch (const std::exception& e)                                         
         {  
+            printf("Task catched exception : %s", e.what());
             Interlocked<TaskStatus>::Exchange(m_eStatus, TaskStatus::Faulted);
         }           
         /* 当前任务执行完毕后, 执行所有异步等待的任务( ContinueWith / Await ) 并将结果投递到 IOCP */

@@ -55,7 +55,7 @@ int main()
     Context* cache[WORKCOUNT];
     for (int taskCtr = 0; taskCtr < WORKCOUNT; taskCtr++)
     {
-        ThreadPool::Ref().TrySubmitThreadpoolCallback
+        ThreadPoolSingleton::Ref().TrySubmitThreadpoolCallback
         (
             [](PTP_CALLBACK_INSTANCE instance, Object args)
             {

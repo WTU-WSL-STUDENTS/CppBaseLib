@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-01-19 11:09:49
  * @LastEditors: like
- * @LastEditTime: 2022-04-04 08:07:51
+ * @LastEditTime: 2022-04-12 13:54:06
  */
 #ifndef SYSTEM_THREADING_THREADPOOL_HPP
 #define SYSTEM_THREADING_THREADPOOL_HPP
@@ -111,7 +111,6 @@ private:
 		SetThreadpoolCallbackCleanupGroup(&environment, group, NULL);
 	}
 public:
-protected:
     virtual void Dispose(bool disposing)
     {
         if(disposing)

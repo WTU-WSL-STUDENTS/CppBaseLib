@@ -19,7 +19,7 @@ using System::Object;
 System::Console Console;
 
 #define MAX_CONNECT_COUNT (4)
-
+#define LISTENING_PORT 12345
 using SocketAsync = System::Net::Sockets::SocketAsyncExtension;
 class Server;
 
@@ -160,7 +160,7 @@ private:
                     ERROR_ASSERT(false, "The last operation completed on the socket was not a receive or send");
             }
         };
-        e.SetBuffer(0, 24);
+        //e.SetBuffer(0, e.GetCount());
         if (!e.GetAcceptSocket()->ReceiveAsync(e))
         {
             ProcessReceive(e);
@@ -243,15 +243,16 @@ public:
     Client() : m_socket(SocketAsync(AddressFamily::InterNetwork, SocketType::Stream, ProtocolType::IPPROTO_TCP))
     {
         /* 1. connect to server */
-        SocketAddress addr(IPAddress::Loopback, 9999);
+        SocketAddress addr(IPAddress::Loopback, LISTENING_PORT);
         m_socket.Connect(addr);
         printf("connect success\n");
         /* 2. send request*/
-        char buffer[] = "Hello from async client";
+        char buffer[1024];
+        sprintf(buffer, "Hello from async client %lld", m_socket.GetHandle());
         SocketError nErrorCode;
-		WINAPI_ASSERT(sizeof(buffer) == m_socket.Send(buffer, sizeof(buffer), SocketFlags::None, nErrorCode), "send failed");
+		WINAPI_ASSERT((strlen(buffer) + 1) == m_socket.Send(buffer, strlen(buffer) + 1, SocketFlags::None, nErrorCode), "send failed");
 		WINAPI_ASSERT(0 == nErrorCode, "send failed");
-		printf("send buffer : %zd , %s\n", sizeof(buffer), buffer);
+		printf("send buffer : %zd , %s\n", strlen(buffer) + 1, buffer);
         /* 3. recv reply */
 		memset(buffer, 0, sizeof(buffer));
 		int nReceivedLen = m_socket.Receive(buffer, sizeof(buffer), SocketFlags::None, nErrorCode);
@@ -289,7 +290,7 @@ int main(int argc, char** argv, char** argEnv)
 SERVER:
 		Server server;
 		server.Init();
-		SocketAddress addr(IPAddress::Loopback, 9999);
+		SocketAddress addr(IPAddress::Loopback, LISTENING_PORT);
 		server.Start(addr);
 	}
     return 0;

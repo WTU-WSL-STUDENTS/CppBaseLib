@@ -13,6 +13,7 @@ add_definitions(-DMSVC_64)
 include_directories(../../include)
 include_directories(../)
 
+add_executable(System.Convert.Test ../System.Convert.Test.cpp)
 add_executable(System.List.Test ../System.List.Test.cpp)
 add_executable (System.Net.Sockets.Socket.Test ../System.Net.Sockets.Socket.Test.cpp)
 add_executable (System.Net.Sockets.SocketAsync.Test ../System.Net.Sockets.SocketAsync.Test.cpp)

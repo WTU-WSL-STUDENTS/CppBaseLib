@@ -162,7 +162,7 @@
 //     for(int i = 0 ; i < WORKCOUNT; i++)
 //     {
 //         pWorkArgs[i] = new TaskTestArgs{&mtx, &notifiEvent, &totalCount, i};
-//         ThreadPool::Ref().TrySubmitThreadpoolCallback
+//         ThreadPoolSingleton::Ref().TrySubmitThreadpoolCallback
 //         (
 //             [](PTP_CALLBACK_INSTANCE instance, Object args)
 //             {
@@ -209,7 +209,7 @@
 //     AutoResetEvent eTimerWork(false);
 //     AutoResetEvent areWhenUnregist(false);
 
-//     RegisteredWaitHandle* rwh = ThreadPool::Ref().RegisterWaitForSingleObject
+//     RegisteredWaitHandle* rwh = ThreadPoolSingleton::Ref().RegisterWaitForSingleObject
 //     (
 //         eTimerWork, 
 //         [](Object args, bool timeout)
@@ -254,9 +254,9 @@
   
 //     for (int i = 0; i < 10; i++)  
 //     {  
-//         ThreadPool::Ref().QueueUserWorkItem(TestThreadPool, (Object)i);  
+//         ThreadPoolSingleton::Ref().QueueUserWorkItem(TestThreadPool, (Object)i);  
 //     }  
-//     ThreadPool::Ref().QueueUserWorkItem(TestThreadPool, (Object)10);  
+//     ThreadPoolSingleton::Ref().QueueUserWorkItem(TestThreadPool, (Object)10);  
   
 //     WaitForSingleObject(hSemaphore, -1);  
 //     CloseHandle(hSemaphore);  
@@ -267,12 +267,12 @@
 // {  
 //     Test();
 //     // /* Threadpool Set */
-//     // if(!ThreadPool::Ref().SetMinThreads(6, 0))
+//     // if(!ThreadPoolSingleton::Ref().SetMinThreads(6, 0))
 //     // {
 //     //     printf("SetMinThreads Failed\n");
 //     //     return 1;
 //     // }
-//     // if(!ThreadPool::Ref().SetMaxThreads(64, 0))
+//     // if(!ThreadPoolSingleton::Ref().SetMaxThreads(64, 0))
 //     // {
 //     //     printf("SetMinThreads Failed\n");
 //     //     return 1;
@@ -281,7 +281,7 @@
 //     // TaskTest();
 //     // RegisterTest();
 //     // /* Dispose */
-//     // ThreadPool::Ref().Dispose();
+//     // ThreadPoolSingleton::Ref().Dispose();
 //     // printf("Destory Resources.\n");
 //     return 0;
 // }

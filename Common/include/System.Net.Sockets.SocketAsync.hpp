@@ -238,7 +238,7 @@ private:
 		{
 			throw std::exception("Async IO task canceled");
 		}*/
-        ERROR_ASSERT(0 == GetLastError() || -1 == e->m_nbyteTransfered, "Catched rare bug !");
+        SOCKETAPI_ASSERT(0 == GetLastError() || -1 == e->m_nbyteTransfered, "Catched rare bug !");
 		e->m_SocketError = 0;
 		e->SetLastOperation(op);
         MemoryBarrier();
