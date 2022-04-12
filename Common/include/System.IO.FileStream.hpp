@@ -4,345 +4,540 @@
  * @Autor: like
  * @Date: 2021-09-13 07:43:18
  * @LastEditors: like
- * @LastEditTime: 2021-10-06 22:33:12
+ * @LastEditTime: 2022-03-24 17:02:57
  */
-#ifdef USE_CPP_FILE_API
 #ifndef SYSTEM_IO_FILESTREAM_HPP
 #define SYSTEM_IO_FILESTREAM_HPP
-#endif
-#include <System.IO.FileStreamcpp.hpp>
-#endif
-#ifndef SYSTEM_IO_FILESTREAM_HPP
-#define SYSTEM_IO_FILESTREAM_HPP
-
-#if !defined(USE_CPP_FILE_API) && !defined(USE_C_FILE_API)
-#define USE_C_FILE_API
-#endif
-#define MAX_LINE_LENGTH 1024
-
-#define _CRT_SECURE_NO_DEPRECATE
-#include "CompliedEntry.h"
-#include "System.Convert.hpp"
-#include "System.IO.Stream.hpp"
-#include <io.h>
+#include <CompliedEntry.h>
+#include <System.IO.Stream.hpp>
+#include <System.Threading.ReaderWriterLockSlim.hpp>
+#include <sys/stat.h>
+#include <sys/locking.h>
 #include <stdio.h>
+#include <io.h>
 #include <map>
-#include <vector>
-using namespace std;
 
-/*https://www.runoob.com/linux/linux-comm-stat.html*/
+#ifdef __WINDOWS
+#pragma warning(disable:4996)
+#endif
 
-#define FILE_SCAN_END EOF
-
-namespace System
+#define GEN_FILE_ACCESS_MODE_INDEX(access, mode, type) ( ((type) << 24) | ((access) << 8) | (mode) )
+// #define RWL_LOCK
+#ifndef RWL_LOCK
+#define RWL_READ_BLOCK(codeBlock) codeBlock
+#define RWL_WRITE_BLOCK(codeBlock) codeBlock
+#else
+#define RWL_READ_BLOCK(codeBlock) rwl.EnterReadLock(); codeBlock rwl.ExitReadLock()
+#define RWL_WRITE_BLOCK(codeBlock) rwl.EnterWriteLock(); codeBlock rwl.ExitWriteLock()
+#endif
+namespace System::IO
 {
-    namespace IO
+    namespace FileAccess_
     {
-        enum PathType/* 文件类型 */
-        {
-            IgnoreType = 0,
-            FILE = S_IFREG,
-            DIRECOTRY = 0040000
-            /*
-                S_IFMT      0170000     文件类型的位mask
-                S_IFSOCK    0140000     socket
-                S_IFLNK     0120000     符号链接(symbolic link)
-                S_IFREG     0100000     一般文件
-                S_IFBLK     0060000     区块装置(block device)
-                S_IFDIR     0040000     目录
-                S_IFCHR     0020000     字符装置(character device)
-                S_IFIFO     0010000     先进先出(fifo)
-                S_ISUID     0004000     文件的(set user-id on execution)位
-                S_ISGID     0002000     文件的(set group-id on execution)位
-                S_ISVTX     0001000     文件的sticky位
-                S_IRWXU     00700       文件所有者的mask值(即所有权限值)
-                S_IRUSR     00400       文件所有者具可读取权限
-                S_IWUSR     00200       文件所有者具可写入权限
-                S_IXUSR     00100       文件所有者具可执行权限
-                S_IRWXG     00070       用户组的mask值(即所有权限值)
-                S_IRGRP     00040       用户组具可读取权限
-                S_IWGRP     00020       用户组具可写入权限
-                S_IXGRP     00010       用户组具可执行权限
-                S_IRWXO     00007       其他用户的mask值(即所有权限值)
-                S_IROTH     00004       其他用户具可读取权限
-                S_IWOTH     00002       其他用户具可写入权限
-                S_IXOTH     00001       其他用户具可执行权限
-            */
-        };
-#define DECLARE_STAT_BUF struct _stat buf
-#define EXISTS(filePath, type) ((0 == _stat(filePath, &buf)) &&  (type == (buf.st_mode & type)))
-        bool Exists(const char* filePath, PathType type)
-        {
-            DECLARE_STAT_BUF;
-            return EXISTS(filePath, type);
-        } 
-        size_t FileSize(const char* filePath)
-        {
-            DECLARE_STAT_BUF;
-            if(!EXISTS(filePath, FILE))
-            {
-                return 0;
-            }
-            return buf.st_size;
-        }
-
-        enum FileOperate/* 文件流操作 */
-        {
-            ReadOnly    ,   /* 打开只读文本文件，该文件必须存在。 */
-            ReadBinary  ,   /* 打开只读二进制文本，该文件必须存在。 */
-            ReadWrite   ,   /* 打开可读写的文件，该文件必须存在 */
-            Create      ,   /* 打开可读写文件，若文件存在则文件长度清为0，即该文件内容会消失。若文件不存在则建立该文件 */
-            Append          /* 打开可读写文件，若文件存在则在光标默认移动至末尾，若文件不存在则建立该文件 */
-        };
-        typedef std::map<int, char*> AccessModeMappingToLetter;
-        
-        AccessModeMappingToLetter accessModeMappingToLetter = 
-        {
-            {ReadOnly,      "r" },
-            {ReadBinary,    "rb"},
-            {ReadWrite,     "r+"},
-            {Create,        "w+"},
-            {Append,        "a+"}
-        };
-        class FileStream : public Stream /* https://docs.microsoft.com/zh-cn/dotnet/api/system.io.filestream.-ctor?view=net-5.0#System_IO_FileStream__ctor_System_String_System_IO_FileMode_ */
-        {
-            public:
-                const char* filePath;
-                std::FILE* fileHandle;
-                FileStream(const char* strFilePath, FileOperate operate = Create) : filePath(strFilePath)
-                {
-                    fileHandle = fopen(strFilePath, accessModeMappingToLetter[operate]);
-                }
-                ~FileStream()
-                {
-                    Close();
-                }
-                bool Valid(){return NULL != fileHandle;}
-                std::FILE* GetFileHandle(){return fileHandle;}
-                size_t Length()
-                {
-                    long len = filelength(fileno(fileHandle));
-                    return -1 < len ? len : 0; 
-    
-                }
-
-                long Seek(long offset, int origin)
-                {
-                    return fseek(fileHandle, offset, origin);
-                }
-                template<typename T>
-                int Scan(const char* format, T& val)
-                {
-                    return fscanf(fileHandle, format, val);
-                }
-                size_t Read(System::byte* dest, size_t count)
-                {
-                    return fread(dest, sizeof(System::byte), count, fileHandle);
-                }
-                bool Get(System::byte* dest, size_t count)
-                {
-                    return fgets((char*)dest, count, fileHandle);
-                }
-                template<typename T>
-                size_t Read(T* dest, int offset, int count)/* 偏移offset个字节，读取count个字节，返回实际读取的长度*/
-                {
-                    if(0 == fseek(fileHandle, offset, 0))
-                    {
-                        return fread(dest, sizeof(T), count, fileHandle);
-                    }
-                    return 0;
-                }
-                template<typename T>
-                size_t Read(T* dest,  int count)/* 偏移offset个字节，读取count个字节，返回实际读取的长度*/
-                {
-                    return fread(dest, sizeof(T), count, fileHandle);
-                }
-                int ReadByte()/* EOF -1*/
-                {
-                    return fgetc(fileHandle);
-                }
-                char* ReadLine()
-                {
-                    char* buffer = (char*)calloc(MAX_LINE_LENGTH, 1);
-                    fgets(buffer, MAX_LINE_LENGTH,fileHandle);   
-                    return 0 != buffer[0] ? buffer : NULL;
-                }
-                size_t Write(System::byte* src, size_t count)
-                {
-                    return fwrite(src, sizeof(System::byte), count, fileHandle);
-                }
-                size_t Write(System::byte* src, int offset, int count)
-                {
-                    if(0 == fseek(fileHandle, offset, 0))
-                    {
-                        return fwrite(src, sizeof(System::byte), count, fileHandle);
-                    }
-                    return 0;
-                }
-                template<typename T>
-                size_t Write(T* src, size_t count = 1)
-                {
-                    return fwrite(src, sizeof(T), count, fileHandle);
-                }
-                int WriteByte(System::byte byte)
-                {
-                    return fputc(byte, fileHandle);
-                }
-                bool WriteLine(const char* str)
-                {
-                    return 0 < fprintf(fileHandle, "%s\n", str);	
-                }
-                void Flush()
-                {            
-                    fflush(fileHandle);
-                }
-                int Close()
-                {  
-                    return NULL != fileHandle ?  fclose(fileHandle) : 0;
-                }
-        };
-
-        class File
-        {
-            private:
-                File(){}
-            public:
-                static bool CanExe(const char* filePath)
-                {
-                    return 0 == _access(filePath, 0x01);
-                }
-                static bool CanRead(const char* filePath)
-                {
-                    return 0 == _access(filePath, 0x02);
-                }
-                static bool CanWrite(const char* filePath)
-                {
-                    return 0 == _access(filePath, 0x04);
-                }
-                static bool CanReadWrite(const char* filePath)
-                {
-                    return 0 == _access(filePath, 0x06);
-                }
-                static void AppendAllLines(const char* filePath, char* lines[], int length)
-                {
-                    FileStream fs(filePath, Append);
-                    for(int i = 0; i < length; i++)
-                    {
-                        fs.WriteLine(lines[i]);
-                    }
-                    fs.Close();
-                }
-                static void Copy(const char* srcPath, const char* destPath)
-                {
-                    FileStream src(srcPath, ReadOnly);
-                    FileStream dest(destPath, ReadWrite);
-                    size_t len;
-                    System::byte buff[MAX_LINE_LENGTH];
-                    while(0 < (len = src.Read(buff, MAX_LINE_LENGTH)))
-                    {
-                        dest.Write(buff, len);
-                    }
-                    dest.Close();
-                    src.Close();
-                }
-                static FileStream* Create(const char* filePath)
-                {
-                    FileStream* fs = new FileStream(filePath, FileOperate::Create);
-                    return fs->Valid() ? fs :NULL;
-                }
-                static bool Delete(const char* filePath){return 0 == remove(filePath);}
-                static bool Exists(const char* filePath){return System::IO::Exists(filePath, PathType::FILE);}
-                static bool Move(const char* srcPath, const char* destPath)
-                {
-                    FileStream src(srcPath, ReadOnly);
-                    FileStream dest(destPath);
-                    size_t len;
-                    System::byte buff[10240];
-                    while(0 < (len = src.Read(buff, 10240)))/* 1.复制源数据所有字节 */
-                    {
-                        dest.Write(buff, len);
-                    }
-                    src.Close();
-                    if(!Delete(srcPath)) /*2. 删除源文件 */
-                    {
-                        dest.Close();
-                        Delete(destPath);
-                        return false;
-                    }
-                    dest.Flush();/* 3.保存数据 */
-                    dest.Close();
-                    return true;
-                }
-                static FileStream* Open(const char* filePath, FileOperate mode = FileOperate::Create)
-                {
-                    FileStream* fs = new FileStream(filePath, mode);
-                    if(fs->Valid())
-                    {
-                        fs->Seek(0, SEEK_SET);
-                        return fs;
-                    }
-                    return NULL;
-                }
-                static FileStream* OpenRead(const char* filePath)
-                {
-                    FileStream* fs = new FileStream(filePath, ReadOnly);
-                    return fs->Valid() ? fs :NULL;
-                }
-                static FileStream* OpenWrite(const char* filePath)
-                {
-                    FileStream* fs = new FileStream(filePath, ReadWrite);
-                    return fs->Valid() ? fs :NULL;
-                }
-                static size_t ReadAllBytes(const char* filePath, byte* (&dest), size_t &size)/* dest需要手动释放 */
-                {
-                    FileStream src(filePath, ReadOnly);
-                    size = src.Length();
-                    if(1 > size)
-                    {
-                        printf("ReadAllBytes Error Return\n");
-                        return -1;
-                    }
-                    if(NULL == dest)
-                    {
-                        dest = (byte*)malloc(size);
-                        memset(dest, 0, size);
-                    }
-                    size_t readedTotalLen   = 0;
-                    if(!(readedTotalLen = src.Read(dest, size)))
-                    {
-                        return -1;
-                    }
-                    src.Close();
-                    return readedTotalLen;
-                }
-                static void ReadAllLines(const char* filePath, vector<char*> &lines)
-                {
-                    FileStream fs(filePath, ReadWrite);
-                    if(!fs.Valid())
-                    {
-                        return;
-                    }
-                    do
-                    {
-                        char* p = fs.ReadLine();
-                        if(!p)
-                        {
-                            break;
-                        }
-                        lines.push_back(p);
-                    }while(true);
-                    fs.Close();
-                }
-                static void Replace(const char* srcPath, const char* destPath, const char* backupPath = "\0") /* 使用其他文件的内容替换指定文件的内容，这一过程将删除原始文件，并创建被替换文件的备份。 */
-                {
-                    if(0 != backupPath[0])
-                    {
-                        Copy(destPath, backupPath);
-                    }
-                    Move(srcPath, destPath);
-                }
-        };
+        enum Option;
     }
-}
+    namespace FileMode_
+    {
+        enum Option;
+    }
+    namespace FileShare_
+    {
+        enum Option;
+    }
+    namespace FileType_
+    {
+        enum Option;
+    };
+    using FileAccess = FileAccess_::Option;
+    using FileMode = FileMode_::Option;
+    using FileShare = FileShare_::Option;
+    using FileType = FileType_::Option;
+    class FileStream;
+    class FileStreamEx;
+};
+enum System::IO::FileAccess_::Option
+{
+    Read = 1,
+    Write,
+    ReadWrite
+};
+enum System::IO::FileMode_::Option
+{
+    /**
+     * @brief 指定操作系统应创建新文件。 这需要 Write 权限。 如果文件已存在，则将引发 IOException异常
+     * 
+     */
+    CreateNew,
+    /**
+     * @brief 指定操作系统应创建新文件。 如果此文件已存在，则会将其覆盖。 这需要 Write 权限。 FileMode.Create 等效于这样的请求：如果文件不存在，则使用 CreateNew；否则使用 Truncate。 如果该文件已存在但为隐藏文件，则将引发 UnauthorizedAccessException异常
+     * 
+     */
+    Create,    
+    /**
+     * @brief 指定操作系统应打开现有文件。 打开文件的能力取决于 FileAccess 枚举所指定的值。 如果文件不存在，引发一个 FileNotFoundException 异常。
+     * 
+     */
+    Open,
+    /**
+     * @brief 指定操作系统应打开文件（如果文件存在）；否则，应创建新文件。 如果用 FileAccess.Read 打开文件，则需要 Read权限。 如果文件访问为 FileAccess.Write，则需要 Write权限。 如果用 FileAccess.ReadWrite 打开文件，则同时需要 Read 和 Write权限
+     * 
+     */
+    OpenOrCreate,
+    /**
+     * @brief 指定操作系统应打开现有文件。 该文件被打开时，将被截断为零字节大小。 这需要 Write 权限。 尝试从使用 FileMode.Truncate 打开的文件中进行读取将导致 "ArgumentException" 异常。
+     * 
+     */
+    Truncate,
+    /**
+     * @brief 若存在文件，则打开该文件并查找到文件尾，或者创建一个新文件。 这需要 Append 权限。 FileMode.Append 只能与 FileAccess.Write 一起使用。 试图查找文件尾之前的位置时会引发 IOException 异常，并且任何试图读取的操作都会失败并引发 "NotSupportedException" 异常。
+     * 
+     */
+    Append
+};
+enum System::IO::FileShare_::Option
+{
+    /**
+     * @brief 谢绝共享当前文件。 文件关闭前，打开该文件的任何请求（由此进程或另一进程发出的请求）都将失败。
+     * 
+     */
+    None = 0,
+    /**
+     * @brief 允许随后打开文件读取。 如果未指定此标志，则文件关闭前，任何打开该文件以进行读取的请求（由此进程或另一进程发出的请求）都将失败。
+     * 
+     */
+    Read = 1,
+    /**
+     * @brief 允许随后打开文件写入。 如果未指定此标志，则文件关闭前，任何打开该文件以进行写入的请求（由此进程或另一进过程发出的请求）都将失败。
+     * 
+     */
+    Write,
+    /**
+     * @brief 允许随后打开文件读取或写入。 如果未指定此标志，则文件关闭前，任何打开该文件以进行读取或写入的请求（由此进程或另一进程发出）都将失败
+     * 
+     */
+    ReadWrite
+};
+enum System::IO::FileType_::Option
+{
+    Text = 1,
+    Binary
+};
+class System::IO::FileStream : public Stream
+{
+    friend class FileStreamEx;
+private:
+    typedef std::map<int, const char*> AccessModeMappingToLetter; 
+    AccessModeMappingToLetter accessModeMappingToLetter = /* https://baike.baidu.com/item/c%E8%AF%AD%E8%A8%80fopen%E5%87%BD%E6%95%B0 */
+    {
+        /**
+         * @brief 创建只写文件，若文件存在则报错(需要 FileStream 支持)；若文件不存在则创建该文件。
+         * 
+         */
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::CreateNew, FileType::Text | FileType::Binary   ), "w"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::CreateNew, FileType::Text                      ), "wt"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::CreateNew, FileType::Binary                    ), "wb"},
+        /**
+         * @brief 创建可读/写文件，若文件存在则报错(需要 FileStream 支持)；若文件不存在则创建该文件。
+         * 
+         */
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::CreateNew, FileType::Text | FileType::Binary   ), "w+"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::CreateNew, FileType::Text                      ), "wt+"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::CreateNew, FileType::Binary                    ), "wb+"},
+        /**
+         * @brief 创建只写文件，若文件存在则文件长度清为零，即该文件内容会消失；若文件不存在则创建该文件。
+         * 
+         */
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Create, FileType::Text | FileType::Binary  ), "w"}, 
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Create, FileType::Text                     ), "wt"}, 
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Create, FileType::Binary                   ), "wb"}, 
+        /**
+         * @brief 创建读/写文件，若文件存在则文件长度清为零，即该文件内容会消失；若文件不存在则创建该文件。
+         * 
+         */
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Create, FileType::Text | FileType::Binary  ), "w+"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Create, FileType::Text                     ), "wt+"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Create, FileType::Binary                   ), "wb+"},
+        /**
+         * @brief 以只读方式打开文件，该文件必须存在
+         * 
+         */
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Read, FileMode::Open, FileType::Text | FileType::Binary ), "r"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Read, FileMode::Open, FileType::Text                    ), "rt"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Read, FileMode::Open, FileType::Binary                  ), "rb"},
+        /**
+         * @brief 打开只写文件，若文件存在则文件长度清为零，即该文件内容会消失；若文件不存在则创建该文件。
+         * 
+         */
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Open, FileType::Text | FileType::Binary), "w"}, /* Truncate */
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Open, FileType::Text                   ), "wt"}, 
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Open, FileType::Binary                 ), "wb"}, 
+        /**
+         * @brief 以读/写方式打开文件，该文件必须存在
+         * 
+         */
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Open, FileType::Text | FileType::Binary), "r+"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Open, FileType::Text                   ), "rt+"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Open, FileType::Binary                 ), "rb+"},
+        /**
+         * @brief OpenOrCreate (需要 FileStream 支持)
+         * 
+         */
+        /**
+         * @brief 打开只写文件，若文件存在则文件长度清为零，即该文件内容会消失；若文件不存在则创建该文件。
+         * 
+         */
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Truncate, FileType::Text | FileType::Binary), "w"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Truncate, FileType::Text                   ), "wt"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Truncate, FileType::Binary                 ), "wb"},
+        /**
+         * @brief 打开可读/写文件，若文件存在则文件长度清为零，即该文件内容会消失；若文件不存在则创建该文件
+         * 
+         */
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Truncate, FileType::Text | FileType::Binary), "w+"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Truncate, FileType::Text                   ), "wt+"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Truncate, FileType::Binary                 ), "wb+"},
 
+        /**
+         * @brief 以附加的方式打开只写文件。若文件不存在，则会创建该文件；如果文件存在，则写入的数据会被加到文件尾后，即文件原先的内容会被保留（EOF 符保留）
+         * 
+         */
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Append, FileType::Text | FileType::Binary  ), "a"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Append, FileType::Text                     ), "at"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Append, FileType::Binary                   ), "ab"},
+        /**
+         * @brief 以附加方式打开可读/写的文件。若文件不存在，则会创建该文件，如果文件存在，则写入的数据会被加到文件尾后，即文件原先的内容会被保留（EOF符不保留）
+         * 
+         */
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Append, FileType::Text | FileType::Binary  ), "a+"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Append, FileType::Text                     ), "at+"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Append, FileType::Binary                   ), "ab+"}
+    };
+    std::FILE* m_pf;
+    const char* m_strPath;
+    FileMode m_eMode;
+    int m_nAccess;
+    FileShare m_eShare;
+    System::Threading::ReaderWriterLockSlim rwl;
+    /**
+     * @brief 文件锁定
+     * 
+     * @return int 
+     */
+    inline bool LockFile()
+    {
+        // int nRet;
+        // if(0 == (nRet == flock(fileno(m_pf), LOCK_EX | LOCK_NB)))
+        // {
+        //     return true;
+        // }  
+        // printf("Lock file : %s failed, error code : %d\n", path, nRet);
+        return false;
+    }
+    /**
+     * @brief 文件解锁
+     * 
+     * @return int 
+     */
+    inline bool UnlockFile()
+    {
+        // int nRet;
+        // if(0 == (nRet == flock(fileno(m_pf), LOCK_UN | LOCK_NB)))
+        // {
+        //     return true;
+        // }  
+        // printf("Unlock file : %s failed, error code : %d\n", path, nRet);
+        return false;
+    }
+protected:
+    void Dispose(bool disposing) override
+    {
+        if(disposing && m_pf)
+        {
+
+            // if(FileShare::None == m_eShare && !UnlockFile())
+            // {
+            //     char buf[1024];
+            //     sprintf(buf, "Not allow share access : %s, unlock failed\n", m_strPath);
+            //     throw buf;
+            // }
+            RWL_READ_BLOCK
+            (
+                fclose(m_pf);
+                m_pf = NULL;
+            );
+        }
+    }
+public:
+    FileStream(const char* path, FileMode mode =  FileMode::OpenOrCreate, FileAccess access = FileAccess::ReadWrite, FileShare share = FileShare::ReadWrite, int type = FileType::Text | FileType::Binary) : 
+        m_strPath(path), m_eMode(mode), m_nAccess(access), m_eShare(share)
+    {
+        if(FileMode::OpenOrCreate == mode)
+        {
+            mode = _access(path, 0) ? FileMode::Open : FileMode::Create;
+        }
+        int nAuth = GEN_FILE_ACCESS_MODE_INDEX(access, mode, type);
+        if(FileMode::CreateNew == mode)
+            ERROR_ASSERT(_access(path, 0), "IOException");
+        ERROR_ASSERT(accessModeMappingToLetter.end() != accessModeMappingToLetter.find(nAuth), "SecurityException");
+        ERROR_ASSERT(NULL != (m_pf = fopen(path, accessModeMappingToLetter[nAuth])), "DirectoryNotFoundException");
+    }
+    ~FileStream()
+    { 
+        Dispose();
+    }
+    /**
+     * @brief 获取一个值，该值指示当前流是否支持读取
+     * 
+     * @return true 
+     * @return false 
+     */
+    bool CanRead() override
+    {
+        return FileAccess::Read & m_nAccess;
+    }
+    /**
+     * @brief 获取一个值，该值指示当前流是否支持写入
+     * 
+     * @return true 
+     * @return false 
+     */
+    bool CanWrite() override
+    {
+        return FileAccess::Write & m_nAccess;
+    }
+    /**
+     * @brief 获取一个值，该值指示当前流是否支持查找
+     * 
+     * @return true 
+     * @return false 
+     */
+    bool CanSeek() override
+    {
+        return FileAccess::Read & m_nAccess;
+    }
+    void Dispose() override
+    {
+        Dispose(true);
+    }
+    /**
+     * @brief 获取流的长度（以字节为单位）
+     * 
+     * @return size_t 
+     */
+    size_t Length() override
+    {
+        RWL_READ_BLOCK
+        (
+            long len = _filelength(fileno(m_pf));
+        )
+        return -1 < len ? len : 0; 
+    }
+    /**
+     * @brief 获取 FileStream 中已打开的文件的绝对路径
+     * 
+     * @return const char* 
+     */
+    const char* Name()
+    {
+        return m_strPath;
+    }
+    /**
+     * @brief 获取此流的当前位置
+     * 
+     * @return long 
+     */
+    inline long GetPosition() override
+    {
+        RWL_READ_BLOCK
+        (
+            long pos = ftell(m_pf);
+        );
+        return pos;
+    }
+    /**
+     * @brief 设置此流的当前位置
+     * 
+     * @param pos 
+     */
+    inline bool SetPosition(long pos) override
+    {
+        return Seek(pos, SeekOrigin::Begin);
+    }
+    /**
+     * @brief 从当前文件流中异步读取字节并将其写入到另一个流中
+     * 
+     * @param destination 
+     * @param bufferSize 
+     * @return Task* 
+     */
+    Task* CopyToAsync(Stream& destination, size_t& bufferSize) override
+    {
+        ERROR_ASSERT(CanRead() && destination.CanWrite(), "NotSupportedException");
+        Task* t = new Task([](AsyncState c)->void
+        {
+            FileStream* fs      = (FileStream*)c[0];
+            Stream* destination = (Stream*)c[1]; 
+            size_t bufferSize   = *(size_t*)c[2];
+            char* buf = (char*)malloc(bufferSize);
+            size_t readedLen = fs->Read(buf, bufferSize); 
+            destination->Write(buf, readedLen);
+            free(buf);
+            destination->Flush();
+        }, CreateAsyncState(this, &destination, &bufferSize));
+        t->Start();
+        return t;
+    }
+    inline void Flush() override
+    {
+        if(CanWrite())
+        {
+            RWL_READ_BLOCK
+            (
+                int nRet = fflush(m_pf);
+            );
+            ERROR_ASSERT(0 == nRet, "Flush Error");
+        }
+    }
+    Task* FlushAsync() override
+    {
+        ERROR_ASSERT(CanWrite(), "NotSupportedException");
+        Task* t = new Task([](AsyncState args)->void
+        {
+            static_cast<FileStream*>(args[0])->Flush();
+        }, CreateAsyncState(this));
+        t->Start();
+        return t;
+    }
+    size_t Read(char* buffer, size_t count) override
+    {
+        RWL_READ_BLOCK
+        (
+            size_t len = fread(buffer, sizeof(char), count, m_pf);
+        );
+        return len;
+    }
+    size_t Read(char* buffer, long offset, size_t count) override
+    {
+        ERROR_ASSERT(Seek(offset, SeekOrigin::Current), "ArgumentException");
+        return Read(buffer, count);
+    }
+    Task* ReadAsync(char* buffer, long& offset, size_t& count) override
+    {
+        ERROR_ASSERT(CanRead(), "NotSupportedException");
+        Task* t = new Task([](AsyncState c)->void
+        {
+            FileStream* fs  = static_cast<FileStream*>(c[0]);
+            char* buffer    = static_cast<char*>(c[1]); 
+            long offset     = *static_cast<long*>(c[2]);
+            size_t count    = *static_cast<size_t*>(c[3]);
+
+            fs->Read(buffer, offset, count);
+        }, CreateAsyncState(this, buffer, &offset, &count));
+        t->Start();
+        return t;
+    }
+    int ReadByte() override
+    {
+        RWL_READ_BLOCK
+        (
+            int c = fgetc(m_pf);
+        );
+        return c;
+    }
+    bool Seek(long offset, SeekOrigin origin) override
+    {
+        ERROR_ASSERT(CanSeek(), "NotSupportedException");     
+        RWL_READ_BLOCK
+        (
+            int n = fseek(m_pf, offset, origin);
+        );
+        return 0 == n;
+    }
+    size_t Write(const char* buffer, size_t count) override
+    {
+        ERROR_ASSERT(CanWrite(), "NotSupportedException");
+        RWL_WRITE_BLOCK
+        (
+            size_t len = fwrite(buffer, sizeof(char), count, m_pf);
+        );
+        return len;
+    }
+    size_t Write(const char* buffer, long offset, size_t count)
+    {
+        ERROR_ASSERT(Seek(offset, SeekOrigin::Current), "ArgumentException");
+        return Write(buffer, count);
+    }
+    Task* WriteAsync(char* buffer, long& offset, size_t& count) override
+    {
+        ERROR_ASSERT(CanWrite(), "NotSupportedException");
+        Task* t = new Task([](AsyncState c)->void
+        {
+            FileStream* fs  = static_cast<FileStream*>(c[0]);
+            char* buffer    = static_cast<char*>(c[1]); 
+            long offset     = *static_cast<long*>(c[2]);
+            size_t count    = *static_cast<size_t*>(c[3]);
+
+            fs->Write(buffer, offset, count);
+            fs->Flush();
+        }, CreateAsyncState(this, buffer, &offset, &count));
+        t->Start();
+        return t;
+    }
+    inline void WriteByte(char value) override
+    {
+        ERROR_ASSERT(CanWrite(), "NotSupportedException");
+        RWL_WRITE_BLOCK
+        (
+            fputc(value, m_pf);
+        );
+    }
+};
+class System::IO::FileStreamEx
+{
+public:
+    template<typename T>
+    static inline int Scan(FileStream& fs, const char* format/* %s 空格或换行为止 */, T& val)
+    {
+        // System::Threading::ReaderWriterLockSlim& rwl = &fs.rwl;
+        RWL_READ_BLOCK
+        (
+            int len = fscanf(fs.m_pf, format, val);
+        );
+        return len;
+    }
+    static inline bool Get(FileStream& fs, char* dest, size_t count/* 最长到换行符截至 */)
+    {
+        // System::Threading::ReaderWriterLockSlim& rwl = fs.rwl;
+        RWL_READ_BLOCK
+        (
+            char* p = fgets(dest, count, fs.m_pf);
+        );
+        return NULL != p;
+    }
+    static inline int ReadLine(FileStream& fs, char* buffer)
+    {
+        // System::Threading::ReaderWriterLockSlim& rwl = fs.rwl;
+        RWL_READ_BLOCK
+        (
+            int n = fscanf(fs.m_pf, "%[^\n]\n", buffer);
+        );
+        return n;
+    }
+    static inline int WriteLine(FileStream& fs,const char* str)
+    {
+        // System::Threading::ReaderWriterLockSlim& rwl = fs.rwl;
+        RWL_WRITE_BLOCK
+        (
+            int n = fprintf(fs.m_pf, "%s\n", str);	
+        );
+        return n;
+    }
+    static inline FILE* FileHandle(FileStream& fs)
+    {
+        return fs.m_pf;
+    }
+};
+#ifdef __WINDOWS
+#pragma warning(default:4996)
+#endif
 #endif

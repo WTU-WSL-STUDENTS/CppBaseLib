@@ -1,6 +1,5 @@
 echo off
-@REM ±‡“Îµ•‘™≤‚ ‘
+if not exist ..\build md ..\build
 cd ..\build
-cmake -BUILD_3RDPART=OFF ..\ -G "Visual Studio 16 2019" -A win32 
+cmake -DBUILD_3RDPART=OFF ..\ -G "Visual Studio 16 2019" -A win32 
 cmake --build .
-cd ..\scripts 

@@ -25,54 +25,8 @@ class System::Convert
     #define IsAlnum(ch)         (0 != isalnum(ch))  /* 字母或数字 */
     #define IsSpace(ch)         (0 != isspace(ch))  /* 空格(' ')、水平定位字符('\t')、归位键('\r')、换行('\n')、垂直定位字符('\v')或翻页('\f')的情况 */
     #define IsPunctuation(ch)   (0 != ispunct(ch)   )/* 非空格、非数字和非英文字母。 */
-    
-    /*
-        %d十进制有符号整数
-
-        %u十进制无符号整数
-
-        %f浮点数
-
-        %s字符串
-
-        %c单个字符
-
-        %p指针的值
-
-        %e指数形式的浮点数
-
-        %x,%X无符号以十六进制表示的整数
-
-        %0无符号以八进制表示的整数
-
-        %g自动选择合适的表示法
-    */
-    #define RETURN_INT_TO_STRING        char buf[16];   memset(buf, 0, sizeof(buf)); sprintf_s(buf, 16, "%d",   value); return buf;
-    #define RETURN_LONGLONG_TO_STRING   char buf[32];   memset(buf, 0, sizeof(buf)); sprintf_s(buf, 32, "%lld", value); return buf;
-    #define RETURN_ULONGLONG_TO_STRING  char buf[32];   memset(buf, 0, sizeof(buf)); sprintf_s(buf, 32, "%llu", value); return buf;
-    #define RETURN_DOUBLE_TO_STRING     char buf[300];  memset(buf, 0, sizeof(buf)); sprintf_s(buf, 300,"%lf", value);  return buf;
 
     #define MAX_SPLIT_COUNT 255    
-    
-    #define GEN_MAP_SPRINTF_TYPE_PAIR(ParamType, SprintfType) {typeid(ParamType).name(), SprintfType}
-    std::map<const char*, const char*> mapSprintfType = 
-    {
-        GEN_MAP_SPRINTF_TYPE_PAIR(char,             "%d"),
-        GEN_MAP_SPRINTF_TYPE_PAIR(unsigned char,    "%d"),
-        GEN_MAP_SPRINTF_TYPE_PAIR(short,            "%d"),
-        GEN_MAP_SPRINTF_TYPE_PAIR(unsigned short,   "%d"),
-        /* 4字节 */
-        GEN_MAP_SPRINTF_TYPE_PAIR(int,              "%d"),
-        GEN_MAP_SPRINTF_TYPE_PAIR(unsigned int,     "%u"),
-        GEN_MAP_SPRINTF_TYPE_PAIR(float,            "%f"),
-        /* 8字节 */
-        GEN_MAP_SPRINTF_TYPE_PAIR(double,           "%lf"),
-        /* 4 or 8 or 16 */
-        GEN_MAP_SPRINTF_TYPE_PAIR(long,             "%ld"),
-        GEN_MAP_SPRINTF_TYPE_PAIR(unsigned long,    "%lld"),
-        GEN_MAP_SPRINTF_TYPE_PAIR(long long,        "%lld"),
-        GEN_MAP_SPRINTF_TYPE_PAIR(unsigned long long,"%lld"),
-    };
 
 #endif
 public:
@@ -187,42 +141,7 @@ public:
     {
         return atof(str);
     }
-    static char* ToString(char value)
-    {
-        RETURN_INT_TO_STRING
-    }
-    static char* ToString(byte value)
-    {
-        RETURN_INT_TO_STRING
-    }
-    static char* ToString(Int16 value)
-    {
-        RETURN_INT_TO_STRING
-    }
-    static char* ToString(UInt16 value)
-    {
-        RETURN_INT_TO_STRING
-    }
-    static char* ToString(Int32 value)
-    {
-        RETURN_INT_TO_STRING
-    }
-    static char* ToString(UInt32 value)
-    {
-        RETURN_INT_TO_STRING
-    }
-    static char* ToString(Int64 value)
-    {
-        RETURN_LONGLONG_TO_STRING
-    }
-    static char* ToString(UInt64 value)
-    {
-        RETURN_ULONGLONG_TO_STRING
-    }
-    static char* ToString(double value)
-    {
-        RETURN_DOUBLE_TO_STRING
-    }
+   
     static bool ToUpper(char& src)
     {  
         if (IsLowAlpha(src))

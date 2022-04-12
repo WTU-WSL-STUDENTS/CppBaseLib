@@ -1,315 +1,300 @@
 #ifndef THREADING_H
 #define THREADING_H
 
-#include <CompliedEntry.h>
-#include <stdio.h>
+#include <System.Threading.WaitHandle.hpp>
+#include <System.Action.hpp>
+#include <vector>
 
-#ifdef _WIN32
-#include <windows.h>
-#include <process.h>
-#else
-#define NOT_WINDOWS_PLANTFORM
-#include <pthread.h>
-#endif
-
-namespace System::Threading /* https://docs.microsoft.com/zh-cn/dotnet/api/system.threading.thread?view=net-5.0 */
+using ThreadStart = PTHREAD_START_ROUTINE; 
+namespace System::Threading
 {
-    #if (defined _WIN32)
-        typedef void* HANDLE;
-        typedef unsigned (__stdcall* THREAD_EVENT)(void*);
-        typedef void* THREAD_EVENT_ARGS;
-        #define THREAD_RETURN_ERROR 0xFFFFFFFF
-        typedef enum _ThreadPriorty
-        {
-            Idle        = THREAD_PRIORITY_IDLE,         //空闲（最低）
-            Lowest      = THREAD_PRIORITY_LOWEST,       //最低（其实是“次低”）
-            BelowNormal = THREAD_PRIORITY_BELOW_NORMAL, //低于标准
-            Normal      = THREAD_PRIORITY_NORMAL,       //标准
-            AboveNormal = THREAD_PRIORITY_ABOVE_NORMAL, //高于标准
-            Highest     = THREAD_PRIORITY_HIGHEST,      //最高（其实是“次高”）
-            TimeCritical= THREAD_PRIORITY_TIME_CRITICAL //关键时间（最高）
-        }ThreadPriorty;
-    #else
-        typedef pthread_t HANDLE;
-        typedef void* THREAD_EVENT(void*);
-        typedef void* THREAD_EVENT_ARGS;
-        typedef int ThreadPriorty;
-        #define Normal 0
-    #endif
-    typedef enum _ThreadStatus
-    {
-        NotInit = 0,
-        Created,
-        WaitingForActivation,   /* 等待安排 */
-        WaitingToRun,           /* 等待开始*/
-        Running,
-        Canceled,
-        Finished
-    }ThreadStatus;
-    typedef void (*OnThreadStart)   (void* sender, int /* ThreadStatus */ args);
-    typedef void (*OnThreadFinished)(void* sender, int /* ThreadStatus */ args);
-    typedef struct tagThreadInfo
-    {
-        HANDLE Handle;
-        unsigned int ThreadId;
-        THREAD_EVENT Event;
-        THREAD_EVENT_ARGS Args;
-        int CurrentStatus;
-        ThreadPriorty Priorty;
-        bool CanCancel;
-    }ThreadInfo;
-
+    enum ThreadPriority;
+    enum ThreadState;
     class Thread;
-}
-
-class System::Threading::Thread
+};
+/** 指定 Thread 的调度优先级
+ * https://docs.microsoft.com/en-us/windows/win32/procthread/scheduling-priorities
+*/
+enum System::Threading::ThreadPriority
+{
+    Lowest = THREAD_PRIORITY_LOWEST,
+    BelowNormal = THREAD_PRIORITY_BELOW_NORMAL,
+    Normal = THREAD_PRIORITY_NORMAL,
+    AboveNormal = THREAD_PRIORITY_ABOVE_NORMAL,
+    Highest = THREAD_PRIORITY_HIGHEST,
+};
+enum System::Threading::ThreadState
+{
+    /**
+     * @brief 线程已启动且尚未停止
+     * 
+     */
+    Running = 0,
+    /**
+     * @brief 正在请求线程停止。 这仅用于内部
+     * 
+     */
+    StopRequested = DECLARE_ENUM_FLAG(0),
+    /**
+     * @brief 正在请求线程挂起
+     * 
+     */
+    SuspendRequested = DECLARE_ENUM_FLAG(1),
+    /**
+     * @brief 线程正作为后台线程执行（相对于前台线程而言）。 此状态可以通过设置 IsBackground 属性来控制
+     * 
+     */
+    Background = DECLARE_ENUM_FLAG(2),
+    /**
+     * @brief 尚未对线程调用 Start() 方法
+     * 
+     */
+    Unstarted = DECLARE_ENUM_FLAG(3),
+    /**
+     * @brief 线程已停止
+     * 
+     */
+    Stopped = DECLARE_ENUM_FLAG(4),
+    /**
+     * @brief 线程处于等待列队 这可能是调用 Sleep(Int32) 或 Join()、请求锁定（例如通过调用 Enter(Object) 或 Wait(Object, Int32, Boolean)）或在线程同步对象上（例如 ManualResetEvent）等待的结果
+     * 
+     */
+    WaitSleepJoin = DECLARE_ENUM_FLAG(5),
+    /**
+     * @brief 线程已挂起
+     * 
+     */
+    Suspended = DECLARE_ENUM_FLAG(6),
+    /**
+     * @brief 已对线程调用了 Abort(Object) 方法，但线程尚未收到试图终止它的挂起的 ThreadAbortException
+     * 
+     */
+    AbortRequested = DECLARE_ENUM_FLAG(7),
+    /**
+     * @brief 线程状态包括 AbortRequested 并且该线程现在已死，但其状态尚未更改为 Stopped
+     * 
+     */
+    Aborted = DECLARE_ENUM_FLAG(8)
+};
+/**
+ * @brief 
+ * 1. 默认情况下每个线程会分配 1M 的栈内存, 即默认情况下最多创建 2048 个线程
+ * 2. your application will have better performance if you create one thread per processor and build queues of requests for which the application maintains the context information. (ThreadPool 的应用场景)
+ */
+class System::Threading::Thread final: public System::Threading::WaitHandle
 {
 private:
-#if (defined _WIN32)
-    /**
-     * @description: Windows线程函数的容器，通过该函数提供OnStart/OnFinished事件
-     * @param 线程函数的参数
-     * @return 返回线程函数执行结果
-     * @author: like
-     */    
-    static unsigned long WINAPI ThreadEventContainer(void* args)
-    {
-        Thread* p = (Thread*)args;
-        ThreadInfo* tInfo = &p->tInfo;
-        if(p->OnStart)
-        {
-            p->OnStart(p, tInfo->CurrentStatus);
-        }
-        THREAD_EVENT event   = tInfo->Event;
-        unsigned long ret    = (*event)(tInfo->Args);
-        if(p->OnFinished)
-        {
-            p->OnFinished(p, tInfo->CurrentStatus);
-        }
-        tInfo->CurrentStatus = Finished;
-        return ret;
-    }
-#else
-    /**
-     * @description: Linux线程函数的容器，通过该函数提供OnStart/OnFinished事件
-     * @param 线程函数的参数
-     * @return 返回线程函数执行结果
-     * @author: like
-     */    
-    static void* ThreadEventContainer(void* args)
-    {
-        Thread* p = (Thread*)args;
-        ThreadInfo* tInfo = &p->tInfo;
-        if(p->OnStart)
-        {
-            p->OnStart(p, tInfo->CurrentStatus);
-        }
-        THREAD_EVENT event = tInfo->Event;
-        void* ret = (*event)(tInfo->Args);
-        if(p->OnFinished)
-        {
-            p->OnFinished(p, tInfo->CurrentStatus);
-        }
-        tInfo->CurrentStatus = Finished;
-        return ret;
-    }
-#endif
+    DWORD m_nThreadId;
+    int m_nStatus;
 public:
-    ThreadInfo tInfo;
-    OnThreadStart OnStart;
-    OnThreadFinished OnFinished;
-    Thread(THREAD_EVENT func, THREAD_EVENT_ARGS args, ThreadPriorty priorty = Normal):OnStart(NULL), OnFinished(NULL)
-    {
-        tInfo.Event     = func;
-        tInfo.Args      = args;
-        tInfo.Priorty   = priorty;
-        #if defined(NOT_WINDOWS_PLANTFORM)
-            int ret = pthread_create(&tInfo.Handle, NULL, (THREAD_EVENT)ThreadEventContainer, (void*)this) ? NotInit : Created;
-            if(0 == ret)
-            {
-                if(Normal != priorty)
-                {
-                    tInfo.CurrentStatus = 0 != pthread_setschedprio(tInfo.Handle, tInfo.Priorty) ? NotInit : Created;
-                }
-                else
-                {
-                    tInfo.CurrentStatus = Created;
-                }
-            }
-            else
-            {
-                tInfo.CurrentStatus = NotInit;
-            }
-        #else
-            tInfo.Handle = (HANDLE)_beginthreadex(0, 0, (THREAD_EVENT)ThreadEventContainer, (void*)this, CREATE_SUSPENDED, &tInfo.ThreadId);          
-            if( tInfo.Handle)
-            {
-                tInfo.CurrentStatus = Normal == priorty ? Created : TRUE == SetThreadPriority(tInfo.Handle, tInfo.Priorty) ? Created : NotInit;
-            }
-            else
-            {
-                tInfo.CurrentStatus = NotInit;
-            }
-        #endif
-    }
-    Thread(THREAD_EVENT func): Thread(func, NULL){}
-    ~Thread(){Disopse();}
-    /**
-     * @description:阻塞调用该函数的线程 
-     * @param 阻塞当前线程指定时间(毫秒)
-     * @return 
-     * @author: like
-     */    
-    static void Sleep(DWORD millscend)
-    {
-        #ifdef _WIN32
-        ::Sleep(millscend);
-        #else
-        usleep(millscend * 1000);
-        #endif
-    }
-    /**
-     * @description:启动线程，Created是线程是否创建的标志，如果不处于“创建完毕”的状态会直接返回false。
-     * @param 
-     * @return 返回线程是否启动成功，如果启动成功会将线程状态切换至Running
-     * @author: like
-     */    
-    bool Start()
-    {
-        if(Created != tInfo.CurrentStatus)
-        {
-            return false;
-        }
-        bool bRet = THREAD_RETURN_ERROR != ResumeThread(tInfo.Handle);
-        if(bRet)
-        {
-            tInfo.CurrentStatus = Running;
-        }
-        return bRet;
-    }
-    /**
-     * @description: 判断当前线程是否处于运行状态 
-     * @param 
-     * @return 返回当前线程是否启动
-     * @author: like
-     */    
-    bool IsRunning()
-    {
-        // DWORD nExitCode;&& (TRUE == ::GetExitCodeThread(tInfo.Handle, &nExitCode)) && (STILL_ACTIVE == nExitCode)
-        return Running == tInfo.CurrentStatus ;
-    }
-    /**
-     * @description:暂停 
-     * @param
-     * @return 返回暂停结果，该函数并非线程安全，未测试最好不用
-     * @author: like
-     */    
-    bool Pause()
+    DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(Thread)
+    Thread(ThreadStart func, void* args = NULL) : m_nStatus(Unstarted)
     {     
-        if(Running != tInfo.CurrentStatus)
+        WINAPI_ASSERT(m_hWaitHandle = CreateThread(NULL, 0, func, args, CREATE_SUSPENDED, &m_nThreadId), "https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createthread");
+    }
+    /**
+     * @brief 如果此线程已启动并且尚未正常终止或中止，则为 true；否则为 false
+     * @return true 
+     * @return false 
+     */
+    bool IsAlive()
+    {
+        VALRET_ASSERT(Running == m_nStatus, false);
+        return STILL_ACTIVE == GetExitCode();
+    }
+    /**
+     * @brief 获取线程的返回值
+     * 1. 正常执行结束, 返回函数的 return 值
+     * 2. 调用 Abort 强制结束, 返回值由 Abort 定义
+     * 3. 正在执行, 返回 STILL_ACTIVE
+     * @return DWORD 
+     */
+    DWORD GetExitCode()
+    {
+        DWORD nRet;
+        WINAPI_ASSERT(GetExitCodeThread(m_hWaitHandle, &nRet), "GetExitCode failed");
+        return nRet;
+    }
+    /**
+     * @brief 设置线程在 cpu 的那几个 Kernel 中运行 
+     * 
+     * @param cpuIndex 
+     */
+    void SetThreadAffinity(const std::initializer_list<unsigned char>& cpuIndex)
+    {
+        DWORD nMask = 0;
+        for(auto ptr = cpuIndex.begin(); ptr != cpuIndex.end(); ++ptr)
         {
-            return WaitingToRun == tInfo.CurrentStatus;
+            nMask |= (1 << *ptr);
         }
-        bool bRet = THREAD_RETURN_ERROR != SuspendThread(tInfo.Handle);      
-        if(bRet)
+        WINAPI_ASSERT(SetThreadAffinityMask(m_hWaitHandle, nMask), "https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-setthreadaffinitymask");
+    }
+    /**
+     * @brief 获取线程优先级
+     * 
+     * @return ThreadPriority 
+     */
+    ThreadPriority GetPriority()
+    {
+        int nRet;
+        WINAPI_ASSERT(THREAD_PRIORITY_ERROR_RETURN != (nRet = GetThreadPriority(m_hWaitHandle)), "https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getthreadpriority");
+        if(ThreadPriority::Lowest > nRet)
         {
-            tInfo.CurrentStatus = WaitingToRun;
+            return ThreadPriority::Lowest;
         }
+        else if(ThreadPriority::Highest < nRet)
+        {
+            return ThreadPriority::Highest;
+        }
+        return (ThreadPriority)nRet;
+    }
+    /**
+     * @brief 设置线程优先级
+     * 
+     * @param priority 
+     */
+    void SetPriority(ThreadPriority priority)
+    {
+        WINAPI_ASSERT(SetThreadPriority(m_hWaitHandle, (int)priority), "https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreadpriority");
+    }
+    /**
+     * @brief 获取线程的名称
+     * 
+     * @return WCHAR* 需要调用 LocalFree 释放分配的内存
+     */
+    WCHAR* GetUnicodeName()
+    {
+        WCHAR* str = NULL;
+        WINAPI_ASSERT(SUCCEEDED(GetThreadDescription(m_hWaitHandle, &str)), "GetUnicodeName failed https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getthreaddescription");
+        return str;
+    }
+    /**
+     * @brief 设置线程的名称
+     * 
+     * @param str 
+     */
+    void SetUnicodeName(const WCHAR* str)
+    {
+        WINAPI_ASSERT(SUCCEEDED(SetThreadDescription(m_hWaitHandle, str)), "SetUnicodeName failed https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreaddescription");
+    }
+    /**
+     * @brief 获取线程唯一标识符
+     * 
+     * @return DWORD 
+     */
+    DWORD GetThreadId()
+    {
+        return m_nThreadId;
+    }
+    /**
+     * @brief 获取当前线程的标识符
+     * 
+     * @return DWORD 
+     */
+    static inline DWORD GetCurrentThreadId()
+    {
+        return ::GetCurrentThreadId();
+    }
+    /**
+     * @brief 获取线程的各种上下文的信息, 线程必须处于非运行状态
+     * 
+     * @param context 
+     * @return true 
+     * @return false 
+     */
+    bool TryGetExecutionContext(
+#if defined(MSVC_64)
+        WOW64_CONTEXT&context)
+#elif defined(MSVC_32) 
+        CONTEXT& context)
+#endif
+    {
+        VALRET_ASSERT(m_hWaitHandle != GetCurrentThread() && !(Running & m_nStatus), false);
+        bool bRet = false;
+#if defined(MSVC_64)
+        WINAPI_ASSERT(bRet = Wow64GetThreadContext(m_hWaitHandle, &context), "TryGetExecutionContext failed https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getthreadcontext");
+#elif defined(MSVC_32)
+        WINAPI_ASSERT(bRet = GetThreadContext(m_hWaitHandle, &context), "TryGetExecutionContext failed");
+#endif
         return bRet;
     }
     /**
-     * @description:此方法调用的线程会被阻塞，直到timeout或当前线程调用的函数执行完毕
-     * @param 设置timeout单位毫秒，默认为一直阻塞直到线程退出
-     * @return 返回当前线程执行的函数是否执行完毕。如果函数已经执行完毕会立刻返回true,
-     * 如果函数还在执行最多等待millisecond，返回函数是否执行完毕的结果。如果线程处于其
-     * 他情况，会立刻返回false
-     * @author: like
-     */ 
-    bool WaitThreadFinshed(DWORD millisecond = INFINITE)/* 最多等待millisecond毫秒如果，默认情况是一直等 */
+     * @brief 调用该接口该线程将不会执行任何 user-mode code 并立刻释放线程的 Stack 实现强制终止线程的执行的功能.
+     * 该接口存在以下风险  
+     * 1. 线程在占有同步对象时不会释放使用权
+     * 2. Stack 存在指向 Heap 的指针对象, Heap 内存不会释放
+     * 3. 线程在执行 kernel32 calls 时终止, 会导致 线程所在内核的 kernel32 state 状态与实际不一致. 
+     * 4. 线程如果正在调用 dll 的全局变量, 线程终止时会释放 dll
+     */
+    void Abort(DWORD nExitCode = -1)
     {
-        if(Finished == tInfo.CurrentStatus)
-        {
-            return true;
-        }
-        if(Running == tInfo.CurrentStatus)
-        {
-            if(WAIT_OBJECT_0 == WaitForSingleObject(tInfo.Handle, millisecond))
-            {
-                tInfo.CurrentStatus = Finished;
-                return true;
-            }
-            else
-            {
-                printf("WaitForSingleObject Finished Timeout\n");
-            }
-        }
-        return false;
+        WINAPI_ASSERT(TerminateThread(m_hWaitHandle, nExitCode), "Abort thread failed https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminatethread");
     }
     /**
-     * @description:此方法调用的线程会被阻塞，直到timeout或当前线程调用的函数执行完毕
-     * @param 设置timeout单位毫秒，默认为一直阻塞直到线程退出
-     * @return 返回当前线程执行的函数是否执行完毕。如果函数已经执行完毕会立刻返回true,
-     * 如果函数还在执行最多等待millisecond，返回函数是否执行完毕的信号。如果线程处于其
-     * 他情况，会立刻返回false
-     * @author: like
-     */    
-    bool WaitThreadCanceled(DWORD millisecond = INFINITE)/* 最多等待millisecond毫秒如果，默认情况是一直等 */
+     * @brief 使线程得以按计划执行
+     * 
+     */
+    void Start()
     {
-        if(Finished == tInfo.CurrentStatus)
-        {
-            return true;
-        }
-        if(Canceled == tInfo.CurrentStatus)
-        {
-            if(WAIT_OBJECT_0 == WaitForSingleObject(tInfo.Handle, millisecond))
-            {
-                tInfo.CurrentStatus = Finished;
-                return true;
-            }
-            else
-            {
-                printf("WaitForSingleObject Cancel Failed, Error Code:%d\n", GetLastError());
-            }
-        }
-        return false;
+        VOIDRET_ASSERT((Suspended | Unstarted) & m_nStatus);
+        DWORD nRet;
+        WINAPI_ASSERT(-1 != (nRet = ResumeThread(m_hWaitHandle)), "Start failed https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-resumethread");
+        ERROR_ASSERT(1 == nRet, "suspend count != 1, call start error");
+        m_nStatus = Running;
     }
     /**
-     * @description:线程退出，该方法存在强制关闭线程可能导致线程内存无法释放
-     * @param
-     * @return 返回强制关闭线程的结果
-     * @author: like
-     */    
-    bool ForceExit()/* 这是危险的API, 强制线程结束并不会释放线程使用的，最好的设计是线程自然运行结束 */
+     * @brief 停止用户态代码 user-mode (application) code 执行，实现线程的挂起. 最好通过同步对象(Monitor, Mutex, Event, Semaphore)实现自定义的 Suspend
+     *  1. 该 API 本意是为 debugger 设计
+     *  2. 如果线程占有同步对象再调用该接口可能会导致死锁
+     */
+    void Suspend()
     {
-        if(Running != tInfo.CurrentStatus)
-        {
-            return Finished == tInfo.CurrentStatus;
-        }
-        if(tInfo.ThreadId == GetCurrentThreadId())
-        {
-            _endthreadex(0);
-        }
-        else
-        {
-            if(!TerminateThread(tInfo.Handle, 0))
-            {
-                return false;
-            }
-        }
-        tInfo.CurrentStatus = Finished;
-        return true;
+        VOIDRET_ASSERT(Running & m_nStatus);
+        DWORD nRet;
+        WINAPI_ASSERT(-1 != (nRet = SuspendThread(m_hWaitHandle)), "Suspend failed https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-suspendthread");
+        ERROR_ASSERT(0 == nRet, "suspend count > 0, call suspend too many times !");
+        m_nStatus = Suspended;
     }
-    bool Disopse()/* 析构函数中释放线程句柄的方法 */
+    /**
+     * @brief 获取当前线程所在的处理器编号
+     * 
+     * @return DWORD 
+     */
+    static inline DWORD CurrentProcessorNumber()
     {
-        if( tInfo.Handle)
-        {
-            if(!CloseHandle(tInfo.Handle))
-            {
-                return false;
-            }
-            tInfo.CurrentStatus = NotInit;
-        }
-        return true;
+        /* https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getcurrentprocessornumber */
+        return ::GetCurrentProcessorNumber();
+    }
+    /**
+     * @brief 获取当前线程句柄, 非线程拥有者请勿 CloseHandle(CurrentThread())
+     * 
+     * @return HANDLE 
+     */
+    static inline HANDLE CurrentThread()
+    {
+        return GetCurrentThread();
+    }
+    /**
+     * @brief 调用线程执行准备好在当前处理器上运行的另一个线程。 由操作系统选择要执行的线程
+     * YieldProcessor : 放弃剩余时间片, 重新开始竞争, 优先级较低的线程竞争失败.
+     * SwitchToThread : 只要有可调度线程，即便优先级较低，也会让其调度
+     * @return true 
+     * @return false 
+     */
+    static inline bool TryYield()
+    {
+        /* https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-switchtothread */
+        return SwitchToThread();
+    }
+    /**
+     * @brief 将当前线程放入等待队列中, 等待 millisecondsTimeout 毫秒后的中断事件, 再放回到就绪列队.
+     * sleep(0) : 直接回到就绪队列重新参与 cpu 竞争
+     * 
+     * @param millisecondsTimeout 
+     */
+    static inline void Sleep(DWORD millisecondsTimeout)
+    {
+        ::Sleep(millisecondsTimeout);
     }
 };
 

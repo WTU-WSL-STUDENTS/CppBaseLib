@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-11-18 06:45:01
  * @LastEditors: like
- * @LastEditTime: 2021-11-18 06:46:22
+ * @LastEditTime: 2022-01-17 09:55:14
  */
 #ifndef MAT2D_RLE_HPP
 #define MAT2D_RLE_HPP
@@ -20,7 +20,15 @@ typedef unsigned long long BinaryRle; /* 最高位记录Label，32位平台最多支持记录 2
 #define SET_NEW_BINARY_RLE_VAL(val) ((((BinaryRle)val) << (sizeof(BinaryRle) * 8 - 1)) + 1)
 typedef System::List<BinaryRle> RLES;
 
-/* 矩阵转二值游程编码 */
+/**
+ * @brief 矩阵转二值游程编码
+ * 000111
+ * 111000
+ * ->
+ * {0,3}{1,3}{1,3}{0,3}
+ * @param mat 输入矩阵
+ * @return RLES* 游程编码指针
+ */
 RLES* TransToRLE(Mat<unsigned char>* mat)
 {
     VALRET_ASSERT(mat, NULL);
@@ -76,4 +84,38 @@ RLES* TransToRLE(Mat<unsigned char>* mat)
     return rles;
 }
 
+#if !defined(RLE_NEIGHBOURHOOD_4) && !defined(RLE_NEIGHBOURHOOD_8)
+#define RLE_NEIGHBOURHOOD_8
+#elif defined(RLE_NEIGHBOURHOOD_4) && defined(RLE_NEIGHBOURHOOD_8)
+#undef RLE_NEIGHBOURHOOD_4
+#endif
+
+/**
+ * @brief bwlabel实现
+ * 
+ * @param mat 输入矩阵
+ * @return System::List<RLES*> 连通域集合 
+ */
+System::List<RLES*> BwLabel(Mat<unsigned char>* mat)
+{
+    VALRET_ASSERT(mat, NULL);
+    System::List<System::List<int>*>* tagList = new System::List<System::List<int>*>();
+    
+    /* 水平遍历 */
+    unsigned char *p = mat->p;
+    for(int r = 0 ; r < mat->h; r++)
+    {
+        for(int c = 0; c < mat->w; c++)
+        {
+            
+        }
+    }
+
+    System::IEnumerator<System::List<int>*>* it = tagList->GetEnumerator();
+    while(it->MoveNext())
+    {
+        // (*it->Current())->
+    }
+    delete tagList;
+}
 #endif

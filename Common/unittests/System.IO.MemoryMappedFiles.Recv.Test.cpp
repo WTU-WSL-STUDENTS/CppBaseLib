@@ -1,3 +1,11 @@
+/*
+ * @Description: 
+ * @Version: 1.0
+ * @Autor: like
+ * @Date: 2021-10-08 15:10:49
+ * @LastEditors: like
+ * @LastEditTime: 2022-02-21 19:32:04
+ */
 #include <System.IO.MemoryMappedFiles.hpp>
 using namespace System::IO::MemoryMappedFiles;
 
@@ -14,8 +22,7 @@ int main()
     {
         printf("%3d:%d\n", i, src[i]);
     }
-    accessor->Memset(111);
-    accessor->Fush(100);
+    accessor->Flush(100);
     delete accessor;
     accessor = NULL;
     delete mapFile;
