@@ -15,6 +15,10 @@ map[0] = "first"
 map[1] = "second"
 map[2] = "third"
 print(fun.DisplayMap(map))
+local map1 = GetCppResults()
+print(map1[0])
+print(map1[1])
+print(map1[2])
 
 function calledbycpp(left, right)
 	print("通过lua_pcall调用：")

@@ -29,10 +29,24 @@ GEN_LUA_FUNCTION_CPP(DisplayMap)
 	LuaParam<int>::ToLua(L, count);
 	return 1;
 }
-
+typedef std::map<int, int> IntKeyIntValMap;
+GEN_LUA_FUNCTION_CPP(GetCppResults)
+{
+	IntKeyIntValMap map = 
+	{ 
+		{1, 100},
+		{2, 200},
+		{3, 300}
+	};
+	printf("Calculating results...\n");
+	LuaParam<IntKeyIntValMap>::ToLua(L, map);
+	//LuaParam<double>::ToLua(L, 3.14);
+	return 1;
+}
 BEGIN_DECLARE_LUA_INTERFACE
 	DECLARE_LUA_INTERFACE(Add)
 	DECLARE_LUA_INTERFACE(DisplayMap)
+	DECLARE_LUA_INTERFACE(GetCppResults)
 END_DECLARE_LUA_INTERFACE
 
 DECLARE_LUA_DLL_ENTRY(lua_test)

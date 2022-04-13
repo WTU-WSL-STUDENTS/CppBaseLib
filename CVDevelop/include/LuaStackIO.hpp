@@ -94,11 +94,11 @@ template<typename TKey, typename TVal>
 class LuaParam<std::map<TKey, TVal>>
 {
 public:
-	static void ToLua(lua_State *L, std::map<TKey, TVal> t)
+	static void ToLua(lua_State *L, std::map<TKey, TVal> table)
     {
 		lua_newtable(L);
-        std::map<K, V>::const_iterator it = arg_.begin()
-		for (; it != arg_.end(); ++it)
+        std::map<TKey, TVal>::iterator it = table.begin();
+		for (; it != table.end(); ++it)
 		{
 			LuaParam<TKey>::ToLua(L, it->first);
 			LuaParam<TVal>::ToLua(L, it->second);

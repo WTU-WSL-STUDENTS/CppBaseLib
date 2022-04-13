@@ -51,7 +51,8 @@ private:
         return SetFuncParams(rest...);
     }
 public:
-    LuaExecuter(){}
+    LuaExecuter() : L(NULL){}
+    lua_State* Handle() { return L; }
     bool CreateLuaStack()
     {
         if(L = luaL_newstate())
@@ -96,6 +97,12 @@ public:
     int GetGlobal(const char* name)
     {
         return lua_getglobal(L, name);
+    }
+    template<typename T>
+    int SetGlobal(const char* name, const T& val)
+    {
+        LuaParam<T>::ToLua(L, val);
+        lua_setglobal(L, name);
     }
     /**
      * @description: Ö´ÐÐÕ»¶¥µÄluaº¯Êý 

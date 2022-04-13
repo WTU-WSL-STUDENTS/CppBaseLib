@@ -341,7 +341,7 @@ public:
         size_t len = FileSize(srcPath);
         ERROR_ASSERT(-1 != len, "IOException");
         FileStream src(srcPath);
-        FileStream dest = overwrite ? FileStream(destPath, FileMode::Create): FileStream(destPath, FileMode::CreateNew);
+        FileStream dest(destPath, overwrite ? FileMode::Create : FileMode::CreateNew);
         char* buf = (char*)malloc(len);
         size_t readedLen = src.Read(buf, len);
         dest.Write(buf, readedLen);

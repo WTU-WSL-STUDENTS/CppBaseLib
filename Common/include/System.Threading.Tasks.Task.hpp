@@ -354,7 +354,7 @@ private:
         }                                                                       
         catch (const std::exception& e)                                         
         {  
-            printf("Task catched exception : %s", e.what());
+            printf("Task catch exception : %s", e.what());
             Interlocked<TaskStatus>::Exchange(m_eStatus, TaskStatus::Faulted);
         }           
         /* 当前任务执行完毕后, 执行所有异步等待的任务( ContinueWith / Await ) 并将结果投递到 IOCP */
