@@ -9,41 +9,85 @@
 #ifndef LUA_DEF_H
 #define LUA_DEF_H
 
+/* 启用自定义 lua 扩展接口 */
+#define USE_LUA_EXTENTION
+
 extern "C" 
 {
 	#include <lua.h>
 	#include <lualib.h> 
 	#include <lauxlib.h>
 };
-size_t _GET_STRING_TEMP_SIZE;
-/* GET_STRING/SET_STRING传入参数为LuaString类型 */
-typedef struct _LuaString
-{
-	const char* str;
-	size_t length;
-}LuaString, *PLuaString;
+#include <map>
+#include <CompliedEntry.h>
 
-/* lua->c 判断获取返回值 */
-#define LUA_RET_IS_INTEGER(index)       lua_isinteger(L, index)
-#define LUA_GET_RET_INTEGER(index)  	lua_tointeger(L, index)
-#define LUA_RET_IS_DOUBLE(index)        lua_isnumber(L, index)
-#define LUA_GET_RET_DOUBLE(index) 		lua_tonumber(L, index)
-#define LUA_RET_IS_STRING(index)        lua_isstring(L, index)
-#define LUA_GET_RET_STRING(index)   	{lua_tolstring(L, index, &_GET_STRING_TEMP_SIZE), _GET_STRING_TEMP_SIZE}
-#define LUA_RET_IS_FUNCTION_PTR(index) 	lua_isuserdata(L, index)
-#define LUA_GET_RET_FUNCTION_PTR(index)	lua_tocfunction(L, index)
-#define LUA_RET_IS_USER_DATA(index)  	lua_isuserdata(L, index)
-#define LUA_GET_RET_USER_DATA(index)  	lua_touserdata(L, index)
+/* lua 基础类型 */
+using number	= lua_Number;
+using integer	= lua_Integer;
+using string	= const char*; /* 与 std::string 区分开 */
+#ifdef USE_LUA_EXTENTION
+using boolean	= int;
+#endif
 
-/* c->lua 在c脚本接口中，读取脚本输入的参数和写入返回值 */
-#define LUA_GET_PARAM_INTEGER(index)luaL_checkinteger(L, index)
-#define LUA_SET_PARAM_INTEGER(val) 	lua_pushinteger(L, val)
-#define LUA_GET_PARAM_DOUBLE(index) luaL_checknumber(L, index)
-#define LUA_SET_PARAM_DOUBLE(val) 	lua_pushnumber(L, val)
-#define LUA_GET_PARAM_STRING(index) {luaL_checklstring(L, index, &_GET_STRING_TEMP_SIZE), _GET_STRING_TEMP_SIZE}
-#define LUA_SET_PARAM_STRING(val) 	lua_pushlstring(L, val.str, val.length) 
+/* lua 基础类型转换 */
+#define tolua(type, val)	(lua_push##type(STACK_OBJECT, val))	// c -> stack -> lua
+#define fromlua(type, idx)	(lua_to##type(STACK_OBJECT, idx))	// lua -> stack -> c
 
-#define LUA_RET_IS_TABLE(index)			lua_istable(L, index)
-#define LUA_GET_PARAM_TABLE_CHECK(index)luaL_checktype(L, index, LUA_TTABLE);
+/* lua 复杂类型 */
+template<typename TKey, typename TVal>
+using table = std::map<TKey, TVal>;
+#ifdef USE_LUA_EXTENTION
+using userdata = System::Object;
+#endif
+
+/* 判断是否为指定类型 */
+#define istype(type, idx)(lua_is##type(STACK_OBJECT, idx))	
+
+/* 获取 lua 函数的返回值 */
+#define getluaret(type, idx) luaL_check##type(STACK_OBJECT, idx)
+
+
+/* lua 接口做一些补充 */
+#ifdef USE_LUA_EXTENTION
+#	define luaL_checkboolean		luaL_checkinteger
+#	define luaL_checkuserdata	luaL_checkudata
+#endif
+
+/* lua c 接口的定义 */
+#define DECLARE_LUA_INTERFACE(funcName) extern "C" int funcName(lua_State* STACK_OBJECT)
+
+/* lua c 接口的注册 */
+#define DECLARE_LUA_DLL_ENTRY(packName, .../* function register */)			\
+extern "C" __declspec(dllexport) int luaopen_##packName(lua_State* luaEnv)	\
+{																			\
+	lua_newtable(luaEnv);													\
+	luaL_setfuncs(luaEnv, luaLibs, 0);										\
+	return 1;																\
+} 																			\
+static luaL_Reg luaLibs[] = {								\
+	DECLARE_LUA_INTERFACE(sizeof(__VA_ARGS__), __VA_ARGS__)	\
+	{NULL, NULL}											\
+};
+/* DECLARE_LUA_DLL_ENTRY 一个包最多支持 16 个接口 */
+#define DECLARE_LUA_INTERFACE(count, ...) DECLARE_LUA_INTERFACE_##count(__VA_ARGS__)
+#ifdef DECLARE_LUA_INTERFACE
+#	define DECLARE_LUA_INTERFACE_1(arg1) {#arg1, arg1},
+#	define DECLARE_LUA_INTERFACE_2(arg1, arg2)	DECLARE_LUA_INTERFACE_1(arg1)	DECLARE_LUA_INTERFACE_1(arg2)
+#	define DECLARE_LUA_INTERFACE_3(arg1, ...)	DECLARE_LUA_INTERFACE_1(arg1)	DECLARE_LUA_INTERFACE_2(__VA_ARGS__)	
+#	define DECLARE_LUA_INTERFACE_4(arg1, ...)	DECLARE_LUA_INTERFACE_1(arg1)	DECLARE_LUA_INTERFACE_3(__VA_ARGS__)	
+#	define DECLARE_LUA_INTERFACE_5(arg1, ...)	DECLARE_LUA_INTERFACE_1(arg1)	DECLARE_LUA_INTERFACE_4(__VA_ARGS__)	
+#	define DECLARE_LUA_INTERFACE_6(arg1, ...)	DECLARE_LUA_INTERFACE_1(arg1)	DECLARE_LUA_INTERFACE_5(__VA_ARGS__)	
+#	define DECLARE_LUA_INTERFACE_7(arg1, ...)	DECLARE_LUA_INTERFACE_1(arg1)	DECLARE_LUA_INTERFACE_6(__VA_ARGS__)	
+#	define DECLARE_LUA_INTERFACE_8(arg1, ...)	DECLARE_LUA_INTERFACE_1(arg1)	DECLARE_LUA_INTERFACE_7(__VA_ARGS__)	
+#	define DECLARE_LUA_INTERFACE_9(arg1, ...)	DECLARE_LUA_INTERFACE_1(arg1)	DECLARE_LUA_INTERFACE_8(__VA_ARGS__)	
+#	define DECLARE_LUA_INTERFACE_10(arg1, ...)	DECLARE_LUA_INTERFACE_1(arg1)	DECLARE_LUA_INTERFACE_9(__VA_ARGS__)	
+#	define DECLARE_LUA_INTERFACE_11(arg1, ...)	DECLARE_LUA_INTERFACE_1(arg1)	DECLARE_LUA_INTERFACE_10(__VA_ARGS__)	
+#	define DECLARE_LUA_INTERFACE_12(arg1, ...)	DECLARE_LUA_INTERFACE_1(arg1)	DECLARE_LUA_INTERFACE_11(__VA_ARGS__)	
+#	define DECLARE_LUA_INTERFACE_13(arg1, ...)	DECLARE_LUA_INTERFACE_1(arg1)	DECLARE_LUA_INTERFACE_12(__VA_ARGS__)	
+#	define DECLARE_LUA_INTERFACE_14(arg1, ...)	DECLARE_LUA_INTERFACE_1(arg1)	DECLARE_LUA_INTERFACE_13(__VA_ARGS__)	
+#	define DECLARE_LUA_INTERFACE_15(arg1, ...)	DECLARE_LUA_INTERFACE_1(arg1)	DECLARE_LUA_INTERFACE_14(__VA_ARGS__)	
+#	define DECLARE_LUA_INTERFACE_16(arg1, ...)	DECLARE_LUA_INTERFACE_1(arg1)	DECLARE_LUA_INTERFACE_15(__VA_ARGS__)	
+#endif
+
 
 #endif

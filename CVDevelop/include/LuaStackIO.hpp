@@ -9,140 +9,103 @@
 #ifndef LUA_MEM_OPERATE_HPP
 #define LUA_MEM_OPERATE_HPP
 
+#include <CompliedEntry.h>
 #include <luadef.h>
 #include <map>
 
+#define STACK_OBJECT L
+#define IO_VAL value
+
+#define DECLARE_LUA_STACK_IO(type, tolua, fromlua, getluaret)   \
+template<>                                                      \
+class LuaStack<type>                                            \
+{                                                               \
+public:                                                         \
+	static inline void PushArg(lua_State* L, const type & IO_VAL) {tolua}               \
+    static inline void GetArg(lua_State* L, int index, type & IO_VAL) { fromlua }       \
+    static inline void GetLuaRet(lua_State* L, int index, type& IO_VAL) { getluaret }   \
+};
+#define DECLARE_LUA_STACK_IO_SIMPLE_TYPE(type)  \
+    DECLARE_LUA_STACK_IO(type,                  \
+    {                           \
+        tolua(type, IO_VAL);    \
+    },                          \
+    {                                                                   \
+        ERROR_ASSERT(istype(type, index), "GetArg simple type error");  \
+        IO_VAL = fromlua(type, index);                                  \
+    },                                                                  \
+    {                                   \
+        IO_VAL = getluaret(type, index);\
+    })
+
+/* 任意类型的入栈出栈的接口 */
 template<typename T>
-class LuaParam
+class LuaStack
 {
 public:
-    /* 向脚本写入返回参数 */
-	static void ToLua(lua_State *L, T t){throw "Not Override";}
-    /* 脚本输入参数不对会直接报错 */
-	static T FromLua(lua_State *L, int index){throw "Not Override";}
+    /* 向脚本传参数 */
+    static void PushArg(lua_State* L, const T& IO_VAL)          = 0;
+    /* 从脚本中获取参数 */
+	static void GetArg(lua_State *L, int index, T& IO_VAL)      = 0;
 	/* 获取脚本返回值 */
-    static bool GetLuaRet(lua_State *L, int index, int& val){throw "Not Override";}
+    static void GetLuaRet(lua_State *L, int index, T& IO_VAL)   = 0;
 };
 
-template<>
-class LuaParam<int>
-{
-public:
-	static void ToLua(lua_State *L, int t){LUA_SET_PARAM_INTEGER(t);}
-	static int FromLua(lua_State *L, int index){return (int)LUA_GET_PARAM_INTEGER(index);}
-	static bool GetLuaRet(lua_State *L, int index, int& val)
-	{
-        if(LUA_RET_IS_INTEGER(index))
-        {
-            val = LUA_GET_RET_INTEGER(index);
-            return true;
-        }
-        return false;
-	}
-};
-template<>
-class LuaParam<double>
-{
-public:
-	static void ToLua(lua_State *L, double t){LUA_SET_PARAM_DOUBLE(t);}
-	static double FromLua(lua_State *L, int index){return (double)LUA_GET_PARAM_DOUBLE(index);}
-    static bool GetLuaRet(lua_State *L, int index, double &val)
-    {
-        if(LUA_RET_IS_DOUBLE(index))
-        {
-            val = LUA_GET_RET_DOUBLE(index);
-            return true;
-        }
-        return false;
-    }
-};
-template<>
-class LuaParam<LuaString>
-{
-public:
-	static void ToLua(lua_State *L, LuaString t){LUA_SET_PARAM_STRING(t);}
-	static LuaString FromLua(lua_State *L, int index){return LUA_GET_PARAM_STRING(index);}
-    static bool GetLuaRet(lua_State *L, int index, LuaString &val)
-    {
-        if(LUA_RET_IS_STRING(index))
-        {
-            val = LUA_GET_RET_STRING(index);
-            return true;
-        }
-        return false;
-    }
-};
-template<>
-class LuaParam<const char*>
-{
-public:
-	static void ToLua(lua_State *L, const char* t){lua_pushlstring(L, t, strlen(t));}
-	static const char* FromLua(lua_State *L, int index){return luaL_checklstring(L, index, &_GET_STRING_TEMP_SIZE);}
-    static bool GetLuaRet(lua_State *L, int index, const char* &val)
-    {
-        if(LUA_RET_IS_STRING(index))
-        {
-            size_t len;
-            val = lua_tolstring(L, index, &len);
-            return len;
-        }
-        return false;
-    }
-};
+/* lua 简单类型的入栈出栈定义 */
+DECLARE_LUA_STACK_IO_SIMPLE_TYPE(number);
+DECLARE_LUA_STACK_IO_SIMPLE_TYPE(integer);
+DECLARE_LUA_STACK_IO_SIMPLE_TYPE(string);
+#ifdef USE_LUA_EXTENTION
+DECLARE_LUA_STACK_IO_SIMPLE_TYPE(boolean);
+#endif
+
 /* table */
 template<typename TKey, typename TVal>
-class LuaParam<std::map<TKey, TVal>>
+class LuaStack<table<TKey, TVal>>
 {
 public:
-	static void ToLua(lua_State *L, std::map<TKey, TVal> table)
+	static void PushArg(lua_State * STACK_OBJECT, const table<TKey, TVal>& IO_VAL)
     {
 		lua_newtable(L);
-        std::map<TKey, TVal>::iterator it = table.begin();
-		for (; it != table.end(); ++it)
+        table<TKey, TVal>::iterator it = IO_VAL.begin();
+		for (; it != IO_VAL.end(); ++it)
 		{
-			LuaParam<TKey>::ToLua(L, it->first);
-			LuaParam<TVal>::ToLua(L, it->second);
-			lua_settable(L, -3);
+            LuaStack<TKey>::PushArg(STACK_OBJECT, it->first);
+            LuaStack<TVal>::PushArg(STACK_OBJECT, it->second);
+			lua_settable(STACK_OBJECT, -3);
+		}
+	}
+    static void GetArg(lua_State* STACK_OBJECT, int index, table<TKey, TVal>& IO_VAL)
+	{
+        ERROR_ASSERT(istype(table, index), "GetArg table type error");
+		lua_pushnil(STACK_OBJECT);
+		if (0 > index)
+		{
+			index--;
+		}
+		while (lua_next(STACK_OBJECT, index) != 0)/* reference : lua_next */
+		{
+            IO_VAL[LuaStack<TKey>::GetArg(STACK_OBJECT, -2)] = LuaStack<TVal>::GetArg(STACK_OBJECT, -1);
+			lua_pop(STACK_OBJECT, 1);
 		}
     }
-	static std::map<TKey, TVal>  FromLua(lua_State *L, int index)
-    {
-        LUA_GET_PARAM_TABLE_CHECK(index);
-		lua_pushnil(L);
-        if(0 > index)
-        {
-            index--;
-        }
-        std::map<TKey, TVal> map;
-		while (lua_next(L, index) != 0)
+    static void GetLuaRet(lua_State *STACK_OBJECT, int index, std::map<TKey, TVal> &val)
+	{
+		ERROR_ASSERT(istype(table, index), "GetLuaRet table type error");
+		lua_pushnil(STACK_OBJECT);
+		if (0 > index)
 		{
-            map[LuaParam<TKey>::FromLua(L, -2)] = LuaParam<TVal>::FromLua(L, -1);
-			lua_pop(L, 1);
+			index--;
 		}
-        return map;
-    }
-    static bool GetLuaRet(lua_State *L, int index, std::map<TKey, TVal> &val)
-    {
-        if(LUA_RET_IS_TABLE(index))
-        {
-            lua_pushnil(L);
-            if(0 > index)
-            {
-                index--;
-            }
-            TKey k;
-            TVal v;
-            while (lua_next(L, index) != 0)
-            {
-                if(LUA_OK == LuaParam<TKey>::GetLuaRet(L, index, k) && LUA_OK == LuaParam<TVal>::GetLuaRet(L, index, v))
-                {
-                    map[k] = v;
-                }
-                lua_pop(L, 1);
-            }
-            return true;
-        }
-        return false;
+		TKey k;
+		TVal v;
+		while (lua_next(STACK_OBJECT, index) != 0)
+		{
+			LuaParam<TKey>::GetLuaRet(STACK_OBJECT, index, k);
+			LuaParam<TVal>::GetLuaRet(STACK_OBJECT, index, v)
+			map[k] = v;
+			lua_pop(STACK_OBJECT, 1);
+		}
     }
 };
 
