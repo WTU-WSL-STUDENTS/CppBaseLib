@@ -17,10 +17,10 @@ using ValueTask = System::Threading::Tasks::ValueTask;
 
 namespace System::IO
 {
-    enum SeekOrigin;
+    enum class SeekOrigin;
     class Stream;
 }
-enum System::IO::SeekOrigin
+enum class System::IO::SeekOrigin
 {
     Begin = 0,
     Current,
@@ -29,8 +29,8 @@ enum System::IO::SeekOrigin
 class System::IO::Stream : public IDisposable//, public IAsyncDisposable
 {
 protected:
-    int m_nReadTimeout;
-    int m_nWriteTimeout;
+    int m_nReadTimeout{};
+    int m_nWriteTimeout{};
     Stream(){}
     virtual void Dispose(bool disposing) = 0;
 public:

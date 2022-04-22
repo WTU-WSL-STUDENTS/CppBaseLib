@@ -393,7 +393,7 @@ public:
      */
     static size_t ReadAllBytes(const char* filePath, char* buffer, size_t bufLen)
     {
-        FileStream fs(filePath, FileMode::Open, FileAccess::Read, FileShare::None, FileType::Binary);
+        FileStream fs(filePath, FileMode::Open, FileAccess::Read, FileShare::None, (int)FileType::Binary);
         size_t bufStep = 1024 > bufLen ? bufLen : 1024;
         size_t total   = 0;
         size_t readedLen = 0;
@@ -424,7 +424,7 @@ public:
      */
     static void ReadAllLines(const char* filePath, MallocList<char*> &lines, size_t maxLineWidth = 1024)
     {
-        FileStream fs(filePath, FileMode::Open, FileAccess::Read, FileShare::None, FileType::Text);
+        FileStream fs(filePath, FileMode::Open, FileAccess::Read, FileShare::None, (int)FileType::Text);
         for(;;)
         {
             char* p = (char*)malloc(maxLineWidth);

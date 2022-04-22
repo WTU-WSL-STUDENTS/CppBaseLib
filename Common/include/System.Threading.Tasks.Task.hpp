@@ -35,11 +35,11 @@ namespace System::Threading::Tasks
 {
     namespace TaskCreation
     {
-        enum Options;/* https://docs.microsoft.com/zh-cn/dotnet/api/system.threading.tasks.taskcreationoptions?view=net-5.0 */
+        enum class Options;/* https://docs.microsoft.com/zh-cn/dotnet/api/system.threading.tasks.taskcreationoptions?view=net-5.0 */
 	}
 	namespace TaskContinuation
 	{
-		enum Options;/* https://docs.microsoft.com/zh-cn/dotnet/api/system.threading.tasks.taskcontinuationoptions?view=net-5.0 */
+		enum class Options;/* https://docs.microsoft.com/zh-cn/dotnet/api/system.threading.tasks.taskcontinuationoptions?view=net-5.0 */
 	}
 	using TaskCreationOptions = TaskCreation::Options;
 	using TaskContinuationOptions = TaskContinuation::Options;
@@ -51,7 +51,7 @@ namespace System::Threading::Tasks
  * @brief 指定可控制任务的创建和执行的可选行为的标志
  * 
  */
-enum System::Threading::Tasks::TaskCreation::Options
+enum class System::Threading::Tasks::TaskCreation::Options
 {
     /**
      * @brief 指定应使用默认行为
@@ -173,7 +173,7 @@ public:
  * https://docs.microsoft.com/zh-cn/dotnet/api/system.threading.tasks.taskcontinuationoptions?view=net-5.0
  * 
  */
-enum System::Threading::Tasks::TaskContinuation::Options
+enum class System::Threading::Tasks::TaskContinuation::Options
 {
     /**
      * @brief  延续任务在前面的任务完成后以异步方式运行，与前面任务最终的 Status 属性值无关。 如果延续为子任务，则会将其创建为分离的嵌套任务
@@ -364,7 +364,7 @@ private:
             m_hTaskCompletionPort.Release();                                 
         }                 
         /* 如有附加到当前线程的子任务, 当前线程同步等待子线程完成后再退出 */
-        if (0 < m_childTasks.Count() && TaskCreationOptions::DenyChildAttach == (m_eCreationOptions & TaskCreationOptions::DenyChildAttach))
+        if (0 < m_childTasks.Count() && (int)TaskCreationOptions::DenyChildAttach == ((int)m_eCreationOptions & (int)TaskCreationOptions::DenyChildAttach))
         {
             return;
         }
@@ -372,11 +372,11 @@ private:
         int count = 0;
         for(int i = 0,idx = 0; i < (int)m_childTasks.Count(); i++)
         {                                                                       
-            if (0 == (m_childTasks[i]->m_eCreationOptions & TaskCreationOptions::AttachedToParent))
+            if (0 == ((int)(m_childTasks[i]->m_eCreationOptions) & (int)TaskCreationOptions::AttachedToParent))
             {
                 continue;
             }
-            handles[count] = &m_childTasks[i]->m_mre;
+            handles[count] = static_cast<WaitHandle*>(&m_childTasks[i]->m_mre);
             count++;
         }         
         if (count)
@@ -648,8 +648,8 @@ public:
         auto ptr = il.begin();
         for (size_t i = 0; i < il.size(); i++, ptr++)
         {
-            ERROR_ASSERT(*ptr, "task is nullptr");
-            handles[i] = &((*ptr)->m_mre);
+			ERROR_ASSERT(*ptr, "task is nullptr");
+			handles[i] = static_cast<WaitHandle*>(&((*ptr)->m_mre));
         }
         bool bRet = WaitHandle::WaitAny(handles, (DWORD)il.size(), millisecondsTimeout);
         delete[] handles;
@@ -683,8 +683,8 @@ public:
         auto ptr = il.begin();
         for(size_t i = 0; i < il.size(); i++, ptr++)
         {
-            ERROR_ASSERT(*ptr, "task is nullptr");
-            handles[i] = &((*ptr)->m_mre);
+			ERROR_ASSERT(*ptr, "task is nullptr");
+			handles[i] = static_cast<WaitHandle*>(&((*ptr)->m_mre));
         }
         int n = WaitHandle::WaitAny(handles, (DWORD)il.size(), millisecondsTimeout);
         delete[] handles;

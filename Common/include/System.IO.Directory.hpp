@@ -29,7 +29,7 @@ using namespace std;
 namespace System::IO
 {
     class Directory;
-    enum SearchOption
+    enum  class SearchOption
     {
         /* 仅在搜索操作中包括当前目录 */
         TopDirectoryOnly,   
@@ -651,7 +651,7 @@ public:
      */
     inline static void GetCurrentDirectory(char (&buf)[_MAX_PATH])
     {
-	    _getcwd(buf, sizeof(buf));
+        ERROR_ASSERT(_getcwd(buf, sizeof(buf)), "GetCurrentDirectory failed");
     }
     /**
      * @brief 获取指定目录下的第一级子目录列表
@@ -702,7 +702,7 @@ public:
         {
             return false;
         }
-        if(TopDirectoryOnly != option)
+        if(SearchOption::TopDirectoryOnly != option)
         {
             size_t begin = 0;
             size_t count = list.Count();

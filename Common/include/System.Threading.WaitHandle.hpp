@@ -24,7 +24,7 @@ namespace System::Threading
 
 /**
  * @brief 封装等待对共享资源进行独占访问的操作系统特定的对象
- * # Refrence
+ * # Reference
  * - WaitOne            : WaitForSingleObject       - https://docs.microsoft.com/zh-cn/windows/win32/api/synchapi/nf-synchapi-waitforsingleobject
  * - WaitAll / WaitAny  : WaitForMultipleObjects    - https://docs.microsoft.com/zh-cn/windows/win32/api/synchapi/nf-synchapi-waitformultipleobjects
  * - SignalAndWait      : SignalObjectAndWait       - https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-signalobjectandwait
@@ -124,36 +124,19 @@ public:
      */
     static bool WaitAll(WaitHandle** waitHandles, DWORD count, DWORD millisecond)
     {
-        if(count > MAXIMUM_WAIT_OBJECTS)
-        {
-            printf("WaitAll  Support Max Handle Count : 64");
-            return false;
-        }
-        HANDLE* handles = (HANDLE*)malloc(sizeof(HANDLE) * count);
+        ERROR_ASSERT(waitHandles && 0 < count && count < MAXIMUM_WAIT_OBJECTS + 1, "Input param error");
+		HANDLE* handles = new HANDLE[count];
+		CANARY_ASSERT(handles);
         for(DWORD i = 0; i < count; i++)
         {
             handles[i] = waitHandles[i]->m_hWaitHandle;
         }
         DWORD status =  WaitForMultipleObjects(count, handles, true, millisecond);
-        free(handles);
+        delete[] handles;
         if(status < WAIT_ABANDONED_0)
         {
             return true;
         }
-        //else if(WAIT_TIMEOUT == status)
-        //{
-        //    printf("WaitAll WaitForMultipleObjects Timeout\n");
-        //    return false;
-        //}
-        //else if(WAIT_FAILED == status)
-        //{
-        //    printf("WaitAll WaitForMultipleObjects Failed, Error Code : %d\n", GetLastError());
-        //    return false;
-        //}
-        //else if (WAIT_ABANDONED_0 >= status && status <= (status - WAIT_ABANDONED_0))/* 虽然没有通过等待, 但所在线程已经被释放 */
-        //{
-        //    waitHandles[status - WAIT_ABANDONED_0]->Dispose(); 
-        //}
         WINAPI_ASSERT(WAIT_TIMEOUT == status, "WaitAll WaitForSingleObject Failed");
         return false;
     }
@@ -177,40 +160,22 @@ public:
      * @return int 1. 成功等待返回数组索引; 2. 超时返回 millisecond; 3. 等待失败返回 -1
      */
     static int WaitAny(WaitHandle** waitHandles, DWORD count, DWORD millisecond)
-    {
-        if(count > MAXIMUM_WAIT_OBJECTS)
-        {
-            printf("WaitAny  Support Max Handle Count : 64");
-            return false;
-        }
-        HANDLE* handles = (HANDLE*)malloc(sizeof(HANDLE) * count);
-        for(DWORD i = 0; i < count; i++)
-        {
-            handles[i] = waitHandles[i]->m_hWaitHandle;
-        }
-        DWORD status = WaitForMultipleObjects(count, handles, false, millisecond);
-        free(handles);
-        if(status < WAIT_ABANDONED_0)
-        {
-            return status;
-        }
-        WINAPI_ASSERT(WAIT_TIMEOUT == status, "WaitAll WaitForSingleObject Failed");
-        return -1;
-        //else if(WAIT_TIMEOUT == status)
-        //{
-        //    printf("WaitAny WaitForMultipleObjects Timeout\n");
-        //    return millisecond;
-        //}
-        //else if(WAIT_FAILED == status)
-        //{
-        //    printf("WaitAny WaitForMultipleObjects Failed, Error Code : %d\n", GetLastError());
-        //    return -1;
-        //}
-        //else if (WAIT_ABANDONED_0 >= status && status <= (status - WAIT_ABANDONED_0))/* 虽然没有通过等待, 但所在线程已经被释放 */
-        //{
-        //    printf("WaitHandle has abandoned\n");
-        //    return status - WAIT_ABANDONED_0;/* abandoned handle index */
-        //}
+	{
+		ERROR_ASSERT(waitHandles && 0 < count && count < MAXIMUM_WAIT_OBJECTS + 1, "Input param error");
+		HANDLE* handles = new HANDLE[count];
+		CANARY_ASSERT(handles);
+		for (DWORD i = 0; i < count; i++)
+		{
+			handles[i] = waitHandles[i]->m_hWaitHandle;
+		}
+		DWORD status = WaitForMultipleObjects(count, handles, true, millisecond);
+		delete[] handles;
+		if (status < WAIT_ABANDONED_0)
+		{
+			return status;
+		}
+		WINAPI_ASSERT(WAIT_TIMEOUT == status, "WaitAny WaitForSingleObject Failed");
+		return -1;
     }
     /**
      * @brief 如果信号和等待都成功完成，则为 true；如果等待没有完成，则此方法一直阻塞不返回

@@ -21,7 +21,7 @@
 #pragma warning(disable:4996)
 #endif
 
-#define GEN_FILE_ACCESS_MODE_INDEX(access, mode, type) ( ((type) << 24) | ((access) << 8) | (mode) )
+#define GEN_FILE_ACCESS_MODE_INDEX(access, mode, type) ( (((int)(type)) << 24) | (((int)(access)) << 8) | ((int)(mode)) )
 // #define RWL_LOCK
 #ifndef RWL_LOCK
 #define RWL_READ_BLOCK(codeBlock) codeBlock
@@ -34,19 +34,19 @@ namespace System::IO
 {
     namespace FileAccess_
     {
-        enum Option;
+        enum class Option;
     }
     namespace FileMode_
     {
-        enum Option;
+        enum class Option;
     }
     namespace FileShare_
     {
-        enum Option;
+        enum class Option;
     }
     namespace FileType_
     {
-        enum Option;
+        enum class Option;
     };
     using FileAccess = FileAccess_::Option;
     using FileMode = FileMode_::Option;
@@ -55,13 +55,13 @@ namespace System::IO
     class FileStream;
     class FileStreamEx;
 };
-enum System::IO::FileAccess_::Option
+enum class System::IO::FileAccess_::Option
 {
     Read = 1,
     Write,
     ReadWrite
 };
-enum System::IO::FileMode_::Option
+enum class System::IO::FileMode_::Option
 {
     /**
      * @brief 指定操作系统应创建新文件。 这需要 Write 权限。 如果文件已存在，则将引发 IOException异常
@@ -94,7 +94,7 @@ enum System::IO::FileMode_::Option
      */
     Append
 };
-enum System::IO::FileShare_::Option
+enum class System::IO::FileShare_::Option
 {
     /**
      * @brief 谢绝共享当前文件。 文件关闭前，打开该文件的任何请求（由此进程或另一进程发出的请求）都将失败。
@@ -117,7 +117,7 @@ enum System::IO::FileShare_::Option
      */
     ReadWrite
 };
-enum System::IO::FileType_::Option
+enum class System::IO::FileType_::Option
 {
     Text = 1,
     Binary
@@ -133,51 +133,51 @@ private:
          * @brief 创建只写文件，若文件存在则报错(需要 FileStream 支持)；若文件不存在则创建该文件。
          * 
          */
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::CreateNew, FileType::Text | FileType::Binary   ), "w"},
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::CreateNew, FileType::Text                      ), "wt"},
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::CreateNew, FileType::Binary                    ), "wb"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::CreateNew, (int)FileType::Text | (int)FileType::Binary ), "w"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::CreateNew, FileType::Text                              ), "wt"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::CreateNew, FileType::Binary                            ), "wb"},
         /**
          * @brief 创建可读/写文件，若文件存在则报错(需要 FileStream 支持)；若文件不存在则创建该文件。
          * 
          */
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::CreateNew, FileType::Text | FileType::Binary   ), "w+"},
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::CreateNew, FileType::Text                      ), "wt+"},
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::CreateNew, FileType::Binary                    ), "wb+"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::CreateNew, (int)FileType::Text | (int)FileType::Binary ), "w+"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::CreateNew, FileType::Text                              ), "wt+"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::CreateNew, FileType::Binary                            ), "wb+"},
         /**
          * @brief 创建只写文件，若文件存在则文件长度清为零，即该文件内容会消失；若文件不存在则创建该文件。
          * 
          */
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Create, FileType::Text | FileType::Binary  ), "w"}, 
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Create, FileType::Text                     ), "wt"}, 
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Create, FileType::Binary                   ), "wb"}, 
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Create, (int)FileType::Text | (int)FileType::Binary), "w"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Create, FileType::Text                             ), "wt"}, 
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Create, FileType::Binary                           ), "wb"}, 
         /**
          * @brief 创建读/写文件，若文件存在则文件长度清为零，即该文件内容会消失；若文件不存在则创建该文件。
          * 
          */
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Create, FileType::Text | FileType::Binary  ), "w+"},
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Create, FileType::Text                     ), "wt+"},
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Create, FileType::Binary                   ), "wb+"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Create, (int)FileType::Text | (int)FileType::Binary), "w+"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Create, FileType::Text                             ), "wt+"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Create, FileType::Binary                           ), "wb+"},
         /**
          * @brief 以只读方式打开文件，该文件必须存在
          * 
          */
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Read, FileMode::Open, FileType::Text | FileType::Binary ), "r"},
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Read, FileMode::Open, FileType::Text                    ), "rt"},
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Read, FileMode::Open, FileType::Binary                  ), "rb"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Read, FileMode::Open, (int)FileType::Text | (int)FileType::Binary   ), "r"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Read, FileMode::Open, FileType::Text                                ), "rt"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Read, FileMode::Open, FileType::Binary                              ), "rb"},
         /**
          * @brief 打开只写文件，若文件存在则文件长度清为零，即该文件内容会消失；若文件不存在则创建该文件。
          * 
          */
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Open, FileType::Text | FileType::Binary), "w"}, /* Truncate */
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Open, FileType::Text                   ), "wt"}, 
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Open, FileType::Binary                 ), "wb"}, 
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Open, (int)FileType::Text | (int)FileType::Binary  ), "w"}, /* Truncate */
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Open, FileType::Text                               ), "wt"}, 
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Open, FileType::Binary                             ), "wb"}, 
         /**
          * @brief 以读/写方式打开文件，该文件必须存在
          * 
          */
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Open, FileType::Text | FileType::Binary), "r+"},
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Open, FileType::Text                   ), "rt+"},
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Open, FileType::Binary                 ), "rb+"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Open, (int)FileType::Text | (int)FileType::Binary  ), "r+"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Open, FileType::Text                               ), "rt+"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Open, FileType::Binary                             ), "rb+"},
         /**
          * @brief OpenOrCreate (需要 FileStream 支持)
          * 
@@ -186,31 +186,31 @@ private:
          * @brief 打开只写文件，若文件存在则文件长度清为零，即该文件内容会消失；若文件不存在则创建该文件。
          * 
          */
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Truncate, FileType::Text | FileType::Binary), "w"},
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Truncate, FileType::Text                   ), "wt"},
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Truncate, FileType::Binary                 ), "wb"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Truncate, (int)FileType::Text | (int)FileType::Binary  ), "w"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Truncate, FileType::Text                               ), "wt"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Truncate, FileType::Binary                             ), "wb"},
         /**
          * @brief 打开可读/写文件，若文件存在则文件长度清为零，即该文件内容会消失；若文件不存在则创建该文件
          * 
          */
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Truncate, FileType::Text | FileType::Binary), "w+"},
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Truncate, FileType::Text                   ), "wt+"},
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Truncate, FileType::Binary                 ), "wb+"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Truncate, (int)FileType::Text | (int)FileType::Binary  ), "w+"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Truncate, FileType::Text                               ), "wt+"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Truncate, FileType::Binary                             ), "wb+"},
 
         /**
          * @brief 以附加的方式打开只写文件。若文件不存在，则会创建该文件；如果文件存在，则写入的数据会被加到文件尾后，即文件原先的内容会被保留（EOF 符保留）
          * 
          */
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Append, FileType::Text | FileType::Binary  ), "a"},
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Append, FileType::Text                     ), "at"},
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Append, FileType::Binary                   ), "ab"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Append, (int)FileType::Text | (int)FileType::Binary), "a"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Append, FileType::Text                             ), "at"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::Write, FileMode::Append, FileType::Binary                           ), "ab"},
         /**
          * @brief 以附加方式打开可读/写的文件。若文件不存在，则会创建该文件，如果文件存在，则写入的数据会被加到文件尾后，即文件原先的内容会被保留（EOF符不保留）
          * 
          */
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Append, FileType::Text | FileType::Binary  ), "a+"},
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Append, FileType::Text                     ), "at+"},
-        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Append, FileType::Binary                   ), "ab+"}
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Append, (int)FileType::Text | (int)FileType::Binary), "a+"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Append, FileType::Text                             ), "at+"},
+        {GEN_FILE_ACCESS_MODE_INDEX(FileAccess::ReadWrite, FileMode::Append, FileType::Binary                           ), "ab+"}
     };
     std::FILE* m_pf;
     const char* m_strPath;
@@ -268,8 +268,8 @@ protected:
         }
     }
 public:
-    FileStream(const char* path, FileMode mode =  FileMode::OpenOrCreate, FileAccess access = FileAccess::ReadWrite, FileShare share = FileShare::ReadWrite, int type = FileType::Text | FileType::Binary) : 
-        m_strPath(path), m_eMode(mode), m_nAccess(access), m_eShare(share)
+    FileStream(const char* path, FileMode mode =  FileMode::OpenOrCreate, FileAccess access = FileAccess::ReadWrite, FileShare share = FileShare::ReadWrite, int type = (int)FileType::Text | (int)FileType::Binary) :
+        m_strPath(path), m_eMode(mode), m_nAccess((int)access), m_eShare(share)
     {
         if(FileMode::OpenOrCreate == mode)
         {
@@ -293,7 +293,7 @@ public:
      */
     bool CanRead() override
     {
-        return FileAccess::Read & m_nAccess;
+        return (int)FileAccess::Read & m_nAccess;
     }
     /**
      * @brief 获取一个值，该值指示当前流是否支持写入
@@ -303,7 +303,7 @@ public:
      */
     bool CanWrite() override
     {
-        return FileAccess::Write & m_nAccess;
+        return (int)FileAccess::Write & m_nAccess;
     }
     /**
      * @brief 获取一个值，该值指示当前流是否支持查找
@@ -313,7 +313,7 @@ public:
      */
     bool CanSeek() override
     {
-        return FileAccess::Read & m_nAccess;
+        return (int)FileAccess::Read & m_nAccess;
     }
     void Dispose() override
     {
@@ -449,7 +449,7 @@ public:
         ERROR_ASSERT(CanSeek(), "NotSupportedException");     
         RWL_READ_BLOCK
         (
-            int n = fseek(m_pf, offset, origin);
+            int n = fseek(m_pf, offset, (int)origin);
         );
         return 0 == n;
     }

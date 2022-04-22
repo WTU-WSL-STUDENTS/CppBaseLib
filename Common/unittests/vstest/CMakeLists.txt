@@ -9,6 +9,8 @@ project ("vstest")
 set(CMAKE_CXX_STANDARD 17)
 add_definitions(-D__WINDOWS)
 add_definitions(-DMSVC_64) 
+add_definitions(-D_CRT_SECURE_NO_WARNINGS) 
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 include_directories(../../include)
 include_directories(../)
@@ -22,3 +24,5 @@ add_executable (System.Threading.Thread.Test ../System.Threading.Thread.Test.cpp
 add_executable (System.Threading.Timer.Test ../System.Threading.Timer.Test.cpp)
 add_executable (System.Threading.Tasks.Task.Test ../System.Threading.Tasks.Task.Test.cpp)
 
+
+add_executable (InterfaceTest InterfaceTest.cpp)
