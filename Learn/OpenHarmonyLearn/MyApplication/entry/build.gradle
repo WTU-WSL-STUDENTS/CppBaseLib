@@ -1,0 +1,43 @@
+apply plugin: 'com.huawei.ohos.hap'
+apply plugin: 'com.huawei.ohos.decctest'
+//For instructions on signature configuration, see https://developer.harmonyos.com/cn/docs/documentation/doc-guides/ide_debug_device-0000001053822404#section1112183053510
+ohos {
+    signingConfigs {
+        debug {
+            storeFile file('C:\\Users\\lk\\.ohos\\config\\auto_debug_myapplication_260086000231451868.p12')
+            storePassword '0000001857CDE324BABD6E85F41A7F0132357BD0434911559FDD4BE0797460484F331EF462955F5A'
+            keyAlias = 'debugKey'
+            keyPassword '00000018668D773D7C7AFC49DCC3D8AEF0BBD0A879CDBBB9EF0AEB9B6EC2CF95C4259B9FAEB21434'
+            signAlg = 'SHA256withECDSA'
+            profile file('C:\\Users\\lk\\.ohos\\config\\auto_debug_myapplication_260086000231451868.p7b')
+            certpath file('C:\\Users\\lk\\.ohos\\config\\auto_debug_myapplication_260086000231451868.cer')
+        }
+    }
+    compileSdkVersion 7
+    defaultConfig {
+        compatibleSdkVersion 4
+    }
+    buildTypes {
+        release {
+            proguardOpt {
+                proguardEnabled false
+                rulesFiles 'proguard-rules.pro'
+            }
+        }
+    }
+    externalNativeBuild {
+        path "src/main/cpp/CMakeLists.txt"
+        arguments "-v"
+        abiFilters "arm64-v8a"
+        cppFlags "-std=c++17"
+    }
+}
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar', '*.har'])
+    implementation 'org.jetbrains:annotations:20.1.0'
+    testImplementation 'junit:junit:4.13.1'
+    ohosTestImplementation 'com.huawei.ohos.testkit:runner:2.0.0.200'
+}
+decc {
+    supportType = ['html', 'xml']
+}
