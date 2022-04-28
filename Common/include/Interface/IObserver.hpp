@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-04-22 15:38:06
  * @LastEditors: like
- * @LastEditTime: 2022-04-22 15:50:01
+ * @LastEditTime: 2022-04-25 17:13:38
  */
 /*
  * @Description: 
@@ -19,19 +19,19 @@
 #include "InterfaceDef.h"
 #include "IDisposable.hpp"
 #include <exception>
-namespace System
+namespace System::Interface
 {
-    template<typename T, typename TValue>
+    template<typename TDerived, typename TValue>
     class IObserver;
 };
 /*
  *  Interface : 
- *		IDisposable<UnsubscriberType> Subscribe(const T& other)
+ *		IDisposable<UnsubscriberType> Subscribe(const TDerived& other)
  */
-template<typename T, typename TValue>
-class System::IObserver 
+template<typename TDerived, typename TValue>
+class System::Interface::IObserver 
 {
-	//DECLARE_CRTP_INTERFACE(IObserver, T)
+	DECLARE_CRTP_INTERFACE(IObserver, TDerived, TValue)
 public:
 	inline void OnCompleted() CRTP_VIRTUAL
 	{

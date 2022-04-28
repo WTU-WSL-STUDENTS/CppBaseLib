@@ -4,25 +4,25 @@
  * @Autor: like
  * @Date: 2022-04-22 10:04:14
  * @LastEditors: like
- * @LastEditTime: 2022-04-22 15:09:15
+ * @LastEditTime: 2022-04-25 17:13:34
  */
 #ifndef SYSTEM_ICOMPARABLE_HPP
 #define SYSTEM_ICOMPARABLE_HPP
 #include "InterfaceDef.h"
 
-namespace System
+namespace System::Interface
 {
-	template<typename T>
+	template<typename TDerived>
 	class IComparable;
 };
 /*
  *  Interface : 
- *		int CompareTo(const T& other) const
+ *		int CompareTo(const TDerived& other) const
  */
-template<typename T>
-class System::IComparable
+template<typename TDerived>
+class System::Interface::IComparable
 {
-	DECLARE_CRTP_INTERFACE(IComparable, T)
+	DECLARE_CRTP_INTERFACE(IComparable, TDerived)
 public:
 	/**
 	 * @brief 
@@ -33,27 +33,27 @@ public:
 	 * 	大于 0 : this bigger than other
 	 * 	小于 0 : this smaller than other 
 	 */
-	inline int CompareTo(const IComparable<T>& other) const CRTP_VIRTUAL
+	inline int CompareTo(const IComparable<TDerived>& other) const CRTP_VIRTUAL
 	{
-		return CRTP_CONST_DERIVED.CompareTo(static_cast<const T&>(other));
+		return CRTP_CONST_DERIVED.CompareTo(static_cast<const TDerived&>(other));
 	}
-	bool IComparable::operator > (IComparable<T>& other)
+	bool IComparable::operator > (IComparable<TDerived>& other)
 	{
 		return 0 < CompareTo(other);
 	}
-	bool IComparable::operator >= (IComparable<T>& other)
+	bool IComparable::operator >= (IComparable<TDerived>& other)
 	{
 		return 0 <= CompareTo(other);
 	}
-	bool IComparable::operator == (IComparable<T>& other)
+	bool IComparable::operator == (IComparable<TDerived>& other)
 	{
 		return 0 == CompareTo(other);
 	}
-	bool IComparable::operator < (IComparable<T>& other)
+	bool IComparable::operator < (IComparable<TDerived>& other)
 	{
 		return 0 > CompareTo(other);
 	}
-	bool IComparable::operator <= (IComparable<T>& other)
+	bool IComparable::operator <= (IComparable<TDerived>& other)
 	{
 		return 0 >= CompareTo(other);
 	}

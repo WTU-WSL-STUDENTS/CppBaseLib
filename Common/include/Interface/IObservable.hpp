@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-04-22 15:10:22
  * @LastEditors: like
- * @LastEditTime: 2022-04-22 15:52:35
+ * @LastEditTime: 2022-04-25 17:13:34
  */
 #ifndef SYSTEM_IOBSERVABLE_HPP
 #define SYSTEM_IOBSERVABLE_HPP
@@ -13,24 +13,24 @@
 #include "IObserver.hpp"
 #include <memory>
 
-namespace System
+namespace System::Interface
 {
-    template<typename T, typename TValue>
+    template<typename TDerived, typename TValue>
     class IObservable;/* https://docs.microsoft.com/zh-cn/dotnet/api/system.iobservable-1.subscribe?view=net-6.0 */
 };
 /*
  *  Interface : 
- *		std::unique_ptr<IDisposable<UnsubscriberType>> Subscribe(const T& other) T<TValue>
+ *		auto Subscribe(const TDerived& other) TDerived<TValue>
  */
-template<typename T, typename TValue>
-class System::IObservable 
+template<typename TDerived, typename TValue>
+class System::Interface::IObservable 
 {
-	DECLARE_CRTP_INTERFACE(IObservable, T)
+	DECLARE_CRTP_INTERFACE(IObservable, TDerived, TValue)
 public:
-    template<typename UnsubscriberType>
-	inline std::shared_ptr<IDisposable<UnsubscriberType>> Subscribe(const IObserver<T, TValue>& observer) CRTP_VIRTUAL
+	template<typename ObserverType>
+	inline auto Subscribe(const IObserver<ObserverType, TValue>& observer) CRTP_VIRTUAL
 	{
-		return CRTP_DERIVED.Subscribe(static_cast<const T&>(observer));
+		return CRTP_DERIVED.Subscribe(static_cast<const ObserverType&>(observer));
 	}
 };
 #endif

@@ -4,28 +4,32 @@
  * @Autor: like
  * @Date: 2022-04-22 15:06:39
  * @LastEditors: like
- * @LastEditTime: 2022-04-22 15:24:45
+ * @LastEditTime: 2022-04-27 11:52:56
  */
 #ifndef SYSTEM_IEQUATABLE_HPP
 #define SYSTEM_IEQUATABLE_HPP
 #include "InterfaceDef.h"
-namespace System
+namespace System::Interface
 {
-    template<typename T>
+    template<typename TDerived>
     class IEquatable;
 };
 /*
  *  Interface : 
- *		int Equals(const T& other) const
+ *		int Equals(const TDerived& other) const
  */
-template<typename T>
-class System::IEquatable 
+template<typename TDerived>
+class System::Interface::IEquatable 
 {
-	DECLARE_CRTP_INTERFACE(IEquatable, T)
+	DECLARE_CRTP_INTERFACE(IEquatable, TDerived)
 public:
-	inline bool Equals(const IEquatable<T>& other) const CRTP_VIRTUAL
+	inline bool Equals(const IEquatable<TDerived>& other) const CRTP_VIRTUAL
 	{
-		return CRTP_CONST_DERIVED.Equals(static_cast<const T&>(other));
+		return CRTP_CONST_DERIVED.Equals(static_cast<const TDerived&>(other));
+	}
+	bool IEquatable::operator == (const IEquatable<TDerived>& other)
+	{
+		return Equals(other);
 	}
 };
 #endif

@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2021-07-23 10:21:28
  * @LastEditors: like
- * @LastEditTime: 2022-04-03 09:12:28
+ * @LastEditTime: 2022-04-25 15:07:00
  */
 #ifndef COMPLIED_ENTRY_H
 #define COMPLIED_ENTRY_H
@@ -38,9 +38,10 @@ namespace System
     typedef long long Int64;
     typedef unsigned long long UInt64;
 #elif defined(MSVC_64) 
-    typedef long Int64;
-    typedef unsigned long UInt64;
+    typedef long long Int64;
+    typedef unsigned long long UInt64;
 #elif !defined(__WINDOWS) /* error */
+    /* 非 windows 平台 x64 sizeof(long) == 8 */
 #endif
 }
 
@@ -110,6 +111,11 @@ namespace System
  */
 #define DISALLOW_COPY_AND_ASSIGN_CONSTRUCTED_FUNCTION(TypeName) TypeName(const TypeName&) = delete; TypeName& operator=(const TypeName&) = delete;
 /**
+ * @brief 禁用在堆上申请内存
+ * 
+ */
+#define DISALLOW_MEMORY_IN_HEAP(TypeName) void* operator new(size_t size) = delete; void operator delete(void* pointer) = delete;
+/**
  * @brief readonly
  * 
  */
@@ -117,6 +123,7 @@ namespace System
 /**
  * @brief 标记当前指针非资源拥有者
  * 
+ * 在资源释放后, WEAK_PTR 会成为悬挂指针, 一定要确保资源生命周期结束后, 不再调用该指针
  */
 #define WEAK_PTR(type) type*
 #define SAVE_DELETE_PTR(p) if((p)){delete (p); (p) = NULL;}
