@@ -5,6 +5,8 @@
 using namespace Interface;
 using namespace std;
 
+#define MAX_COUNT 10
+
 class Data : public IEquatable<Data>
 {
 public:
@@ -35,20 +37,19 @@ void StackListTest()
 	StackList<Data> list(2);
 	list.AddRange({ 3 , 4, 5 });
 	printf("%d %p\n%d %p\n%d %p\n", list[0].val, list[0].resource, list[1].val, list[1].resource, list[2].val, list[2].resource);
-	for (int i = 0; i < 100; i++)
+	for (int i = 0; i < MAX_COUNT; i++)
 	{
 		list.Add(std::move(i));
 	}
-	for (int i = 0; i < 100; i++)
+	for (int i = 0; i < MAX_COUNT; i++)
 	{
 		list.Remove(i);
 	}
-	StackList<Data>::_IEnumerator p = list.GetEnumerator();
-	printf("%d, %d ( should be 3, 192 )\n", list.Count(), list.Capacity());
-	for (auto& a : p)
+	printf("%d, %d\n", list.Count(), list.Capacity());
+	/*for (auto& a : list)
 	{
 		printf("%d %p\n", a.val, a.resource);
-	}
+	}*/
 	/* 显示释放资源，非必要 */
 	list.Dispose();
 	printf("%d, %d ( should be 0, 0 )\n", list.Count(), list.Capacity());
@@ -57,25 +58,24 @@ void HeapListTest()
 {
 	HeapList<int*> list(2);
 	list.AddRange({ new int(3) , new int(4), new int(5) });
-	for (int i = 0; i < 100; i++)
+	for (int i = 0; i < MAX_COUNT; i++)
 	{
 		list.Add(new int(i));
 	}
-	for (int i = 0; i < 100; i++)
+	for (int i = 0; i < MAX_COUNT; i++)
 	{
 		list.RemoveIf([i](int* item)->bool { return i == *item; });
 	}
-	HeapList<int*>::_IEnumerator p = list.GetEnumerator();
 	
-	printf("%d, %d( should be 3, 192 )\n", list.Count(), list.Capacity());
-	std::for_each
+	printf("%d, %d\n", list.Count(), list.Capacity());
+	/*std::for_each
 	(
-		p.begin(), p.end(),
-		[](int* item)
+		list.begin(), list.end(),
+		[&](int* item)->void
 		{
 			printf("%d\n", *item);
 		}
-	);
+	);*/
 	list.Dispose();
 	printf("%d, %d (should be 0, 0)\n", list.Count(), list.Capacity());
 }

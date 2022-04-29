@@ -26,11 +26,11 @@ public:
 	bool RemoveIf(FPredicate match)
 	{
 		static_assert(std::is_same<function_traits<decltype(match)>::return_type, bool>::value);
-		auto* target = std::find_if(begin(), end(), match);
-		auto* targetNext = target + 1;
+		Iterator target = std::find_if(begin(), end(), match);
+		Iterator targetNext = target + 1;
 		VALRET_ASSERT(end() > target, false);
 		RALLPolicy<T>::destroy(*target);
-		CANARY_ASSERT(memmove(target, targetNext, (UInt64)end() - (UInt64)targetNext));
+		CANARY_ASSERT(memmove((T*)target, (T*)targetNext, (UInt64)(T*)end() - (UInt64)(T*)targetNext));
 		m_nCount--;
 		return true;
 	}

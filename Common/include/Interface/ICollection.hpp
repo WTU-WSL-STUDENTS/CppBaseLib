@@ -4,11 +4,11 @@
  * @Autor: like
  * @Date: 2022-04-26 10:44:13
  * @LastEditors: like
- * @LastEditTime: 2022-04-26 15:05:56
+ * @LastEditTime: 2022-04-29 15:32:01
  */
 #ifndef SYSTEM_ICOLLECTION_HPP
 #define SYSTEM_ICOLLECTION_HPP
-#include "IEnumerator.hpp"
+#include "IEnumerable.hpp"
 
 namespace System::Interface
 {

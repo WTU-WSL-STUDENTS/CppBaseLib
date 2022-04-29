@@ -50,16 +50,17 @@ public:
 	{
 		return m_nCapacity;
 	}
-
+	//using Iterator = SequenceMemoryEnumerator<TElement>;
+	using Iterator = IEnumerator<TDerived, TElement, RandomAccessIterator<TDerived, TElement>>;
 	TElement& operator[](int index) CRTP_OVERRIDE
 	{
 		return m_scan0[index];
 	}
-	TElement* begin() CRTP_OVERRIDE
+	Iterator  begin() CRTP_OVERRIDE
 	{
 		return m_scan0;
 	}
-	TElement* end() CRTP_OVERRIDE
+	Iterator  end() CRTP_OVERRIDE
 	{
 		return m_scan0 + m_nCount;
 	}
@@ -115,11 +116,11 @@ public:
 	}
 	bool Remove(const TElement& item) CRTP_OVERRIDE
 	{
-		auto* target = std::find(m_scan0, end(), item);
-		auto* targetNext = target + 1;
+		Iterator target = std::find(begin(), end(), item);
+		Iterator targetNext = target + 1;
 		VALRET_ASSERT(end() > target, false);
 		RALLPolicy::destroy(*target);
-		CANARY_ASSERT(memmove(target, targetNext, (UInt64)end() - (UInt64)targetNext));
+		CANARY_ASSERT(memmove((TElement*)target, (TElement*)targetNext, (UInt64)(TElement*)end() - (UInt64)(TElement*)targetNext));
 		m_nCount--;
 		return true;
 	}

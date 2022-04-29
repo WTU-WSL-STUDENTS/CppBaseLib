@@ -9,6 +9,7 @@
 #ifndef INTERFACE_DEF_H
 #define INTERFACE_DEF_H
 
+#include <iterator> 
 #include <type_traits>
 #include "../CompliedEntry.h"
 #include "../CompliedIndexer.h"
