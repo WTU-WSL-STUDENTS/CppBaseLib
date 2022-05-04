@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-04-22 15:26:30
  * @LastEditors: like
- * @LastEditTime: 2022-04-25 17:13:40
+ * @LastEditTime: 2022-05-04 16:21:09
  */
 #ifndef SYSTEM_IDISPOSABLE_HPP
 #define SYSTEM_IDISPOSABLE_HPP
@@ -15,10 +15,7 @@ namespace System::Interface
     template<typename TDerived>
     class IDisposable;
 };
-/*
- *  Interface : 
- *		int Equals(const TDerived& other) const
- */
+#define CRTPInterfaceDefineWithCheck_Dispose CRTP_INTERFACE_OVERRIDED_ASSERT(void, Dispose);	
 template<typename TDerived>
 class System::Interface::IDisposable
 {
@@ -26,6 +23,7 @@ class System::Interface::IDisposable
 public:
 	inline void Dispose() CRTP_VIRTUAL
 	{
+		CRTPInterfaceDefineWithCheck_Dispose;
 		return CRTP_DERIVED.Dispose();
 	}
 };

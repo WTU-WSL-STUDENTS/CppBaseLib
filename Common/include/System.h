@@ -13,7 +13,6 @@
 #include "Interface/IComparable.hpp"
 #include "Interface/IDisposable.hpp"
 #include "Interface/IEnumerator.hpp"
-#include "Interface/IEquatable.hpp"
 #include "Interface/IObservable.hpp"
 #include "Interface/IObserver.hpp"
 

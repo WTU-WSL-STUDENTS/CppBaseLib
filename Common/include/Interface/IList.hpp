@@ -51,18 +51,18 @@ public:
 		return m_nCapacity;
 	}
 	//using Iterator = SequenceMemoryEnumerator<TElement>;
-	using Iterator = IEnumerator<TDerived, TElement, RandomAccessIterator<TDerived, TElement>>;
+	using Iterator = SequenceMemoryEnumerator<TElement>;
 	TElement& operator[](int index) CRTP_OVERRIDE
 	{
 		return m_scan0[index];
 	}
 	Iterator  begin() CRTP_OVERRIDE
 	{
-		return m_scan0;
+		return Iterator(m_scan0);
 	}
 	Iterator  end() CRTP_OVERRIDE
 	{
-		return m_scan0 + m_nCount;
+		return Iterator(m_scan0 + m_nCount);
 	}
     /**
      * @brief 末尾增加数据. O(1)
@@ -120,7 +120,7 @@ public:
 		Iterator targetNext = target + 1;
 		VALRET_ASSERT(end() > target, false);
 		RALLPolicy::destroy(*target);
-		CANARY_ASSERT(memmove((TElement*)target, (TElement*)targetNext, (UInt64)(TElement*)end() - (UInt64)(TElement*)targetNext));
+		CANARY_ASSERT(memmove(&(*target), &(*targetNext), (UInt64)GET_ITERATOR_NATIVE_POINTER(end()) - (UInt64)GET_ITERATOR_NATIVE_POINTER(targetNext)));
 		m_nCount--;
 		return true;
 	}

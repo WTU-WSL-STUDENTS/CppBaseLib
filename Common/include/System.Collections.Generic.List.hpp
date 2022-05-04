@@ -30,7 +30,7 @@ public:
 		Iterator targetNext = target + 1;
 		VALRET_ASSERT(end() > target, false);
 		RALLPolicy<T>::destroy(*target);
-		CANARY_ASSERT(memmove((T*)target, (T*)targetNext, (UInt64)(T*)end() - (UInt64)(T*)targetNext));
+		CANARY_ASSERT(memmove(&(*target), &(*targetNext), (UInt64)GET_ITERATOR_NATIVE_POINTER(end()) - (UInt64)GET_ITERATOR_NATIVE_POINTER(targetNext)));
 		m_nCount--;
 		return true;
 	}
@@ -38,6 +38,10 @@ public:
 	bool Exists(FPredicate match)
 	{
 		return end() > std::find(begin(), end(), match);
+	}
+	void Sort()
+	{
+		std::sort(begin(), end());
 	}
 	template<typename FPredicate>
 	T* Find(FPredicate match)

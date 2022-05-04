@@ -2,17 +2,9 @@
  * @Description: 
  * @Version: 1.0
  * @Autor: like
- * @Date: 2022-04-29 15:30:59
- * @LastEditors: like
- * @LastEditTime: 2022-04-29 16:03:12
- */
-/*
- * @Description: 
- * @Version: 1.0
- * @Autor: like
  * @Date: 2022-04-24 17:01:55
  * @LastEditors: like
- * @LastEditTime: 2022-04-26 15:06:11
+ * @LastEditTime: 2022-05-04 16:23:09
  */
 #ifndef SYSTEM_IENUMERABLE_HPP
 #define SYSTEM_IENUMERABLE_HPP

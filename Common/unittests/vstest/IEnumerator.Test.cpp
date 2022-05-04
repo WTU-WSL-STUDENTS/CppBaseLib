@@ -7,7 +7,7 @@ using namespace std;
 
 #define MAX_COUNT 10
 
-class Data : public IEquatable<Data>
+class Data : public IEquatable<Data>//, IComparable<Data>
 {
 public:
 	int val;
@@ -31,6 +31,15 @@ public:
 	{
 		return val == other.val;//&& resource == other.resource;
 	}
+	int CompareTo(const Data& other) const CRTP_OVERRIDE
+	{
+		return val > other.val ? 1 : val < other.val ? -1 : 0;
+	}
+	/* 如果Data 能隐式转换成基础类型则不需要继承 IComparable, 因为基础类型自带比较功能. 同时也要注意隐式转换带来意想不到的比较结果 */
+	/*operator int()
+	{
+		return val;
+	}*/
 };
 void StackListTest()
 {
@@ -46,11 +55,22 @@ void StackListTest()
 		list.Remove(i);
 	}
 	printf("%d, %d\n", list.Count(), list.Capacity());
-	/*for (auto& a : list)
+	for (auto& a : list)
 	{
 		printf("%d %p\n", a.val, a.resource);
-	}*/
+	}
+	/*list[0].val = 100;
+	list.Sort();
+	std::for_each
+	(
+		list.begin(), list.end(),
+		[&](const Data& item)->void
+		{
+			printf("%d %p\n", item.val, item.resource);
+		}
+	);*/
 	/* 显示释放资源，非必要 */
+	list.begin()[1];
 	list.Dispose();
 	printf("%d, %d ( should be 0, 0 )\n", list.Count(), list.Capacity());
 }
@@ -66,16 +86,25 @@ void HeapListTest()
 	{
 		list.RemoveIf([i](int* item)->bool { return i == *item; });
 	}
-	
 	printf("%d, %d\n", list.Count(), list.Capacity());
-	/*std::for_each
+	std::for_each
 	(
 		list.begin(), list.end(),
 		[&](int* item)->void
 		{
 			printf("%d\n", *item);
 		}
-	);*/
+	);
+	printf("Begin sort...\n");
+	list.Sort();
+	std::for_each
+	(
+		list.begin(), list.end(),
+		[&](int* item)->void
+		{
+			printf("%d,%p\n", *item, item);
+		}
+	);
 	list.Dispose();
 	printf("%d, %d (should be 0, 0)\n", list.Count(), list.Capacity());
 }

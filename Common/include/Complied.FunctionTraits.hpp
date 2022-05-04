@@ -4,12 +4,14 @@
  * @Autor: like
  * @Date: 2022-04-28 16:17:17
  * @LastEditors: like
- * @LastEditTime: 2022-04-28 16:18:39
+ * @LastEditTime: 2022-04-30 15:50:52
  */
 #ifndef COMPLIED_FUNCTION_TRAITS_HPP
 #define COMPLIED_FUNCTION_TRAITS_HPP
 #include <cstddef>
 #include <tuple>
+#include <type_traits>
+#include "Complied.Macro.h"
 /**
  * @brief 函数类型萃取
  * 
@@ -67,5 +69,14 @@ struct function_traits<F&> : public function_traits < F >
 template<class F>
 struct function_traits<F&&> : public function_traits < F >
 {};
-
+/**
+ * @brief 编译时检查 ClassType::FuncName 是否可访问. 返回值与 ReturnType 一致则宏定义结果为 true 
+ * 
+ */
+#define FUNCTION_RETURN_TYPE_IS_THAT(ReturnType, FuncName)	\
+	(std::is_same<ReturnType, function_traits<decltype(&( FuncName ))>::return_type>::value)
+/**
+ * @brief 
+ * 借鉴 std::_Wrapped_seekable_v
+ */
 #endif
