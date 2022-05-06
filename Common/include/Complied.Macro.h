@@ -4,13 +4,13 @@
  * @Autor: like
  * @Date: 2022-04-26 15:12:38
  * @LastEditors: like
- * @LastEditTime: 2022-04-30 17:19:59
+ * @LastEditTime: 2022-05-06 14:57:00
  */
 
 #ifndef COMPLIED_MACRO_H
 #define COMPLIED_MACRO_H
 /**
- * @brief è®¡ç®— __VA_ARGS__ å‚æ•°ä¸ªæ•°,æœ€å¤§æ”¯æŒ64ä¸ªå‚æ•°
+ * @brief ¼ÆËã __VA_ARGS__ ²ÎÊı¸öÊı,×î´óÖ§³Ö64¸ö²ÎÊı
  * 
  */
 #define MACRO_ARG_COUNT(...) MACRO_Expand( INTERNAL_ARG_COUNT_PRIVATE(0, ##__VA_ARGS__,\
@@ -30,7 +30,7 @@
 	_50, _51, _52, _53, _54, _55, _56, _57, _58, _59, \
 	_60, _61, _62, _63, _64, N, ...) N
 /**
- * @brief å±•å¼€ __VA_ARGS__ , å¯¹äºé msvc ç¼–è¯‘å™¨, é»˜è®¤ä¸ºå±•å¼€
+ * @brief Õ¹¿ª __VA_ARGS__ , ¶ÔÓÚ·Ç msvc ±àÒëÆ÷, Ä¬ÈÏÎªÕ¹¿ª
  * 
  */
 #define MACRO_Expand(...) __VA_ARGS__

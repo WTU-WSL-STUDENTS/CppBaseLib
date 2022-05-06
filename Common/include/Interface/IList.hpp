@@ -4,11 +4,13 @@
  * @Autor: like
  * @Date: 2022-04-26 10:46:07
  * @LastEditors: like
- * @LastEditTime: 2022-04-26 15:06:20
+ * @LastEditTime: 2022-05-06 14:25:44
  */
 #ifndef SYSTEM_ILIST_HPP
 #define SYSTEM_ILIST_HPP
+#define _SILENCE_CXX17_OLD_ALLOCATOR_MEMBERS_DEPRECATION_WARNING
 #include "ICollection.hpp"
+#include <memory>
 
 namespace System::Interface
 {
@@ -26,7 +28,7 @@ template<typename TDerived, typename TElement, typename RALLPolicy>
 CRTP_ABSTRACT class System::Interface::IList : public ICollection<TDerived, TElement>, public IDisposable<TDerived> , protected RALLPolicy
 {
 DECLARE_CRTP_INTERFACE(IList, TDerived, TElement, RALLPolicy)
-private:
+protected:
 	std::allocator<TElement> allocPool;
 	TElement* m_scan0;
 	int m_nCapacity;
@@ -50,17 +52,16 @@ public:
 	{
 		return m_nCapacity;
 	}
-	//using Iterator = SequenceMemoryEnumerator<TElement>;
 	using Iterator = SequenceMemoryEnumerator<TElement>;
 	TElement& operator[](int index) CRTP_OVERRIDE
 	{
 		return m_scan0[index];
 	}
-	Iterator  begin() CRTP_OVERRIDE
+	Iterator  begin() const CRTP_OVERRIDE
 	{
 		return Iterator(m_scan0);
 	}
-	Iterator  end() CRTP_OVERRIDE
+	Iterator  end() const CRTP_OVERRIDE
 	{
 		return Iterator(m_scan0 + m_nCount);
 	}

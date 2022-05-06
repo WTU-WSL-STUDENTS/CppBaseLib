@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-04-24 17:01:55
  * @LastEditors: like
- * @LastEditTime: 2022-05-04 16:23:09
+ * @LastEditTime: 2022-05-06 14:25:26
  */
 #ifndef SYSTEM_IENUMERABLE_HPP
 #define SYSTEM_IENUMERABLE_HPP
@@ -21,19 +21,13 @@ class System::Interface::IEnumerable
 {
 	DECLARE_CRTP_INTERFACE(IEnumerable, TDerived, TElement)
 public:
-#ifdef DOT_NET_ITERATOR_COMPATIBLE
-    auto GetEnumerator()
+    auto begin() const CRTP_VIRTUAL
 	{
-		return begin();
-	};
-#endif
-    auto begin() CRTP_VIRTUAL
-	{
-		return CRTP_DERIVED.begin();
+		return CRTP_CONST_DERIVED.begin();
 	}
-    auto end() CRTP_VIRTUAL
+    auto end() const CRTP_VIRTUAL
 	{
-		return CRTP_DERIVED.end();
+		return CRTP_CONST_DERIVED.end();
 	}
 };
 

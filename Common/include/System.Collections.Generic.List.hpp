@@ -19,8 +19,14 @@ template<class T, template<class> class RALLPolicy>
 class System::Collections::Generic::List final : public System::Interface::IList<List<T, RALLPolicy>, T, RALLPolicy<T>>
 {
 public:
-	using IList_ = IList<List<T, RALLPolicy>, T, RALLPolicy<T>>;
-	List(int capacity = 8) : IList_(capacity) {};
+	explicit List(int capacity = 8) : _IList(capacity) {};
+	List(std::initializer_list<T> list) : _IList(list.size()) 
+	{
+		for (const auto& item : list)
+		{
+			Add(item);
+		}
+	};
 	~List() { Dispose(); }
 	template<typename FPredicate>
 	bool RemoveIf(FPredicate match)
@@ -43,16 +49,20 @@ public:
 	{
 		std::sort(begin(), end());
 	}
+	void Reverse()
+	{
+		std::reverse(begin(), end());
+	}
 	template<typename FPredicate>
-	T* Find(FPredicate match)
+	auto Find(FPredicate match)
 	{
 		return std::find(begin(), end(), match);
 	}
 	template<typename FPredicate>
 	int FindIndex(FPredicate match)
 	{
-		T* target = Find(match);
-		end() > target ? ((size_t)target - (size_t)begin())/ sizeof(T) : SIZE_MAX;
+		auto target = Find(match);
+		end() > target ? target.Distance(begin()) : -1;
 	}
 	template<typename F>
 	void ForEach(F action)

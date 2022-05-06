@@ -15,15 +15,13 @@ namespace System::Interface
     template<typename TDerived>
     class IDisposable;
 };
-#define CRTPInterfaceDefineWithCheck_Dispose CRTP_INTERFACE_OVERRIDED_ASSERT(void, Dispose);	
 template<typename TDerived>
 class System::Interface::IDisposable
 {
 	DECLARE_CRTP_INTERFACE(IDisposable, TDerived)
 public:
-	inline void Dispose() CRTP_VIRTUAL
+	void Dispose() CRTP_VIRTUAL
 	{
-		CRTPInterfaceDefineWithCheck_Dispose;
 		return CRTP_DERIVED.Dispose();
 	}
 };

@@ -4,7 +4,7 @@
  * @Autor: like
  * @Date: 2022-04-26 10:44:13
  * @LastEditors: like
- * @LastEditTime: 2022-04-29 15:32:01
+ * @LastEditTime: 2022-05-06 14:24:51
  */
 #ifndef SYSTEM_ICOLLECTION_HPP
 #define SYSTEM_ICOLLECTION_HPP
@@ -35,8 +35,12 @@ public:
     {
         return false;
 	}
+	void CopyTo(TElement* buffer, int bufferOffset) CRTP_VIRTUAL
+	{
+		CRTP_DERIVED.CopyTo(buffer, bufferOffset);
+	}
 
-	TElement& operator[](int index) CRTP_VIRTUAL
+	/*TElement& operator[](int index) CRTP_VIRTUAL
 	{
 		return CRTP_DERIVED[index];
 	}
@@ -50,7 +54,7 @@ public:
 	}
     void Add(const TElement& item) CRTP_VIRTUAL
     {
-        CRTP_DERIVED.Add(std::forward<TElement>(item));
+        CRTP_DERIVED.Add(item);
     }
     void Clear() CRTP_VIRTUAL
     {
@@ -67,7 +71,7 @@ public:
     bool Remove(const TElement& item) CRTP_VIRTUAL
     {
         return CRTP_DERIVED.Contains(item);
-    }
+    }*/
 
 
 };

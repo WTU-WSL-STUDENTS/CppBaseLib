@@ -11,8 +11,9 @@
 #include "IDisposable.hpp"
 #include "IComparable.hpp"
 #include "ISelfOffsetable.hpp"
-
+#define _SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING
 #define GET_ITERATOR_NATIVE_POINTER(iterator) (&(*(iterator)))
+
 namespace System::Interface
 {
 	/**
@@ -48,10 +49,6 @@ namespace System::Interface
 	template<typename TElement>
 	class SequenceMemoryEnumerator;
 };
-/**
- * @brief 需要实现的接口
- * CompareTo / Equals / operator->() / operator*() / operator=() / Increase / Decrease
- */
 template<typename TDerived, typename TElement>
 struct System::Interface::OutputIterator : 
 	public ISelfIncreaseable<TDerived>, 
@@ -102,11 +99,13 @@ struct System::Interface::ForwardIterator :
 
 	TDerived& operator++() CRTP_VIRTUAL
 	{
+		CRTPInterfaceDefineWithCheck_Increase;
 		CRTP_DERIVED.Increase(1);
 		return CRTP_DERIVED;
 	}
 	TDerived operator++(int) CRTP_VIRTUAL
 	{
+		CRTPInterfaceDefineWithCheck_Increase;
 		TDerived temp(CRTP_CONST_DERIVED);
 		CRTP_DERIVED.Increase(1);
 		return temp;
@@ -143,24 +142,44 @@ struct System::Interface::RandomAccessIterator :
 	public std::random_access_iterator_tag
 {
 };
-
+#define CRTPInterfaceDefineWithCheck_IsValid CRTP_OVERRIDED_ASSERT(IS_CRTP_INTERFACE_OVERRIDED_NO_PARAMS(bool, IsValid));	
 template<typename TDerived, typename TElement, typename Category = System::Interface::RandomAccessIterator<TDerived, TElement>>
 CRTP_ABSTRACT class System::Interface::IEnumerator :
 	public Category,
 	public std::iterator<Category, TElement>
 {
     DECLARE_CRTP_INTERFACE(IEnumerator, TDerived, TElement, Category)
+public:
+	explicit operator bool() const
+	{
+		return IsValid();
+	}
+private:
+	bool IsValid() const
+	{
+		CRTPInterfaceDefineWithCheck_IsValid;
+		return CRTP_CONST_DERIVED.IsValid();
+	}
+};
+template<typename TElement>
+class System::Interface::SequenceMemoryEnumerator :
+	public IEnumerator<SequenceMemoryEnumerator<TElement>, TElement, RandomAccessIterator<SequenceMemoryEnumerator<TElement>, TElement>>
+{
 private:
 	WEAK_PTR(TElement)  m_p;
 public:
-	explicit IEnumerator(WEAK_PTR(TElement) x) : m_p(x) {}
-    IEnumerator(const IEnumerator& mit) : m_p(mit.m_p) {}
-
+	explicit SequenceMemoryEnumerator(WEAK_PTR(TElement) x) : m_p(x) {}
+	SequenceMemoryEnumerator(const SequenceMemoryEnumerator& mit) : m_p(mit.m_p) {}
+	SequenceMemoryEnumerator& operator= (const SequenceMemoryEnumerator& mit) CRTP_OVERRIDE 
+	{
+		m_p = mit.m_p; 
+		return *this; 
+	}
 	TElement& operator*() CRTP_OVERRIDE
 	{
 		return *m_p;
 	}
-	const TElement& operator*()const CRTP_OVERRIDE
+	TElement& operator*()const CRTP_OVERRIDE
 	{
 		return *m_p;
 	}
@@ -172,11 +191,11 @@ public:
 	{
 		return m_p;
 	}
-	int CompareTo(const TDerived& other) const CRTP_OVERRIDE
+	int CompareTo(const SequenceMemoryEnumerator<TElement>& other) const CRTP_OVERRIDE
 	{
 		return m_p > other.m_p ? 1 : m_p < other.m_p ? -1 : 0;
 	}
-	bool Equals(const TDerived& other) const CRTP_OVERRIDE
+	bool Equals(const SequenceMemoryEnumerator<TElement>& other) const CRTP_OVERRIDE
 	{
 		return m_p == other.m_p;
 	}
@@ -188,46 +207,17 @@ public:
 	{
 		m_p -= n;
 	}
-	/* if(it) */
-	explicit operator bool() const
-	{
-		return nullptr != m_p;
-	}
-	std::ptrdiff_t Distance(const TDerived& other) const
+	std::ptrdiff_t Distance(const SequenceMemoryEnumerator<TElement>& other) const CRTP_OVERRIDE
 	{
 		return m_p - other.m_p;
 	}
-	TElement& AccessNativeReference(std::ptrdiff_t index) const
+	TElement& AccessNativeReference(std::ptrdiff_t index) const CRTP_OVERRIDE
 	{
 		return m_p[index];
 	}
-	/* std::distance */
-	/*std::ptrdiff_t operator-(const TDerived& other) const
+	bool IsValid() const CRTP_OVERRIDE
 	{
-		return m_p - other.m_p;
+		return m_p;
 	}
-	TDerived operator-(const std::ptrdiff_t& n) const
-	{
-		return TDerived(m_p - n);
-	}*/
-};
-
-template<typename TElement>
-class System::Interface::SequenceMemoryEnumerator :
-	public IEnumerator<SequenceMemoryEnumerator<TElement>, TElement, RandomAccessIterator<SequenceMemoryEnumerator<TElement>, TElement>>
-{
-public:
-	explicit SequenceMemoryEnumerator(WEAK_PTR(TElement) x) : _IEnumerator(x) {}
-	SequenceMemoryEnumerator(const SequenceMemoryEnumerator& mit) :_IEnumerator(mit){}
-	SequenceMemoryEnumerator& operator= (const SequenceMemoryEnumerator& mit) CRTP_OVERRIDE 
-	{
-		m_p = mit.m_p; 
-		return *this; 
-	}
-	/*SequenceMemoryEnumerator& operator=(const TElement* x)
-	{
-		m_p = x;
-		return *this;
-	}*/
 };
 #endif

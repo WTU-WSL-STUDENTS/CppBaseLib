@@ -28,21 +28,37 @@ class System::Interface::IComparable
 {
 	DECLARE_CRTP_INTERFACE(IComparable, TDerived)
 public:
-	bool IComparable::operator > (const TDerived& other) const
+	/*bool IComparable::operator > (const TDerived& other) const
 	{
-		return 0 < CompareTo(other);
+		return 0 < CRTPCompareTo(other);
 	}
 	bool IComparable::operator >= (const TDerived& other) const
 	{
-		return 0 <= CompareTo(other);
+		return 0 <= CRTPCompareTo(other);
 	}
 	bool IComparable::operator < (const TDerived& other) const
 	{
-		return 0 > CompareTo(other);
+		return 0 > CRTPCompareTo(other);
 	}
 	bool IComparable::operator <= (const TDerived& other) const
 	{
-		return 0 >= CompareTo(other);
+		return 0 >= CRTPCompareTo(other);
+	}*/
+	bool IComparable::operator > (const _IComparable& other) const
+	{
+		return 0 < CRTPCompareTo(other);
+	}
+	bool IComparable::operator >= (const _IComparable& other) const
+	{
+		return 0 <= CRTPCompareTo(other);
+	}
+	bool IComparable::operator < (const _IComparable& other) const
+	{
+		return 0 > CRTPCompareTo(other);
+	}
+	bool IComparable::operator <= (const _IComparable& other) const
+	{
+		return 0 >= CRTPCompareTo(other);
 	}
 private:
 	/**
@@ -54,7 +70,7 @@ private:
 	 * >0 : *this > other
 	 * <0 : *this < other
 	 */
-	int CompareTo(const IComparable<TDerived>& other) const CRTP_VIRTUAL
+	int CRTPCompareTo(const IComparable<TDerived>& other) const CRTP_VIRTUAL
 	{
 		CRTPInterfaceDefineWithCheck_CompareTo;
 		return CRTP_CONST_DERIVED.CompareTo(static_cast<const TDerived&>(other));
@@ -71,14 +87,14 @@ class System::Interface::IEquatable
 public:
 	bool IEquatable::operator == (const TDerived& other) const
 	{
-		return Equals(other);
+		return CRTPEquals(other);
 	}
 	bool IEquatable::operator != (const TDerived& other) const
 	{
-		return !Equals(other);
+		return !CRTPEquals(other);
 	}
 private:
-	bool Equals(const TDerived& other) const CRTP_VIRTUAL
+	bool CRTPEquals(const TDerived& other) const CRTP_VIRTUAL
 	{
 		CRTPInterfaceDefineWithCheck_Equals;
 		return CRTP_CONST_DERIVED.Equals(other);
